@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NutriSafe - Medical Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Outfit:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error-container": "#ffdad6",
+                      "surface-container-highest": "#d9e3f6",
+                      "on-surface-variant": "#3d4947",
+                      "on-secondary-fixed-variant": "#144f4b",
+                      "inverse-surface": "#27313f",
+                      "tertiary-container": "#b05e3d",
+                      "outline": "#6d7a77",
+                      "primary-container": "#008378",
+                      "on-tertiary-fixed-variant": "#773215",
+                      "primary": "#00685f",
+                      "outline-variant": "#bcc9c6",
+                      "on-error": "#ffffff",
+                      "surface-variant": "#d9e3f6",
+                      "secondary-fixed-dim": "#9ad1cb",
+                      "on-tertiary-container": "#fffbff",
+                      "tertiary-fixed-dim": "#ffb59a",
+                      "on-background": "#121c2a",
+                      "on-tertiary-fixed": "#370e00",
+                      "inverse-on-surface": "#eaf1ff",
+                      "tertiary": "#924628",
+                      "surface-container": "#e6eeff",
+                      "primary-fixed-dim": "#6bd8cb",
+                      "on-surface": "#121c2a",
+                      "surface-bright": "#f8f9ff",
+                      "on-secondary": "#ffffff",
+                      "secondary": "#316763",
+                      "on-primary-fixed-variant": "#005049",
+                      "on-secondary-container": "#376d69",
+                      "on-tertiary": "#ffffff",
+                      "primary-fixed": "#89f5e7",
+                      "surface-tint": "#006a61",
+                      "tertiary-fixed": "#ffdbce",
+                      "surface-container-low": "#eff4ff",
+                      "inverse-primary": "#6bd8cb",
+                      "on-primary-fixed": "#00201d",
+                      "surface-container-high": "#dee9fc",
+                      "on-secondary-fixed": "#00201e",
+                      "secondary-container": "#b5ede7",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed": "#b5ede7",
+                      "on-primary": "#ffffff",
+                      "on-primary-container": "#f4fffc",
+                      "surface": "#f8f9ff",
+                      "on-error-container": "#93000a",
+                      "background": "#f8f9ff",
+                      "surface-dim": "#d0dbed",
+                      "error": "#ba1a1a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "lg": "24px",
+                      "xl": "32px",
+                      "xs": "4px",
+                      "xxl": "48px",
+                      "sm": "8px",
+                      "unit": "8px",
+                      "container-padding": "20px",
+                      "gutter": "16px",
+                      "md": "16px"
+              },
+              "fontFamily": {
+                      "label-caps": [
+                              "Inter"
+                      ],
+                      "h2": [
+                              "Outfit"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "h1-mobile": [
+                              "Outfit"
+                      ],
+                      "h1": [
+                              "Outfit"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "h3": [
+                              "Outfit"
+                      ]
+              },
+              "fontSize": {
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "h2": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "h1-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "h1": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "h3": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: #f8f9ff;
+            color: #121c2a;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .progress-bar-bg {
+            background-color: #d9e3f6;
+        }
+        
+        .progress-bar-fill {
+            background-color: #00685f;
+            width: 25%; /* Example: Step 1 of 4 */
+            transition: width 0.3s ease;
+        }
+
+        .chip-active {
+            background-color: rgba(0, 131, 120, 0.1);
+            border-color: #00685f;
+            color: #00685f;
+        }
+
+        /* Hide scrollbar for clean horizontal scrolling */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-xxl">
+<!-- Top Navigation (Hidden as this is a linear flow, but required to show structure if needed later) -->
+<!-- Suppressed navigation shell due to onboarding intent -->
+<main class="max-w-md mx-auto px-container-padding pt-xl pb-xxl">
+<!-- Progress Indicator -->
+<div class="mb-lg">
+<div class="flex justify-between items-center mb-sm">
+<span class="font-label-caps text-label-caps text-on-surface-variant">STEP 1 OF 4</span>
+<span class="font-body-sm text-body-sm text-primary">Personal Details</span>
+</div>
+<div class="h-2 rounded-full progress-bar-bg w-full overflow-hidden">
+<div class="h-full rounded-full progress-bar-fill"></div>
+</div>
+</div>
+<!-- Header -->
+<div class="mb-xl text-center">
+<h1 class="font-h1-mobile text-h1-mobile text-on-background mb-sm">Let's personalize your food guidance</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">We need a few details to provide safe, accurate nutritional recommendations tailored to your unique health profile.</p>
+</div>
+<!-- Form Section -->
+<form class="space-y-lg">
+<!-- Bento-style Form Grid -->
+<div class="bg-surface-container-lowest rounded-[24px] p-lg shadow-[0px_2px_4px_rgba(31,41,55,0.04)] space-y-md">
+<!-- Name -->
+<div>
+<label class="block font-body-sm text-body-sm font-bold text-on-surface mb-xs" for="fullName">Full Name</label>
+<input class="w-full h-[56px] rounded-lg border border-outline-variant bg-surface-bright px-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-body-md text-body-md text-on-background" id="fullName" name="fullName" placeholder="Jane Doe" type="text"/>
+</div>
+<!-- DOB -->
+<div>
+<label class="block font-body-sm text-body-sm font-bold text-on-surface mb-xs" for="dob">Date of Birth</label>
+<div class="relative">
+<input class="w-full h-[56px] rounded-lg border border-outline-variant bg-surface-bright px-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-body-md text-body-md text-on-background pl-xl" id="dob" name="dob" type="date"/>
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">calendar_month</span>
+</div>
+</div>
+<!-- Gender -->
+<div>
+<label class="block font-body-sm text-body-sm font-bold text-on-surface mb-xs">Biological Sex</label>
+<div class="flex gap-sm">
+<label class="flex-1">
+<input class="peer sr-only" name="gender" type="radio" value="female"/>
+<div class="h-[56px] flex items-center justify-center rounded-lg border border-outline-variant bg-surface-bright peer-checked:bg-primary-container peer-checked:border-primary peer-checked:text-on-primary-container cursor-pointer transition-colors font-body-md text-body-md">
+                                Female
+                            </div>
+</label>
+<label class="flex-1">
+<input class="peer sr-only" name="gender" type="radio" value="male"/>
+<div class="h-[56px] flex items-center justify-center rounded-lg border border-outline-variant bg-surface-bright peer-checked:bg-primary-container peer-checked:border-primary peer-checked:text-on-primary-container cursor-pointer transition-colors font-body-md text-body-md">
+                                Male
+                            </div>
+</label>
+</div>
+</div>
+<!-- Height & Weight Row -->
+<div class="flex gap-md">
+<div class="flex-1">
+<label class="block font-body-sm text-body-sm font-bold text-on-surface mb-xs" for="height">Height</label>
+<div class="relative">
+<input class="w-full h-[56px] rounded-lg border border-outline-variant bg-surface-bright px-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-body-md text-body-md text-on-background pr-xl" id="height" name="height" placeholder="170" type="number"/>
+<span class="absolute right-md top-1/2 -translate-y-1/2 font-body-sm text-body-sm text-on-surface-variant">cm</span>
+</div>
+</div>
+<div class="flex-1">
+<label class="block font-body-sm text-body-sm font-bold text-on-surface mb-xs" for="weight">Weight</label>
+<div class="relative">
+<input class="w-full h-[56px] rounded-lg border border-outline-variant bg-surface-bright px-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-body-md text-body-md text-on-background pr-xl" id="weight" name="weight" placeholder="65" type="number"/>
+<span class="absolute right-md top-1/2 -translate-y-1/2 font-body-sm text-body-sm text-on-surface-variant">kg</span>
+</div>
+</div>
+</div>
+</div>
+<!-- CTA -->
+<div class="pt-md">
+<button class="w-full h-[56px] bg-primary text-on-primary rounded-[12px] font-h3 text-h3 flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-[0px_10px_20px_rgba(31,41,55,0.08)]" type="button">
+                    Continue to Health Conditions
+                </button>
+</div>
+</form>
+</main>
+</body></html>

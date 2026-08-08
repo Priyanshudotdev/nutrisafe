@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NutriSafe - Home Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Outfit:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#d9e3f6",
+                        "on-surface-variant": "#3d4947",
+                        "on-secondary-fixed-variant": "#144f4b",
+                        "inverse-surface": "#27313f",
+                        "tertiary-container": "#b05e3d",
+                        "outline": "#6d7a77",
+                        "primary-container": "#008378",
+                        "on-tertiary-fixed-variant": "#773215",
+                        "primary": "#00685f",
+                        "outline-variant": "#bcc9c6",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#d9e3f6",
+                        "secondary-fixed-dim": "#9ad1cb",
+                        "on-tertiary-container": "#fffbff",
+                        "tertiary-fixed-dim": "#ffb59a",
+                        "on-background": "#121c2a",
+                        "on-tertiary-fixed": "#370e00",
+                        "inverse-on-surface": "#eaf1ff",
+                        "tertiary": "#924628",
+                        "surface-container": "#e6eeff",
+                        "primary-fixed-dim": "#6bd8cb",
+                        "on-surface": "#121c2a",
+                        "surface-bright": "#f8f9ff",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#316763",
+                        "on-primary-fixed-variant": "#005049",
+                        "on-secondary-container": "#376d69",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#89f5e7",
+                        "surface-tint": "#006a61",
+                        "tertiary-fixed": "#ffdbce",
+                        "surface-container-low": "#eff4ff",
+                        "inverse-primary": "#6bd8cb",
+                        "on-primary-fixed": "#00201d",
+                        "surface-container-high": "#dee9fc",
+                        "on-secondary-fixed": "#00201e",
+                        "secondary-container": "#b5ede7",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#b5ede7",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#f4fffc",
+                        "surface": "#f8f9ff",
+                        "on-error-container": "#93000a",
+                        "background": "#f8f9ff",
+                        "surface-dim": "#d0dbed",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "card": "24px",
+                        "button": "12px"
+                    },
+                    "spacing": {
+                        "lg": "24px",
+                        "xl": "32px",
+                        "xs": "4px",
+                        "xxl": "48px",
+                        "sm": "8px",
+                        "unit": "8px",
+                        "container-padding": "20px",
+                        "gutter": "16px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Inter"],
+                        "h2": ["Outfit"],
+                        "body-sm": ["Inter"],
+                        "h1-mobile": ["Outfit"],
+                        "h1": ["Outfit"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "h3": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "h2": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "h1-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }],
+                        "h1": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "h3": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #F8F9FF; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="text-on-background min-h-screen pb-[100px] md:pb-0 font-body-md antialiased">
+<!-- TopAppBar -->
+<header class="bg-surface w-full top-0 sticky z-50 flex items-center justify-between px-lg py-md w-full shadow-[0px_2px_4px_rgba(31,41,55,0.04)]">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high border-2 border-primary-container shrink-0">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional, high-quality headshot of an individual, centered in a circular frame, taken with soft studio lighting against a clean, minimal white background, suitable for a premium health app profile avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTOGzlawKZOIJ09M7yy54QUQ0gh8MA-BRGtGUwLlyrhqhu_VnhO8THV8ifvwqhDeHd-dKGq3IU30Lx5E81sxBkWX9zb3jPKel7PBnsrKGX_ON0KIb1h87sFmknywvRyWm1K9upPcfsliQQmlKlnLvczBX7t1rAAs3H6SLmcf5ZCw3A-5ghtFyILhAI8GcM3dDLZTPIibK1p372L-v2PsrimgVIb4Nl1Lx9xvi9Ys1_b7Cj5nwnack9"/>
+</div>
+<div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Good morning,</p>
+<h1 class="font-h3 text-h3 text-on-surface">Alex</h1>
+</div>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="px-container-padding max-w-7xl mx-auto pt-lg space-y-xl">
+<!-- Hero Section: Can I eat this? -->
+<section>
+<h2 class="font-h2 text-h2 text-on-surface mb-md">Can I eat this?</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<!-- Scan Food Bento Card -->
+<button class="bg-primary hover:bg-surface-tint transition-colors active:scale-95 duration-200 rounded-card p-lg h-40 flex flex-col justify-between items-start text-on-primary shadow-[0px_10px_20px_rgba(31,41,55,0.08)] relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+<div class="bg-white/20 p-sm rounded-full backdrop-blur-sm group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[32px]">center_focus_strong</span>
+</div>
+<div class="text-left">
+<h3 class="font-h3 text-h3">Scan Food</h3>
+<p class="font-body-sm text-body-sm text-on-primary/80 mt-1">Use camera to check labels</p>
+</div>
+</button>
+<!-- Search Food Bento Card -->
+<button class="bg-surface-container-lowest border border-outline-variant hover:border-primary-container transition-colors active:scale-95 duration-200 rounded-card p-lg h-40 flex flex-col justify-between items-start text-on-surface shadow-[0px_2px_4px_rgba(31,41,55,0.04)] group">
+<div class="bg-surface-container-high p-sm rounded-full group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-[32px]">search</span>
+</div>
+<div class="text-left w-full">
+<h3 class="font-h3 text-h3">Search Food</h3>
+<div class="flex items-center gap-sm mt-2 overflow-hidden w-full">
+<span class="px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant font-label-caps text-[10px] whitespace-nowrap">Banana</span>
+<span class="px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant font-label-caps text-[10px] whitespace-nowrap">Rice</span>
+<span class="px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant font-label-caps text-[10px] whitespace-nowrap">Roti</span>
+</div>
+</div>
+</button>
+</div>
+</section>
+<!-- Your recent checks -->
+<section>
+<div class="flex justify-between items-end mb-md">
+<h2 class="font-h2 text-h2 text-on-surface">Your recent checks</h2>
+<a class="font-body-sm text-body-sm text-primary font-semibold hover:underline" href="#">View all</a>
+</div>
+<div class="space-y-sm">
+<!-- Recent Item 1: Safe -->
+<div class="bg-surface-container-lowest rounded-card p-md flex items-center gap-md shadow-[0px_2px_4px_rgba(31,41,55,0.04)] border border-surface-variant">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-surface-container-low">
+<img alt="Banana" class="w-full h-full object-cover" data-alt="A macro shot of a fresh, bright yellow banana on a clean white surface. Soft studio lighting emphasizing the texture of the peel. Minimalist and premium aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkGkmEWGXFY2O6NYXBtMyx8Rgwo-2TiAFJAo_ZVke-5vpfJD0uk8TnFXNHnGk4Ui61ijkWYCptiB5mDxXxjsyDsO4qkx2oFLWGA0Woh3a0cAkPrNsjduYHcUKQE4IjJhiFj_jqgVP8laHj0NQkaiWwyXI-POdilZQOwrdUMdEUHWaof6mlkgb3y6vxzRyTSmi1Y-MOXkat8OfHAWQqUpQzJaFipu7usVGQZvakcfD2wegjyxpHLQnK"/>
+</div>
+<div class="flex-1">
+<h4 class="font-h3 text-h3 text-on-surface leading-tight mb-1">Banana</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Yesterday</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="px-3 py-1 rounded-full bg-[#E6F4EA] text-[#137333] font-label-caps text-label-caps flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Safe
+                        </span>
+</div>
+</div>
+<!-- Recent Item 2: Warning -->
+<div class="bg-surface-container-lowest rounded-card p-md flex items-center gap-md shadow-[0px_2px_4px_rgba(31,41,55,0.04)] border border-surface-variant">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-surface-container-low">
+<img alt="Mixed Nuts" class="w-full h-full object-cover" data-alt="A small bowl of salted mixed nuts on a pristine white background. High-key lighting, soft shadows, focusing on the texture of the nuts. Clean, modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHkooTGCKbbR8TxJafWUUGtqSeb74VrUBhcadByvpngDIuLmy3k34Qp_qsntgJG-SeEMJELKXG9B-sZ-AVCqeJv3uw7rLvBZHDAp0KXM0wuL3op9R5e16VmgPgzzCCXipxc7hKQBBolePBalNvq05_zkjyoVzhMGT-cNMRnP8eOPFCebl5FB7wE3CNaAyqGw67FtY_rO_sbznkHz1MAc7GOYI5amY7YnZQOO9o-4S9ZYQnLbZGtQ2Q"/>
+</div>
+<div class="flex-1">
+<h4 class="font-h3 text-h3 text-on-surface leading-tight mb-1">Mixed Nuts</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Oct 12</p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="px-3 py-1 rounded-full bg-error-container text-on-error-container font-label-caps text-label-caps flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span> High Sodium
+                        </span>
+</div>
+</div>
+</div>
+</section>
+<!-- What can I eat? -->
+<section class="mb-xxl">
+<div class="bg-secondary-container rounded-card p-lg relative overflow-hidden">
+<div class="absolute right-0 top-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+<div class="relative z-10">
+<h2 class="font-h2 text-h2 text-on-secondary-container mb-2">What can I eat?</h2>
+<p class="font-body-md text-body-md text-on-secondary-container/80 mb-lg max-w-[200px]">Find safe recipes based on ingredients you have at home.</p>
+<button class="bg-on-secondary-container text-secondary-container px-lg py-3 rounded-button font-body-sm font-semibold hover:opacity-90 active:scale-95 transition-all w-max inline-flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">kitchen</span>
+                        Browse pantry
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface shadow-[0px_-2px_4px_rgba(31,41,55,0.04)] fixed bottom-0 left-0 w-full h-[80px] flex justify-around items-center px-lg pb-safe md:hidden z-50 rounded-t-xl">
+<!-- Home (Active) -->
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-2 active:scale-90 transition-transform duration-200 hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-caps text-label-caps mt-1">Home</span>
+</button>
+<!-- History (Inactive) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 active:scale-90 transition-transform duration-200 hover:bg-surface-container-high transition-colors rounded-full">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">history</span>
+<span class="font-label-caps text-label-caps mt-1">History</span>
+</button>
+<!-- Profile (Inactive) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 active:scale-90 transition-transform duration-200 hover:bg-surface-container-high transition-colors rounded-full">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">person</span>
+<span class="font-label-caps text-label-caps mt-1">Profile</span>
+</button>
+</nav>
+</body></html>
