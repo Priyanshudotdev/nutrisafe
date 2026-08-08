@@ -1,7 +1,7 @@
-import React from 'react';
-import { Text, View } from 'react-native';
+import React from "react";
+import { Text, View } from "react-native";
 
-import { EditScreenInfo } from './EditScreenInfo';
+import { EditScreenInfo } from "./EditScreenInfo";
 
 interface ScreenContentProps {
   title: string;
