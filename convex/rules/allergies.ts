@@ -1,6 +1,10 @@
 import { RuleResult } from "./types";
 
-export function evaluateAllergies(foodName: string, aliases: string[] = [], userAllergies: string[] = []): RuleResult {
+export function evaluateAllergies(
+  foodName: string,
+  aliases: string[] = [],
+  userAllergies: string[] = []
+): RuleResult {
   const factors: RuleResult["factors"] = [];
   const searchText = [foodName, ...aliases].join(" ").toLowerCase();
 
@@ -9,7 +13,7 @@ export function evaluateAllergies(foodName: string, aliases: string[] = [], user
       factors.push({
         nutrient: allergy,
         reason: `Matches your reported allergy: '${allergy}'.`,
-        severity: "high"
+        severity: "high",
       });
     }
   }
@@ -19,6 +23,6 @@ export function evaluateAllergies(foodName: string, aliases: string[] = [], user
     ruleVersion: "allergy-v0",
     confidence: "high",
     verdict: factors.length > 0 ? "not_recommended" : "safe",
-    factors
+    factors,
   };
 }

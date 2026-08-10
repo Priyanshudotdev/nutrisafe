@@ -1,6 +1,11 @@
-import { action } from "../_generated/server";
+import { action, env } from "../_generated/server";
 import { v } from "convex/values";
-import { nutritionValidator, ruleResultValidator, safetyVerdictValidator } from "../validators";
+import {
+  aiResponseValidator,
+  nutritionValidator,
+  ruleResultValidator,
+  safetyVerdictValidator,
+} from "../validators";
 
 const SYSTEM_PROMPT = `You are the explanation layer of a personalized food safety application.
 
@@ -33,8 +38,9 @@ export const generate = action({
     overallVerdict: safetyVerdictValidator,
     alternativeCandidates: v.array(v.any()),
   },
+  returns: aiResponseValidator,
   handler: async (ctx, args) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY is not set.");
     }
@@ -88,7 +94,7 @@ Generate the explanation adhering strictly to the system rules. Respond with JSO
 
     const data = await response.json();
     const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
+
     if (!candidateText) {
       throw new Error("Invalid response structure from Gemini API");
     }
@@ -96,7 +102,7 @@ Generate the explanation adhering strictly to the system rules. Respond with JSO
     let parsed: any;
     try {
       parsed = JSON.parse(candidateText);
-    } catch (e) {
+    } catch {
       throw new Error("Failed to parse AI JSON response: " + candidateText);
     }
 
@@ -107,7 +113,9 @@ Generate the explanation adhering strictly to the system rules. Respond with JSO
       typeof parsed.why !== "string" ||
       !Array.isArray(parsed.healthRisks) ||
       !parsed.healthRisks.every((r: any) => typeof r === "string") ||
-      (parsed.portionAdvice !== undefined && parsed.portionAdvice !== null && typeof parsed.portionAdvice !== "string") ||
+      (parsed.portionAdvice !== undefined &&
+        parsed.portionAdvice !== null &&
+        typeof parsed.portionAdvice !== "string") ||
       typeof parsed.disclaimer !== "string"
     ) {
       throw new Error("AI response failed schema validation. Output: " + candidateText);

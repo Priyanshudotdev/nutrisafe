@@ -4,6 +4,7 @@ import { v } from "convex/values";
 export const create = mutation({
   args: {
     name: v.string(),
+    age: v.optional(v.number()),
     dateOfBirth: v.optional(v.string()),
     gender: v.optional(v.string()),
     height: v.optional(v.number()),
@@ -20,6 +21,7 @@ export const create = mutation({
     allergies: v.array(v.string()),
     dietaryPreferences: v.array(v.string()),
   },
+  returns: v.id("patientProfiles"),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
 
@@ -30,7 +32,7 @@ export const create = mutation({
     // Check if profile already exists
     const existing = await ctx.db
       .query("patientProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
 
     if (existing) {
@@ -38,8 +40,9 @@ export const create = mutation({
     }
 
     const profileId = await ctx.db.insert("patientProfiles", {
-      userId: identity.subject,
+      userId: identity.tokenIdentifier,
       name: args.name,
+      age: args.age,
       dateOfBirth: args.dateOfBirth,
       gender: args.gender,
       height: args.height,

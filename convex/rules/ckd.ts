@@ -14,7 +14,7 @@ export function evaluateCKD(
   userWeightKg?: number
 ): RuleResult {
   const factors: RuleResult["factors"] = [];
-  
+
   const potassium = nutrition.potassium ?? 0;
   const phosphorus = nutrition.phosphorus ?? 0;
   const sodium = nutrition.sodium ?? 0;
@@ -23,11 +23,16 @@ export function evaluateCKD(
   let requiresPersonalizedGuidance = false;
 
   // 1. Sodium (Universally restricted in CKD, typically <2300mg/day)
-  if (sodium >= (ckdDetails?.sodiumLimit ? ckdDetails.sodiumLimit / 5 : CKD_BASE_THRESHOLDS.highSodium)) {
+  if (
+    sodium >=
+    (ckdDetails?.sodiumLimit ? ckdDetails.sodiumLimit / 5 : CKD_BASE_THRESHOLDS.highSodium)
+  ) {
     factors.push({
-      nutrient: "sodium", value: sodium,
+      nutrient: "sodium",
+      value: sodium,
       reason: `High sodium (${sodium}mg). NKF advises limiting sodium to manage blood pressure and fluid retention in CKD.`,
-      severity: "high", isPositive: false
+      severity: "high",
+      isPositive: false,
     });
   }
 
@@ -35,38 +40,50 @@ export function evaluateCKD(
   if (ckdDetails?.potassiumStatus === "high") {
     if (potassium >= CKD_BASE_THRESHOLDS.highPotassium) {
       factors.push({
-        nutrient: "potassium", value: potassium,
+        nutrient: "potassium",
+        value: potassium,
         reason: `High potassium (${potassium}mg). Your profile indicates a need for potassium restriction.`,
-        severity: "high", isPositive: false
+        severity: "high",
+        isPositive: false,
       });
     }
   } else if (!ckdDetails?.potassiumStatus) {
     requiresPersonalizedGuidance = true;
     if (potassium >= CKD_BASE_THRESHOLDS.highPotassium) {
       factors.push({
-        nutrient: "potassium", value: potassium,
+        nutrient: "potassium",
+        value: potassium,
         reason: `High potassium (${potassium}mg). Whether this is safe depends entirely on your current lab results.`,
-        severity: "medium", isPositive: false
+        severity: "medium",
+        isPositive: false,
       });
     }
   }
 
   // 3. Phosphorus (Restricted in advanced CKD or if labs are high)
-  if (ckdDetails?.phosphorusStatus === "high" || ckdDetails?.stage === "G4" || ckdDetails?.stage === "G5") {
+  if (
+    ckdDetails?.phosphorusStatus === "high" ||
+    ckdDetails?.stage === "G4" ||
+    ckdDetails?.stage === "G5"
+  ) {
     if (phosphorus >= CKD_BASE_THRESHOLDS.highPhosphorus) {
       factors.push({
-        nutrient: "phosphorus", value: phosphorus,
+        nutrient: "phosphorus",
+        value: phosphorus,
         reason: `High phosphorus (${phosphorus}mg). Needs restriction in advanced CKD or when labs indicate high levels.`,
-        severity: "high", isPositive: false
+        severity: "high",
+        isPositive: false,
       });
     }
   } else if (!ckdDetails?.phosphorusStatus) {
     requiresPersonalizedGuidance = true;
     if (phosphorus >= CKD_BASE_THRESHOLDS.highPhosphorus) {
       factors.push({
-        nutrient: "phosphorus", value: phosphorus,
+        nutrient: "phosphorus",
+        value: phosphorus,
         reason: `High phosphorus (${phosphorus}mg). Depending on your stage, this may require a phosphate binder.`,
-        severity: "medium", isPositive: false
+        severity: "medium",
+        isPositive: false,
       });
     }
   }
@@ -75,17 +92,26 @@ export function evaluateCKD(
   if (ckdDetails?.dialysis) {
     if (protein >= CKD_BASE_THRESHOLDS.highProtein) {
       factors.push({
-        nutrient: "protein", value: protein,
+        nutrient: "protein",
+        value: protein,
         reason: `High protein (${protein}g). Dialysis patients generally require higher protein intake to replace losses.`,
-        severity: "low", isPositive: true
+        severity: "low",
+        isPositive: true,
       });
     }
-  } else if (ckdDetails?.stage === "G3a" || ckdDetails?.stage === "G3b" || ckdDetails?.stage === "G4" || ckdDetails?.stage === "G5") {
+  } else if (
+    ckdDetails?.stage === "G3a" ||
+    ckdDetails?.stage === "G3b" ||
+    ckdDetails?.stage === "G4" ||
+    ckdDetails?.stage === "G5"
+  ) {
     if (protein >= CKD_BASE_THRESHOLDS.highProtein) {
       factors.push({
-        nutrient: "protein", value: protein,
+        nutrient: "protein",
+        value: protein,
         reason: `High protein (${protein}g). KDIGO suggests protein restriction (e.g., 0.55-0.8g/kg/day) to slow CKD progression.`,
-        severity: "high", isPositive: false
+        severity: "high",
+        isPositive: false,
       });
     }
   } else if (!ckdDetails?.stage) {
@@ -94,23 +120,27 @@ export function evaluateCKD(
 
   // Determine verdict based on factors
   let verdict: RuleResult["verdict"] = "safe";
-  if (factors.some(f => f.severity === "high")) {
+  if (factors.some((f) => f.severity === "high")) {
     verdict = "not_recommended";
-  } else if (factors.some(f => f.severity === "medium")) {
+  } else if (factors.some((f) => f.severity === "medium")) {
     verdict = "moderation";
   }
 
   // Soften the blow if they just lack personalization but don't have dangerous universal levels
-  if (requiresPersonalizedGuidance && verdict === "not_recommended" && sodium < CKD_BASE_THRESHOLDS.highSodium) {
-    verdict = "moderation"; 
+  if (
+    requiresPersonalizedGuidance &&
+    verdict === "not_recommended" &&
+    sodium < CKD_BASE_THRESHOLDS.highSodium
+  ) {
+    verdict = "moderation";
   }
 
-  return { 
-    condition: "ckd", 
+  return {
+    condition: "ckd",
     ruleVersion: "ckd-v1",
     confidence: ckdDetails ? "high" : "low",
-    verdict, 
+    verdict,
     factors,
-    requiresPersonalizedGuidance
+    requiresPersonalizedGuidance,
   };
 }

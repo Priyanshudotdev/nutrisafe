@@ -8,11 +8,14 @@ export const find = internalQuery({
     profile: v.any(),
     limit: v.optional(v.number()),
   },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const originalFood = await ctx.db.get(args.foodId);
     if (!originalFood) throw new Error("Original food not found.");
 
-    const allFoods = await ctx.db.query("foods").collect();
+    // Keep alternative ranking bounded so a growing food catalog cannot exceed
+    // Convex transaction limits. The caller only needs a small candidate pool.
+    const allFoods = await ctx.db.query("foods").withIndex("by_name").take(500);
 
     const ranked = rankAlternatives(originalFood as any, allFoods as any, args.profile);
 

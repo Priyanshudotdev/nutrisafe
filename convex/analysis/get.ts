@@ -5,6 +5,7 @@ export const get = query({
   args: {
     id: v.id("foodAnalyses"),
   },
+  returns: v.any(),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
 
@@ -18,7 +19,7 @@ export const get = query({
       throw new Error("Analysis not found");
     }
 
-    if (analysis.userId !== identity.subject) {
+    if (analysis.userId !== identity.tokenIdentifier) {
       throw new Error("Unauthorized");
     }
 

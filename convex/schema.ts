@@ -37,6 +37,7 @@ export default defineSchema({
   patientProfiles: defineTable({
     userId: v.string(), // Links to Better Auth user ID
     name: v.string(),
+    age: v.optional(v.number()),
     dateOfBirth: v.optional(v.string()), // YYYY-MM-DD
     gender: v.optional(v.string()),
     height: v.optional(v.number()), // in cm
@@ -48,13 +49,23 @@ export default defineSchema({
     additionalNotes: v.optional(v.string()),
     ckdDetails: v.optional(
       v.object({
-        stage: v.optional(v.union(
-          v.literal("G1"), v.literal("G2"), v.literal("G3a"), 
-          v.literal("G3b"), v.literal("G4"), v.literal("G5")
-        )),
+        stage: v.optional(
+          v.union(
+            v.literal("G1"),
+            v.literal("G2"),
+            v.literal("G3a"),
+            v.literal("G3b"),
+            v.literal("G4"),
+            v.literal("G5")
+          )
+        ),
         dialysis: v.optional(v.boolean()),
-        potassiumStatus: v.optional(v.union(v.literal("normal"), v.literal("high"), v.literal("low"))),
-        phosphorusStatus: v.optional(v.union(v.literal("normal"), v.literal("high"), v.literal("low"))),
+        potassiumStatus: v.optional(
+          v.union(v.literal("normal"), v.literal("high"), v.literal("low"))
+        ),
+        phosphorusStatus: v.optional(
+          v.union(v.literal("normal"), v.literal("high"), v.literal("low"))
+        ),
         sodiumLimit: v.optional(v.number()),
         proteinTarget: v.optional(v.number()),
       })
@@ -97,7 +108,7 @@ export default defineSchema({
     name: v.string(),
     aliases: v.optional(v.array(v.string())),
     category: v.optional(v.string()),
-    foodType: v.optional(v.string()), 
+    foodType: v.optional(v.string()),
     source: v.string(),
 
     nutrition: v.object({

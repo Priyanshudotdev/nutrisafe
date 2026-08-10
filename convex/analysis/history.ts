@@ -5,6 +5,7 @@ export const getHistory = query({
   args: {
     limit: v.optional(v.number()),
   },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
 
@@ -14,7 +15,7 @@ export const getHistory = query({
 
     const analyses = await ctx.db
       .query("foodAnalyses")
-      .withIndex("by_user_createdAt", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user_createdAt", (q) => q.eq("userId", identity.tokenIdentifier))
       .order("desc")
       .take(args.limit ?? 20);
 

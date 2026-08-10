@@ -10,7 +10,7 @@ export const explain = action({
   handler: async (ctx, args) => {
     // TODO: Implement external API call to Gemini or OpenAI
     // const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_API_KEY`, ...);
-    
+
     // Returning dummy explanation for now
     return {
       summary: `Based on your profile, ${args.foodName} is considered ${args.verdict}.`,
@@ -19,8 +19,8 @@ export const explain = action({
       portionAdvice: "Keep to half a serving.",
       ai: {
         provider: "gemini",
-        model: "gemini-1.5-flash"
-      }
+        model: "gemini-1.5-flash",
+      },
     };
   },
 });

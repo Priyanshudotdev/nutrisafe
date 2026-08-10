@@ -15,7 +15,7 @@ export const DIABETES_THRESHOLDS = {
 
 export function evaluateDiabetes(nutrition: Partial<NutritionData>): RuleResult {
   const factors: RuleResult["factors"] = [];
-  
+
   const freeSugar = nutrition.freeSugar ?? 0;
   const carbs = nutrition.carbohydrates ?? 0;
   const fibre = nutrition.fibre ?? 0;
@@ -27,16 +27,20 @@ export function evaluateDiabetes(nutrition: Partial<NutritionData>): RuleResult 
   // 1. Free Sugar Check
   if (freeSugar >= DIABETES_THRESHOLDS.highFreeSugar) {
     factors.push({
-      nutrient: "freeSugar", value: freeSugar,
+      nutrient: "freeSugar",
+      value: freeSugar,
       reason: `Contains ${freeSugar}g of free sugar. ADA guidelines advise minimizing added sugars.`,
-      severity: "high", isPositive: false
+      severity: "high",
+      isPositive: false,
     });
     negativeScore += 3;
   } else if (freeSugar >= DIABETES_THRESHOLDS.moderateFreeSugar) {
     factors.push({
-      nutrient: "freeSugar", value: freeSugar,
+      nutrient: "freeSugar",
+      value: freeSugar,
       reason: `Moderate free sugar (${freeSugar}g). Consume in moderation.`,
-      severity: "medium", isPositive: false
+      severity: "medium",
+      isPositive: false,
     });
     negativeScore += 1;
   }
@@ -45,16 +49,20 @@ export function evaluateDiabetes(nutrition: Partial<NutritionData>): RuleResult 
   if (carbs >= DIABETES_THRESHOLDS.highCarbs) {
     if (fibre < DIABETES_THRESHOLDS.goodFibre) {
       factors.push({
-        nutrient: "carbohydrates", value: carbs,
+        nutrient: "carbohydrates",
+        value: carbs,
         reason: `High carbohydrate density (${carbs}g) with low fiber (${fibre}g). May cause rapid glucose spikes.`,
-        severity: "high", isPositive: false
+        severity: "high",
+        isPositive: false,
       });
       negativeScore += 2;
     } else {
       factors.push({
-        nutrient: "carbohydrates", value: carbs,
+        nutrient: "carbohydrates",
+        value: carbs,
         reason: `High carbohydrates (${carbs}g), but contains fiber. Portion control advised.`,
-        severity: "medium", isPositive: false
+        severity: "medium",
+        isPositive: false,
       });
       negativeScore += 1;
     }
@@ -63,9 +71,11 @@ export function evaluateDiabetes(nutrition: Partial<NutritionData>): RuleResult 
   // 3. Positive Fiber Check
   if (fibre >= DIABETES_THRESHOLDS.goodFibre) {
     factors.push({
-      nutrient: "fibre", value: fibre,
+      nutrient: "fibre",
+      value: fibre,
       reason: `Good source of fiber (${fibre}g), which helps stabilize blood sugar according to ADA guidelines.`,
-      severity: "medium", isPositive: true
+      severity: "medium",
+      isPositive: true,
     });
     positiveScore += 2;
   }
@@ -73,9 +83,11 @@ export function evaluateDiabetes(nutrition: Partial<NutritionData>): RuleResult 
   // 4. Saturated Fat Check (Secondary warning)
   if (satFat >= DIABETES_THRESHOLDS.highSaturatedFat) {
     factors.push({
-      nutrient: "saturatedFat", value: satFat,
+      nutrient: "saturatedFat",
+      value: satFat,
       reason: `High saturated fat (${satFat}g). ADA recommends limiting to manage cardiovascular risk.`,
-      severity: "medium", isPositive: false
+      severity: "medium",
+      isPositive: false,
     });
     negativeScore += 1;
   }
@@ -91,11 +103,11 @@ export function evaluateDiabetes(nutrition: Partial<NutritionData>): RuleResult 
     verdict = "moderation";
   }
 
-  return { 
-    condition: "diabetes", 
+  return {
+    condition: "diabetes",
     ruleVersion: "diabetes-v1",
     confidence: "high",
-    verdict, 
-    factors 
+    verdict,
+    factors,
   };
 }

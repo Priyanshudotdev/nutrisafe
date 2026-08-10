@@ -1,25 +1,45 @@
-import { action } from "../_generated/server";
+import { action, env } from "../_generated/server";
 import { v } from "convex/values";
 import { api } from "../_generated/api";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { Id } from "../_generated/dataModel";
+
+type FoodSearchResult = {
+  _id: Id<"foods">;
+  name: string;
+  source: string;
+  category?: string;
+};
 
 export const identify = action({
   args: {
     imageBase64: v.string(),
     mimeType: v.string(), // e.g. "image/jpeg"
   },
-  handler: async (ctx, args) => {
+  returns: v.object({
+    identifiedName: v.string(),
+    foodId: v.union(v.id("foods"), v.null()),
+    matchFound: v.boolean(),
+  }),
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    identifiedName: string;
+    foodId: Id<"foods"> | null;
+    matchFound: boolean;
+  }> => {
     // 1. Authenticate user
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY is not set.");
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    
+
     // gemini-1.5-flash supports multimodality and is fast
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -41,14 +61,17 @@ Do not include markdown blocks, backticks, or any other text.`;
       const result = await model.generateContent([prompt, ...imageParts]);
       const response = await result.response;
       let text = response.text().trim();
-      
+
       // Clean up potential markdown formatting from LLM
-      text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-      
+      text = text
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
       let parsed;
       try {
         parsed = JSON.parse(text);
-      } catch (e) {
+      } catch {
         throw new Error("Failed to parse Gemini response: " + text);
       }
 
@@ -60,7 +83,7 @@ Do not include markdown blocks, backticks, or any other text.`;
 
       // 3. Search our database for this food name
       // We leverage the existing search query to find the closest match
-      const searchResults = await ctx.runQuery(api.nutrition.search.search, {
+      const searchResults: FoodSearchResult[] = await ctx.runQuery(api.nutrition.search.search, {
         foodName: identifiedName,
       });
 

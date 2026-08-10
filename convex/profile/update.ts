@@ -4,6 +4,7 @@ import { v } from "convex/values";
 export const update = mutation({
   args: {
     name: v.optional(v.string()),
+    age: v.optional(v.number()),
     dateOfBirth: v.optional(v.string()),
     gender: v.optional(v.string()),
     height: v.optional(v.number()),
@@ -32,6 +33,7 @@ export const update = mutation({
     dietaryPreferences: v.optional(v.array(v.string())),
     additionalNotes: v.optional(v.string()),
   },
+  returns: v.id("patientProfiles"),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
 
@@ -41,7 +43,7 @@ export const update = mutation({
 
     const profile = await ctx.db
       .query("patientProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
 
     if (!profile) {

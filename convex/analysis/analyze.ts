@@ -8,12 +8,11 @@ export const analyze = action({
   args: {
     foodId: v.id("foods"),
   },
+  returns: v.any(),
   handler: async (ctx, args) => {
     // 1. Authenticate user
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
-    const userId = identity.subject;
-
     // 6. Save analysis as "processing"
     const analysisId = await ctx.runMutation(internal.analysis.analyze.createAnalysis, {
       foodId: args.foodId,
@@ -42,9 +41,9 @@ export const analyze = action({
       });
 
       // Determine overall verdict completely separated from AI
-      if (ruleResults.some(r => r.verdict === "not_recommended")) {
+      if (ruleResults.some((r) => r.verdict === "not_recommended")) {
         overallVerdict = "not_recommended";
-      } else if (ruleResults.some(r => r.verdict === "moderation")) {
+      } else if (ruleResults.some((r) => r.verdict === "moderation")) {
         overallVerdict = "moderation";
       }
     } catch (error: any) {
@@ -71,7 +70,7 @@ export const analyze = action({
     // 7. Generate AI Explanation
     let explanation = null;
     let explanationStatus = "completed";
-    
+
     let aiResponse: any = null;
     try {
       aiResponse = await ctx.runAction(api.ai.explain.generate, {
@@ -100,7 +99,7 @@ export const analyze = action({
     if (aiResponse) {
       explanation = {
         ...aiResponse,
-        alternatives: alternativeCandidates.map(c => c.foodName),
+        alternatives: alternativeCandidates.map((c) => c.foodName),
         basedOnRules,
       };
     }
@@ -135,13 +134,14 @@ export const createAnalysis = internalMutation({
   args: {
     foodId: v.id("foods"),
   },
+  returns: v.id("foodAnalyses"),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     const food = await ctx.db.get(args.foodId);
     return await ctx.db.insert("foodAnalyses", {
-      userId: identity.subject,
+      userId: identity.tokenIdentifier,
       foodName: food ? food.name : "Unknown",
       nutrition: {},
       conditions: [],
@@ -162,12 +162,13 @@ export const completeAnalysis = internalMutation({
     nutritionSnapshot: nutritionValidator,
     conditionsSnapshot: v.array(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     const analysis = await ctx.db.get(args.analysisId);
-    if (!analysis || analysis.userId !== identity.subject) {
+    if (!analysis || analysis.userId !== identity.tokenIdentifier) {
       throw new Error("Analysis not found or unauthorized");
     }
 
@@ -180,6 +181,7 @@ export const completeAnalysis = internalMutation({
       nutrition: args.nutritionSnapshot, // Historical snapshot
       conditions: args.conditionsSnapshot, // Historical snapshot
     });
+    return null;
   },
 });
 
@@ -187,17 +189,19 @@ export const failAnalysis = internalMutation({
   args: {
     analysisId: v.id("foodAnalyses"),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
     const analysis = await ctx.db.get(args.analysisId);
-    if (!analysis || analysis.userId !== identity.subject) {
+    if (!analysis || analysis.userId !== identity.tokenIdentifier) {
       throw new Error("Analysis not found or unauthorized");
     }
 
     await ctx.db.patch(args.analysisId, {
       status: "failed",
     });
+    return null;
   },
 });

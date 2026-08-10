@@ -5,6 +5,7 @@ export const remove = mutation({
   args: {
     id: v.id("foodAnalyses"),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
 
@@ -18,10 +19,11 @@ export const remove = mutation({
       throw new Error("Analysis not found");
     }
 
-    if (analysis.userId !== identity.subject) {
+    if (analysis.userId !== identity.tokenIdentifier) {
       throw new Error("Unauthorized");
     }
 
     await ctx.db.delete(args.id);
+    return null;
   },
 });
