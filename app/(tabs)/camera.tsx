@@ -1,14 +1,24 @@
 import React, { useState } from "react";
-import { View, Text, Image, ScrollView, ActivityIndicator, Alert , TouchableOpacity, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+  Platform,
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useAction } from "convex/react";
+import { router } from "expo-router";
 import { api } from "@/convex/_generated/api";
-import { useRouter } from "expo-router";
+import { nutriSafeColors, radii, spacing, typography } from "@/components/NutriSafeTheme";
+import { MaterialIcon } from "@/components/NutriSafeComponents";
 
 export default function CameraScreen() {
-  const router = useRouter();
   const identifyFood = useAction(api.ai.identify.identify);
-  
+
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [identifying, setIdentifying] = useState(false);
   const [identifiedResult, setIdentifiedResult] = useState<any>(null);
@@ -49,10 +59,9 @@ export default function CameraScreen() {
     setIdentifying(true);
     setIdentifiedResult(null);
     try {
-      // Assuming a generic jpeg mime type from image picker base64
-      const result = await identifyFood({ 
-        imageBase64: base64String, 
-        mimeType: "image/jpeg" 
+      const result = await identifyFood({
+        imageBase64: base64String,
+        mimeType: "image/jpeg",
       });
       setIdentifiedResult(result);
     } catch (e: any) {
@@ -63,88 +72,316 @@ export default function CameraScreen() {
     }
   };
 
-  return (
-    <View className="flex-1 bg-background p-6">
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text className="text-3xl font-extrabold text-foreground mb-2 mt-4">
-          Scan Food
-        </Text>
-        <Text className="text-default-500 mb-8">
-          Take a photo of any food to instantly identify and analyze it.
-        </Text>
+  const handleAnalyze = () => {
+    if (identifiedResult?.foodId) {
+      router.push(`/meal-planner/results?foodIds=${identifiedResult.foodId}`);
+    }
+  };
 
-        <View className="flex flex-col gap-4 mb-8">
-          <TouchableOpacity 
-            size="lg" 
-            color="primary" 
+  return (
+    <View style={{ flex: 1, backgroundColor: nutriSafeColors.background }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        {/* Header */}
+        <View
+          style={{
+            backgroundColor: nutriSafeColors.primary,
+            paddingHorizontal: spacing.lg,
+            paddingVertical: spacing.xl,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: spacing.sm,
+            }}
+          >
+            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: spacing.md }}>
+              <MaterialIcon
+                name="arrow_back"
+                size={24}
+                color={nutriSafeColors.onPrimary}
+              />
+            </TouchableOpacity>
+            <Text style={typography.h2} className="text-on-primary">
+              Scan Food
+            </Text>
+          </View>
+          <Text style={typography.bodyMd} className="text-on-primary opacity-90">
+            Identify and analyze any food instantly
+          </Text>
+        </View>
+
+        {/* Instructions */}
+        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+          <View
+            style={{
+              backgroundColor: nutriSafeColors.secondaryContainer,
+              borderRadius: radii.xl,
+              padding: spacing.lg,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: `${nutriSafeColors.onSecondaryContainer}1a`,
+                borderRadius: radii.full,
+                padding: spacing.sm,
+                width: 40,
+                height: 40,
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: spacing.md,
+              }}
+            >
+              <MaterialIcon
+                name="camera_alt"
+                size={24}
+                color={nutriSafeColors.onSecondaryContainer}
+                filled
+              />
+            </View>
+            <Text style={typography.h3} className="text-on-secondary-container mb-sm font-semibold">
+              How it works
+            </Text>
+            <Text style={typography.bodyMd} className="text-on-secondary-container opacity-90 mb-sm">
+              1. Take a photo of any food
+            </Text>
+            <Text style={typography.bodyMd} className="text-on-secondary-container opacity-90 mb-sm">
+              2. Our AI identifies the food
+            </Text>
+            <Text style={typography.bodyMd} className="text-on-secondary-container opacity-90">
+              3. We analyze medical compatibility
+            </Text>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View
+          style={{
+            paddingHorizontal: spacing.lg,
+            marginTop: spacing.lg,
+            gap: spacing.sm,
+          }}
+        >
+          <TouchableOpacity
             onPress={() => requestPermissionAndScan("camera")}
-            className="shadow-lg shadow-primary/20"
+            style={{
+              backgroundColor: nutriSafeColors.primary,
+              borderRadius: radii.lg,
+              padding: spacing.lg,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: spacing.sm,
+            }}
           >
-            Take a Photo
+            <MaterialIcon name="camera_alt" size={24} color={nutriSafeColors.onPrimary} filled />
+            <Text style={typography.bodyMd} className="text-on-primary font-semibold">
+              Take a Photo
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            size="lg" 
-            variant="flat" 
+
+          <TouchableOpacity
             onPress={() => requestPermissionAndScan("gallery")}
+            style={{
+              backgroundColor: nutriSafeColors.surfaceContainer,
+              borderRadius: radii.lg,
+              padding: spacing.lg,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: spacing.sm,
+            }}
           >
-            Upload from Gallery
+            <MaterialIcon
+              name="photo_library"
+              size={24}
+              color={nutriSafeColors.onSurface}
+            />
+            <Text style={typography.bodyMd} className="text-on-surface font-semibold">
+              Upload from Gallery
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {imageUri && (
-          <View className="items-center mb-6">
-            <Image 
-              source={{ uri: imageUri }} 
-              className="w-64 h-64 rounded-3xl"
-              resizeMode="cover"
-            />
+        {/* Image Preview */}
+        {imageUri && !identifiedResult && !identifying && (
+          <View
+            style={{
+              marginHorizontal: spacing.lg,
+              marginTop: spacing.lg,
+              alignItems: "center",
+            }}
+          >
+            <View
+              style={{
+                width: 256,
+                height: 256,
+                borderRadius: radii.xl,
+                overflow: "hidden",
+                borderWidth: 2,
+                borderColor: nutriSafeColors.primary,
+              }}
+            >
+              <Image
+                source={{ uri: imageUri }}
+                style={{ width: "100%", height: "100%" }}
+                resizeMode="cover"
+              />
+            </View>
+            <Text style={typography.bodyMd} className="text-on-surface-variant mt-md">
+              Ready to identify
+            </Text>
           </View>
         )}
 
+        {/* Identifying State */}
         {identifying && (
-          <View className="items-center justify-center p-6 bg-content1 rounded-2xl border border-default-100 shadow-sm mt-4">
-            <ActivityIndicator size="large" color="#4f46e5" />
-            <Text className="mt-4 text-foreground font-semibold">Vision AI is identifying food...</Text>
+          <View
+            style={{
+              marginHorizontal: spacing.lg,
+              marginTop: spacing.lg,
+              backgroundColor: nutriSafeColors.surfaceContainerLowest,
+              borderRadius: radii.xl,
+              padding: spacing.lg,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: nutriSafeColors.outlineVariant,
+            }}
+          >
+            <ActivityIndicator size="large" color={nutriSafeColors.primary} />
+            <Text
+              style={typography.bodyMd}
+              className="text-on-surface mt-md font-semibold"
+            >
+              Vision AI is identifying food...
+            </Text>
+            <Text style={typography.bodySm} className="text-on-surface-variant mt-xs">
+              Checking clinical database
+            </Text>
           </View>
         )}
 
+        {/* Identified Result */}
         {identifiedResult && !identifying && (
-          <View className="p-6 bg-content1 rounded-2xl shadow-lg border border-default-200 items-center">
-            <Text className="text-default-500 mb-1">Identified as:</Text>
-            <Text className="text-2xl font-black text-foreground mb-4">
+          <View
+            style={{
+              marginHorizontal: spacing.lg,
+              marginTop: spacing.lg,
+              backgroundColor: nutriSafeColors.surfaceContainerLowest,
+              borderRadius: radii.xl,
+              padding: spacing.lg,
+              borderWidth: 1,
+              borderColor: nutriSafeColors.outlineVariant,
+            }}
+          >
+            <Text style={typography.labelCaps} className="text-on-surface-variant mb-sm">
+              Identified as
+            </Text>
+            <Text
+              style={typography.h1Mobile}
+              className="text-on-surface font-bold mb-lg"
+            >
               {identifiedResult.identifiedName}
             </Text>
 
             {identifiedResult.matchFound ? (
-              <View className="w-full flex flex-col gap-3">
-                <View className="bg-success/20 p-3 rounded-xl mb-2 items-center">
-                  <Text className="text-success-700 font-bold">Match found in database!</Text>
+              <View
+                style={{
+                  backgroundColor: `${nutriSafeColors.primaryContainer}20`,
+                  borderRadius: radii.lg,
+                  padding: spacing.md,
+                  marginBottom: spacing.lg,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: spacing.sm,
+                }}
+              >
+                <MaterialIcon
+                  name="check_circle"
+                  size={24}
+                  color={nutriSafeColors.onPrimaryContainer}
+                  filled
+                />
+                <View>
+                  <Text style={typography.bodyMd} className="text-on-primary-container font-semibold">
+                    Match found!
+                  </Text>
+                  <Text style={typography.bodySm} className="text-on-primary-container">
+                    Food exists in database
+                  </Text>
                 </View>
-                <TouchableOpacity className="bg-primary w-full items-center justify-center p-4 rounded-xl"
-                  size="lg"
-                  onPress={() => {
-                    Alert.alert("Analyze", `Food ID: ${identifiedResult.foodId}`);
-                  }}
-                >
-                  <Text className="text-white font-bold">Analyze Medical Compatibility</Text>
-                </TouchableOpacity>
               </View>
             ) : (
-              <View className="w-full bg-danger/10 p-4 rounded-xl items-center">
-                <Text className="text-danger-700 font-bold mb-1">No exact match found.</Text>
-                <Text className="text-danger-600 text-sm text-center">
-                  We identified the food, but we don&apos;t have its verified nutritional profile in our local clinical database yet.
+              <View
+                style={{
+                  backgroundColor: `${nutriSafeColors.errorContainer}1a`,
+                  borderRadius: radii.lg,
+                  padding: spacing.md,
+                  marginBottom: spacing.lg,
+                  borderWidth: 1,
+                  borderColor: `${nutriSafeColors.error}30`,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: spacing.sm,
+                    marginBottom: spacing.sm,
+                  }}
+                >
+                  <MaterialIcon
+                    name="warning"
+                    size={20}
+                    color={nutriSafeColors.onErrorContainer}
+                  />
+                  <Text style={typography.labelCaps} className="text-error-container">
+                    No match found
+                  </Text>
+                </View>
+                <Text style={typography.bodySm} className="text-error-container opacity-90">
+                  We identified the food, but we don't have its verified nutritional profile in our
+                  local clinical database yet.
                 </Text>
               </View>
             )}
-            
-            <TouchableOpacity className="mt-6 w-full bg-default-200 items-center justify-center p-4 rounded-xl"
+
+            {identifiedResult.matchFound && (
+              <TouchableOpacity
+                onPress={handleAnalyze}
+                style={{
+                  backgroundColor: nutriSafeColors.primary,
+                  borderRadius: radii.lg,
+                  paddingVertical: spacing.lg,
+                  alignItems: "center",
+                  marginBottom: spacing.sm,
+                }}
+              >
+                <Text style={typography.bodyMd} className="text-on-primary font-semibold">
+                  Analyze Medical Compatibility
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
               onPress={() => {
                 setImageUri(null);
                 setIdentifiedResult(null);
               }}
+              style={{
+                backgroundColor: nutriSafeColors.outlineVariant,
+                borderRadius: radii.lg,
+                paddingVertical: spacing.lg,
+                alignItems: "center",
+              }}
             >
-              <Text className="text-default-700 font-bold">Try Another Photo</Text>
+              <Text style={typography.bodyMd} className="text-on-surface-variant font-semibold">
+                Try Another Photo
+              </Text>
             </TouchableOpacity>
           </View>
         )}

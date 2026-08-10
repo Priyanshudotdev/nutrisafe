@@ -1,12 +1,22 @@
 import React, { useState } from "react";
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Alert , TouchableOpacity, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  TextInput,
+} from "react-native";
+import { Button } from "heroui-native/button";
 import { useRouter } from "expo-router";
 import { authClient } from "@/lib/auth-client";
 
 export default function LoginScreen() {
   const router = useRouter();
   const [isSignUp, setIsSignUp] = useState(false);
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -17,7 +27,7 @@ export default function LoginScreen() {
       Alert.alert("Error", "Please fill in all fields.");
       return;
     }
-    
+
     setLoading(true);
     try {
       if (isSignUp) {
@@ -34,8 +44,15 @@ export default function LoginScreen() {
         });
         if (error) throw new Error(error.message);
       }
-      
-      // On success, redirect back to index so the state machine can route to Profile or Tabs
+
+      // Ensure the session atom and Convex provider have the new session before routing.
+      const { data: session, error: sessionError } = await authClient.getSession({
+        fetchOptions: { throw: false },
+      });
+      if (sessionError || !session?.session) {
+        throw new Error("Authentication succeeded, but the session could not be loaded.");
+      }
+
       router.replace("/");
     } catch (e: any) {
       Alert.alert("Authentication Failed", e.message);
@@ -45,16 +62,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-background"
-    >
+      className="bg-background flex-1">
       <ScrollView contentContainerClassName="flex-grow justify-center px-6 py-12">
         <View className="mb-10">
-          <Text className="text-5xl font-black text-foreground tracking-tight">
-            NutriSafe
-          </Text>
-          <Text className="text-xl text-default-500 mt-2 font-medium">
+          <Text className="text-foreground text-5xl font-black tracking-tight">NutriSafe</Text>
+          <Text className="text-default-500 mt-2 text-xl font-medium">
             {isSignUp ? "Create your account" : "Welcome back"}
           </Text>
         </View>
@@ -62,8 +76,10 @@ export default function LoginScreen() {
         <View className="flex flex-col gap-5">
           {isSignUp && (
             <View>
-              <Text className="font-bold text-foreground mb-1">Full Name</Text>
-              <TextInput className="border border-default-200 rounded-xl p-4 bg-default-50 text-foreground mt-1 mb-3" placeholderTextColor="#888"
+              <Text className="text-foreground mb-1 font-bold">Full Name</Text>
+              <TextInput
+                className="border-default-200 bg-default-50 text-foreground mb-3 mt-1 rounded-xl border p-4"
+                placeholderTextColor="#888"
                 placeholder="Enter your name"
                 value={name}
                 onChangeText={setName}
@@ -71,8 +87,10 @@ export default function LoginScreen() {
             </View>
           )}
           <View>
-            <Text className="font-bold text-foreground mb-1">Email</Text>
-            <TextInput className="border border-default-200 rounded-xl p-4 bg-default-50 text-foreground mt-1 mb-3" placeholderTextColor="#888"
+            <Text className="text-foreground mb-1 font-bold">Email</Text>
+            <TextInput
+              className="border-default-200 bg-default-50 text-foreground mb-3 mt-1 rounded-xl border p-4"
+              placeholderTextColor="#888"
               placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -81,8 +99,10 @@ export default function LoginScreen() {
             />
           </View>
           <View>
-            <Text className="font-bold text-foreground mb-1">Password</Text>
-            <TextInput className="border border-default-200 rounded-xl p-4 bg-default-50 text-foreground mt-1 mb-3" placeholderTextColor="#888"
+            <Text className="text-foreground mb-1 font-bold">Password</Text>
+            <TextInput
+              className="border-default-200 bg-default-50 text-foreground mb-3 mt-1 rounded-xl border p-4"
+              placeholderTextColor="#888"
               placeholder="Enter your password"
               secureTextEntry
               value={password}
@@ -90,20 +110,23 @@ export default function LoginScreen() {
             />
           </View>
 
-          <TouchableOpacity className="mt-4 bg-primary shadow-lg shadow-primary/30 items-center justify-center p-4 rounded-xl"
+          <Button
             size="lg"
-            onPress={handleAuth}
-            
-          >
-            <Text className="text-white font-bold">{isSignUp ? "Sign Up" : "Sign In"}</Text>
-          </TouchableOpacity>
+            variant="primary"
+            className="mt-4"
+            isDisabled={loading}
+            onPress={handleAuth}>
+            {loading ? "Please wait…" : isSignUp ? "Sign Up" : "Sign In"}
+          </Button>
 
-          <TouchableOpacity className="mt-2 bg-transparent items-center justify-center p-4 rounded-xl" 
-            onPress={() => setIsSignUp(!isSignUp)}
-            
-          >
-            <Text className="text-primary">{isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}</Text>
-          </TouchableOpacity>
+          <Pressable
+            className="mt-2 items-center py-3"
+            accessibilityRole="button"
+            onPress={() => setIsSignUp(!isSignUp)}>
+            <Text className="font-semibold" style={{ color: "#4f46e5" }}>
+              {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

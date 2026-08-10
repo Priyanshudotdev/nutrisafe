@@ -21,7 +21,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <HeroUINativeProvider>
-        <ConvexBetterAuthProvider client={convex} authClient={authClient}>
+        <ConvexBetterAuthProvider client={convex} authClient={authClient as never}>
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

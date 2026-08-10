@@ -5,7 +5,6 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
-  Platform,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useAction } from "convex/react";
@@ -61,11 +60,7 @@ export default function MealPlannerResults() {
             }}
           >
             <TouchableOpacity onPress={() => router.back()} style={{ marginRight: spacing.md }}>
-              <MaterialIcon
-                name="arrow_back"
-                size={24}
-                color={nutriSafeColors.onPrimary}
-              />
+              <MaterialIcon name="arrow_back" size={24} color={nutriSafeColors.onPrimary} />
             </TouchableOpacity>
             <Text style={typography.h2} className="text-on-primary">
               Safe Meals Found
@@ -117,12 +112,7 @@ export default function MealPlannerResults() {
               borderColor: nutriSafeColors.outlineVariant,
             }}
           >
-            <MaterialIcon
-              name="info"
-              size={64}
-              color={nutriSafeColors.onSurfaceVariant}
-              filled
-            />
+            <MaterialIcon name="info" size={64} color={nutriSafeColors.onSurfaceVariant} filled />
             <Text
               style={typography.h3}
               className="text-on-surface mt-xl mb-sm font-bold"

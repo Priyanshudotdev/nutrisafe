@@ -1,11 +1,21 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Alert , TouchableOpacity, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  TouchableOpacity,
+  TextInput,
+} from "react-native";
+import { Button } from "heroui-native/button";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Condition } from "@/convex/rules/types";
 
-const AVAILABLE_CONDITIONS: { id: Condition, label: string }[] = [
+const AVAILABLE_CONDITIONS: { id: Condition; label: string }[] = [
   { id: "diabetes", label: "Diabetes" },
   { id: "ckd", label: "Chronic Kidney Disease" },
   { id: "heart_hypertension", label: "Heart Disease / Hypertension" },
@@ -15,7 +25,7 @@ const AVAILABLE_CONDITIONS: { id: Condition, label: string }[] = [
 export default function MedicalProfileScreen() {
   const router = useRouter();
   const createProfile = useMutation(api.profile.create.create);
-  
+
   const [loading, setLoading] = useState(false);
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
@@ -25,10 +35,8 @@ export default function MedicalProfileScreen() {
   const [allergiesText, setAllergiesText] = useState("");
 
   const toggleCondition = (condition: Condition) => {
-    setSelectedConditions(prev => 
-      prev.includes(condition) 
-        ? prev.filter(c => c !== condition)
-        : [...prev, condition]
+    setSelectedConditions((prev) =>
+      prev.includes(condition) ? prev.filter((c) => c !== condition) : [...prev, condition]
     );
   };
 
@@ -37,13 +45,13 @@ export default function MedicalProfileScreen() {
       Alert.alert("Required Fields", "Please fill in your basic physical details.");
       return;
     }
-    
+
     setLoading(true);
     try {
       const allergiesList = allergiesText
         .split(",")
-        .map(s => s.trim().toLowerCase())
-        .filter(s => s.length > 0);
+        .map((s) => s.trim().toLowerCase())
+        .filter((s) => s.length > 0);
 
       // Enforce the architecture rule: if allergies exist, add food_allergy condition
       let finalConditions = [...selectedConditions];
@@ -59,6 +67,7 @@ export default function MedicalProfileScreen() {
         weight: parseInt(weight) || 70,
         conditions: finalConditions,
         allergies: allergiesList,
+        dietaryPreferences: [],
       });
 
       // Route back to index to let the state machine push us to (tabs)
@@ -71,21 +80,20 @@ export default function MedicalProfileScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-background"
-    >
+      className="bg-background flex-1">
       <ScrollView contentContainerClassName="p-6 pt-16 flex-grow">
-        <Text className="text-3xl font-extrabold text-foreground mb-2">Medical Profile</Text>
-        <Text className="text-lg text-default-500 mb-8">
-          Personalizing your safety analysis
-        </Text>
+        <Text className="text-foreground mb-2 text-3xl font-extrabold">Medical Profile</Text>
+        <Text className="text-default-500 mb-8 text-lg">Personalizing your safety analysis</Text>
 
         <View className="flex flex-col gap-6">
           <View className="flex flex-row gap-4">
             <View className="flex-1">
-              <Text className="font-bold text-foreground mb-1">Age</Text>
-              <TextInput className="border border-default-200 rounded-xl p-4 bg-default-50 text-foreground mt-1 mb-3" placeholderTextColor="#888"
+              <Text className="text-foreground mb-1 font-bold">Age</Text>
+              <TextInput
+                className="border-default-200 bg-default-50 text-foreground mb-3 mt-1 rounded-xl border p-4"
+                placeholderTextColor="#888"
                 keyboardType="numeric"
                 value={age}
                 onChangeText={setAge}
@@ -93,19 +101,23 @@ export default function MedicalProfileScreen() {
               />
             </View>
             <View className="flex-1">
-              <Text className="font-bold text-foreground mb-1">Gender</Text>
-              <TextInput className="border border-default-200 rounded-xl p-4 bg-default-50 text-foreground mt-1 mb-3" placeholderTextColor="#888"
+              <Text className="text-foreground mb-1 font-bold">Gender</Text>
+              <TextInput
+                className="border-default-200 bg-default-50 text-foreground mb-3 mt-1 rounded-xl border p-4"
+                placeholderTextColor="#888"
                 value={gender}
                 onChangeText={setGender}
                 placeholder="e.g. Male"
               />
             </View>
           </View>
-          
+
           <View className="flex flex-row gap-4">
             <View className="flex-1">
-              <Text className="font-bold text-foreground mb-1">Height (cm)</Text>
-              <TextInput className="border border-default-200 rounded-xl p-4 bg-default-50 text-foreground mt-1 mb-3" placeholderTextColor="#888"
+              <Text className="text-foreground mb-1 font-bold">Height (cm)</Text>
+              <TextInput
+                className="border-default-200 bg-default-50 text-foreground mb-3 mt-1 rounded-xl border p-4"
+                placeholderTextColor="#888"
                 keyboardType="numeric"
                 value={height}
                 onChangeText={setHeight}
@@ -113,8 +125,10 @@ export default function MedicalProfileScreen() {
               />
             </View>
             <View className="flex-1">
-              <Text className="font-bold text-foreground mb-1">Weight (kg)</Text>
-              <TextInput className="border border-default-200 rounded-xl p-4 bg-default-50 text-foreground mt-1 mb-3" placeholderTextColor="#888"
+              <Text className="text-foreground mb-1 font-bold">Weight (kg)</Text>
+              <TextInput
+                className="border-default-200 bg-default-50 text-foreground mb-3 mt-1 rounded-xl border p-4"
+                placeholderTextColor="#888"
                 keyboardType="numeric"
                 value={weight}
                 onChangeText={setWeight}
@@ -124,7 +138,7 @@ export default function MedicalProfileScreen() {
           </View>
 
           <View className="mt-2">
-            <Text className="text-lg font-bold text-foreground mb-3">Health Conditions</Text>
+            <Text className="text-foreground mb-3 text-lg font-bold">Health Conditions</Text>
             <View className="flex flex-row flex-wrap gap-2">
               {AVAILABLE_CONDITIONS.map((cond) => {
                 const isSelected = selectedConditions.includes(cond.id);
@@ -132,9 +146,14 @@ export default function MedicalProfileScreen() {
                   <TouchableOpacity
                     key={cond.id}
                     onPress={() => toggleCondition(cond.id)}
-                    className={isSelected ? "bg-primary shadow-md shadow-primary/20 px-3 py-1" : "bg-default-100 px-3 py-1"}
-                  >
-                    <Text className={isSelected ? "text-white font-medium" : "text-default-700"}>{cond.label}</Text>
+                    className={
+                      isSelected
+                        ? "bg-primary shadow-primary/20 px-3 py-1 shadow-md"
+                        : "bg-default-100 px-3 py-1"
+                    }>
+                    <Text className={isSelected ? "font-medium text-white" : "text-default-700"}>
+                      {cond.label}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -142,21 +161,25 @@ export default function MedicalProfileScreen() {
           </View>
 
           <View className="mt-2">
-            <Text className="text-lg font-bold text-foreground mb-3">Food Allergies</Text>
-            <Text className="font-bold text-foreground mb-1">Allergies</Text>
-            <TextInput className="border border-default-200 rounded-xl p-4 bg-default-50 text-foreground mt-1 mb-3" placeholderTextColor="#888"
+            <Text className="text-foreground mb-3 text-lg font-bold">Food Allergies</Text>
+            <Text className="text-foreground mb-1 font-bold">Allergies</Text>
+            <TextInput
+              className="border-default-200 bg-default-50 text-foreground mb-3 mt-1 rounded-xl border p-4"
+              placeholderTextColor="#888"
               placeholder="e.g. peanuts, milk, shellfish (comma separated)"
               value={allergiesText}
               onChangeText={setAllergiesText}
             />
           </View>
 
-          <TouchableOpacity className="mt-6 bg-primary shadow-lg shadow-primary/30 py-4 items-center justify-center p-4 rounded-xl"
-            onPress={handleSave}
-            
-          >
-            <Text className="text-white font-bold text-lg">Complete Setup</Text>
-          </TouchableOpacity>
+          <Button
+            className="mt-6"
+            size="lg"
+            variant="primary"
+            isDisabled={loading}
+            onPress={handleSave}>
+            {loading ? "Saving…" : "Complete Setup"}
+          </Button>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

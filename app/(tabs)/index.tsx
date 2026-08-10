@@ -1,14 +1,33 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  TextInput,
+  Platform,
+  Alert,
+} from "react-native";
 import { useQuery, useAction } from "convex/react";
+import { router, useRouter } from "expo-router";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { nutriSafeColors, radii, spacing, typography } from "@/components/NutriSafeTheme";
+import { MaterialIcon } from "@/components/NutriSafeComponents";
+
+type FoodSearchResult = {
+  _id: Id<"foods">;
+  name: string;
+  category?: string;
+};
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Conditionally run the query only if search term is long enough
+
   const searchResults = useQuery(
-    api.nutrition.search.search, 
+    api.nutrition.search.search,
     searchQuery.length > 2 ? { foodName: searchQuery } : "skip"
   );
 
@@ -16,7 +35,7 @@ export default function DashboardScreen() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
 
-  const handleAnalyze = async (food: any) => {
+  const handleAnalyze = async (food: FoodSearchResult) => {
     setAnalyzing(true);
     setResult(null);
     try {
@@ -24,47 +43,261 @@ export default function DashboardScreen() {
       setResult(res);
     } catch (e: any) {
       console.error(e);
-      alert(e.message);
+      Alert.alert("Error", e.message);
     } finally {
       setAnalyzing(false);
-      setSearchQuery(""); // Hide dropdown
+      setSearchQuery("");
     }
   };
 
-  return (
-    <View className="flex-1 bg-background p-6">
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text className="text-3xl font-extrabold text-foreground mb-1 mt-4">
-          NutriSafe Analysis
-        </Text>
-        <Text className="text-default-500 mb-6">
-          Find out if a food fits your medical profile.
-        </Text>
-        
-        <TextInput className="border border-default-200 rounded-xl p-4 bg-default-50 text-foreground mt-1 mb-3" placeholderTextColor="#888"
-          placeholder="Search for foods (e.g. Banana, Wheat)"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          className="shadow-sm p-3 text-lg"
-        />
+  const handleScanFood = () => {
+    router.push("/camera");
+  };
 
+  const handleMealPlanner = () => {
+    router.push("/meal-planner");
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: nutriSafeColors.background }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        {/* Header */}
+        <View
+          style={{
+            backgroundColor: nutriSafeColors.primary,
+            paddingHorizontal: spacing.lg,
+            paddingVertical: spacing.xl,
+          }}
+        >
+          <Text style={typography.h1} className="text-on-primary">
+            NutriSafe
+          </Text>
+          <Text style={typography.bodyMd} className="text-on-primary opacity-90">
+            Make safer food choices
+          </Text>
+        </View>
+
+        {/* Welcome Section */}
+        <View
+          style={{
+            paddingHorizontal: spacing.lg,
+            marginTop: -spacing.xl,
+            marginBottom: spacing.lg,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: nutriSafeColors.surfaceContainerLowest,
+              borderRadius: radii.xl,
+              padding: spacing.lg,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.04,
+              shadowRadius: 4,
+              elevation: 2,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: nutriSafeColors.primaryContainer,
+                borderRadius: radii.md,
+                padding: spacing.md,
+                marginBottom: spacing.lg,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.sm,
+              }}
+            >
+              <MaterialIcon
+                name="check_circle"
+                size={32}
+                color={nutriSafeColors.onPrimaryContainer}
+                filled
+              />
+              <Text style={typography.bodyMd} className="text-on-primary-container">
+                Your profile is complete!
+              </Text>
+            </View>
+
+            <Text style={typography.h3} className="text-on-surface mb-sm">
+              What would you like to do?
+            </Text>
+
+            <TouchableOpacity
+              onPress={handleScanFood}
+              style={{
+                backgroundColor: nutriSafeColors.secondaryContainer,
+                borderRadius: radii.lg,
+                padding: spacing.lg,
+                marginBottom: spacing.sm,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.md,
+              }}
+            >
+              <MaterialIcon
+                name="camera_alt"
+                size={28}
+                color={nutriSafeColors.onSecondaryContainer}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={typography.bodyMd} className="text-on-secondary-container font-semibold">
+                  Scan Food
+                </Text>
+                <Text style={typography.bodySm} className="text-on-secondary-container opacity-80">
+                  Identify and analyze any food
+                </Text>
+              </View>
+              <MaterialIcon
+                name="chevron_right"
+                size={20}
+                color={nutriSafeColors.onSecondaryContainer}
+                filled
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleMealPlanner}
+              style={{
+                backgroundColor: nutriSafeColors.surfaceContainer,
+                borderRadius: radii.lg,
+                padding: spacing.lg,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.md,
+              }}
+            >
+              <MaterialIcon
+                name="restaurant_menu"
+                size={28}
+                color={nutriSafeColors.primary}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={typography.bodyMd} className="text-on-surface font-semibold">
+                  Meal Planner
+                </Text>
+                <Text style={typography.bodySm} className="text-on-surface opacity-80">
+                  Build safe meals from your ingredients
+                </Text>
+              </View>
+              <MaterialIcon
+                name="chevron_right"
+                size={20}
+                color={nutriSafeColors.primary}
+                filled
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Search Section */}
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
+          <Text style={typography.h3} className="text-on-surface mb-md">
+            Search Foods
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: nutriSafeColors.surfaceContainerLowest,
+              borderRadius: radii.lg,
+              padding: spacing.sm,
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: nutriSafeColors.outlineVariant,
+            }}
+          >
+            <MaterialIcon
+              name="search"
+              size={20}
+              color={nutriSafeColors.onSurfaceVariant}
+              style={{ marginLeft: spacing.sm }}
+            />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search for foods (e.g. Banana, Wheat)"
+              placeholderTextColor={nutriSafeColors.onSurfaceVariant}
+              style={{
+                flex: 1,
+                color: nutriSafeColors.onSurface,
+                fontSize: 16,
+                fontFamily: Platform.OS === "ios" ? "Inter" : "Inter",
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.md,
+              }}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery("")}
+                style={{ marginRight: spacing.sm }}
+              >
+                <MaterialIcon
+                  name="close"
+                  size={20}
+                  color={nutriSafeColors.onSurfaceVariant}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Search Results */}
         {searchQuery.length > 2 && searchResults && !analyzing && !result && (
-          <View className="bg-content1 rounded-xl mt-2 p-2 shadow-lg border border-default-200">
+          <View
+            style={{
+              marginHorizontal: spacing.lg,
+              marginBottom: spacing.lg,
+              backgroundColor: nutriSafeColors.surfaceContainerLowest,
+              borderRadius: radii.xl,
+              padding: spacing.md,
+              borderWidth: 1,
+              borderColor: nutriSafeColors.outlineVariant,
+            }}
+          >
             {searchResults.length === 0 ? (
-              <Text className="p-3 text-default-500 text-center">No foods found.</Text>
+              <Text style={typography.bodyMd} className="text-on-surface-variant text-center py-lg">
+                No foods found.
+              </Text>
             ) : (
-              searchResults.map(food => (
-                <TouchableOpacity 
+              searchResults.map((food: FoodSearchResult) => (
+                <TouchableOpacity
                   key={food._id}
-                  className="p-3 border-b border-default-100 last:border-b-0 flex flex-row items-center justify-between"
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: spacing.md,
+                    paddingHorizontal: spacing.sm,
+                    borderBottomWidth: 1,
+                    borderBottomColor: nutriSafeColors.outlineVariant,
+                  }}
                   onPress={() => handleAnalyze(food)}
                 >
-                  <View>
-                    <Text className="font-semibold text-foreground text-lg">{food.name}</Text>
-                    {food.category && <Text className="text-xs text-default-400">{food.category}</Text>}
+                  <View style={{ flex: 1 }}>
+                    <Text style={typography.bodyMd} className="text-on-surface font-semibold">
+                      {food.name}
+                    </Text>
+                    {food.category && (
+                      <Text style={typography.bodySm} className="text-on-surface-variant">
+                        {food.category}
+                      </Text>
+                    )}
                   </View>
-                  <View className="bg-primary/10 px-3 py-1 rounded-full">
-                    <Text className="text-primary text-xs font-bold">Analyze</Text>
+                  <View
+                    style={{
+                      backgroundColor: `${nutriSafeColors.primary}1a`,
+                      borderRadius: radii.full,
+                      paddingHorizontal: spacing.sm,
+                      paddingVertical: spacing.xs,
+                    }}
+                  >
+                    <Text style={typography.labelCaps} className="text-primary">
+                      Analyze
+                    </Text>
                   </View>
                 </TouchableOpacity>
               ))
@@ -72,80 +305,229 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {/* Loading State */}
         {analyzing && (
-          <View className="mt-12 items-center justify-center p-8 bg-content1 rounded-2xl shadow-sm border border-default-100">
-            <ActivityIndicator size="large" color="#4f46e5" />
-            <Text className="mt-4 text-default-600 font-medium">Running Medical Rules Engine...</Text>
-            <Text className="text-default-400 text-xs mt-1">Evaluating alternatives...</Text>
+          <View
+            style={{
+              marginHorizontal: spacing.lg,
+              marginBottom: spacing.lg,
+              backgroundColor: nutriSafeColors.surfaceContainerLowest,
+              borderRadius: radii.xl,
+              padding: spacing.lg,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: nutriSafeColors.outlineVariant,
+            }}
+          >
+            <ActivityIndicator size="large" color={nutriSafeColors.primary} />
+            <Text
+              style={typography.bodyMd}
+              className="text-on-surface-variant mt-md font-medium"
+            >
+              Running Medical Rules Engine...
+            </Text>
+            <Text style={typography.bodySm} className="text-on-surface-variant mt-xs">
+              Evaluating alternatives...
+            </Text>
           </View>
         )}
 
+        {/* Analysis Result */}
         {result && (
-          <View className="mt-6 bg-content1 rounded-2xl p-5 shadow-lg border border-default-200">
+          <View
+            style={{
+              marginHorizontal: spacing.lg,
+              marginBottom: spacing.lg,
+              backgroundColor: nutriSafeColors.surfaceContainerLowest,
+              borderRadius: radii.xl,
+              padding: spacing.lg,
+              borderWidth: 1,
+              borderColor: nutriSafeColors.outlineVariant,
+            }}
+          >
             {/* Verdict Badge */}
-            <View className={`px-4 py-2 rounded-full self-start mb-4 ${
-              result.verdict === 'safe' ? 'bg-success/20' : 
-              result.verdict === 'moderation' ? 'bg-warning/20' : 'bg-danger/20'
-            }`}>
-              <Text className={`font-black tracking-wide ${
-                result.verdict === 'safe' ? 'text-success-700' : 
-                result.verdict === 'moderation' ? 'text-warning-700' : 'text-danger-700'
-              }`}>
+            <View
+              style={{
+                backgroundColor:
+                  result.verdict === "safe"
+                    ? `${nutriSafeColors.primaryContainer}20`
+                    : result.verdict === "moderation"
+                    ? `${nutriSafeColors.tertiaryContainer}20`
+                    : `${nutriSafeColors.errorContainer}20`,
+                borderRadius: radii.full,
+                paddingHorizontal: spacing.lg,
+                paddingVertical: spacing.sm,
+                alignSelf: "flex-start",
+                marginTop: spacing.sm,
+              }}
+            >
+              <Text
+                style={{
+                  ...typography.labelCaps,
+                  color:
+                    result.verdict === "safe"
+                      ? nutriSafeColors.onPrimaryContainer
+                      : result.verdict === "moderation"
+                      ? nutriSafeColors.onTertiaryContainer
+                      : nutriSafeColors.onErrorContainer,
+                }}
+              >
                 {result.verdict.toUpperCase()}
               </Text>
             </View>
 
             {result.explanation ? (
-              <View className="flex flex-col gap-4">
-                <Text className="text-xl font-bold text-foreground">
+              <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
+                <Text style={typography.h3} className="text-on-surface font-bold">
                   {result.explanation.summary}
                 </Text>
-                
-                <View className="bg-default-100 p-4 rounded-xl">
-                  <Text className="font-bold text-foreground mb-1">Why?</Text>
-                  <Text className="text-default-600 leading-5">
+
+                <View
+                  style={{
+                    backgroundColor: nutriSafeColors.surfaceContainer,
+                    borderRadius: radii.lg,
+                    padding: spacing.md,
+                  }}
+                >
+                  <Text style={typography.labelCaps} className="text-on-surface mb-sm">
+                    Why?
+                  </Text>
+                  <Text
+                    style={typography.bodyMd}
+                    className="text-on-surface-variant leading-6"
+                  >
                     {result.explanation.why}
                   </Text>
                 </View>
 
                 {result.explanation.healthRisks?.length > 0 && (
-                  <View className="bg-danger/10 p-4 rounded-xl">
-                    <Text className="font-bold text-danger-600 mb-2">Specific Risks</Text>
+                  <View
+                    style={{
+                      backgroundColor: `${nutriSafeColors.errorContainer}1a`,
+                      borderRadius: radii.lg,
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: `${nutriSafeColors.error}30`,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm }}>
+                      <MaterialIcon
+                        name="warning"
+                        size={20}
+                        color={nutriSafeColors.onErrorContainer}
+                        filled
+                      />
+                      <Text style={typography.labelCaps} className="text-error-container">
+                        Health Risks
+                      </Text>
+                    </View>
                     {result.explanation.healthRisks.map((risk: string, i: number) => (
-                      <Text key={i} className="text-danger-700 mb-1">• {risk}</Text>
+                      <Text key={i} style={typography.bodySm} className="text-error-container mb-xs">
+                        • {risk}
+                      </Text>
                     ))}
                   </View>
                 )}
 
                 {result.explanation.portionAdvice && (
-                  <View className="bg-warning/10 p-4 rounded-xl">
-                    <Text className="font-bold text-warning-700 mb-1">Portion Advice</Text>
-                    <Text className="text-warning-800">{result.explanation.portionAdvice}</Text>
+                  <View
+                    style={{
+                      backgroundColor: `${nutriSafeColors.tertiaryContainer}1a`,
+                      borderRadius: radii.lg,
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: `${nutriSafeColors.tertiary}30`,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm }}>
+                      <MaterialIcon
+                        name="info"
+                        size={20}
+                        color={nutriSafeColors.onTertiaryContainer}
+                        filled
+                      />
+                      <Text style={typography.labelCaps} className="text-tertiary-container">
+                        Portion Advice
+                      </Text>
+                    </View>
+                    <Text style={typography.bodyMd} className="text-tertiary-container">
+                      {result.explanation.portionAdvice}
+                    </Text>
                   </View>
                 )}
 
                 {result.explanation.alternatives?.length > 0 && (
-                  <View className="bg-primary/10 p-4 rounded-xl">
-                    <Text className="font-bold text-primary-700 mb-2">Medically Safe Alternatives</Text>
+                  <View
+                    style={{
+                      backgroundColor: `${nutriSafeColors.primaryContainer}1a`,
+                      borderRadius: radii.lg,
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: `${nutriSafeColors.primary}30`,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm }}>
+                      <MaterialIcon
+                        name="lightbulb"
+                        size={20}
+                        color={nutriSafeColors.onPrimaryContainer}
+                        filled
+                      />
+                      <Text style={typography.labelCaps} className="text-primary-container">
+                        Safe Alternatives
+                      </Text>
+                    </View>
                     {result.explanation.alternatives.map((alt: string, i: number) => (
-                      <Text key={i} className="text-primary-800 font-medium mb-1">✓ {alt}</Text>
+                      <Text key={i} style={typography.bodyMd} className="text-on-primary-container mb-xs font-medium">
+                        ✓ {alt}
+                      </Text>
                     ))}
                   </View>
                 )}
-                
-                <Text className="text-xs text-default-400 mt-2 text-center italic px-4">
+
+                <Text
+                  style={typography.bodySm}
+                  className="text-on-surface-variant mt-xs text-center italic"
+                >
                   {result.explanation.disclaimer}
                 </Text>
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: nutriSafeColors.outlineVariant,
+                    borderRadius: radii.lg,
+                    paddingVertical: spacing.md,
+                    alignItems: "center",
+                    marginTop: spacing.lg,
+                  }}
+                  onPress={() => setResult(null)}
+                >
+                  <Text style={typography.bodyMd} className="text-on-surface-variant font-semibold">
+                    Analyze Another Food
+                  </Text>
+                </TouchableOpacity>
               </View>
             ) : (
-              <Text className="text-danger mt-2">Analysis completed, but AI explanation failed to generate.</Text>
+              <View style={{ alignItems: "center", marginTop: spacing.lg }}>
+                <Text style={typography.bodyMd} className="text-error-container">
+                  Analysis completed, but AI explanation failed to generate.
+                </Text>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: nutriSafeColors.outlineVariant,
+                    borderRadius: radii.lg,
+                    paddingVertical: spacing.md,
+                    paddingHorizontal: spacing.lg,
+                    marginTop: spacing.lg,
+                  }}
+                  onPress={() => setResult(null)}
+                >
+                  <Text style={typography.bodyMd} className="text-on-surface-variant font-semibold">
+                    Try Again
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
-            
-            <TouchableOpacity className="mt-8 shadow-sm bg-default-200 items-center justify-center p-4 rounded-xl" 
-              onPress={() => setResult(null)}
-            >
-              <Text className="text-default-700 font-bold">Analyze Another Food</Text>
-            </TouchableOpacity>
           </View>
         )}
       </ScrollView>

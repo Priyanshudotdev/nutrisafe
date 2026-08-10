@@ -61,9 +61,20 @@ export default function MealPlannerIndex() {
             paddingVertical: spacing.xl,
           }}
         >
-          <Text style={typography.h2} className="text-on-primary">
-            Meal Planner
-          </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: spacing.sm,
+            }}
+          >
+            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: spacing.md }}>
+              <MaterialIcon name="arrow_back" size={24} color={nutriSafeColors.onPrimary} />
+            </TouchableOpacity>
+            <Text style={typography.h2} className="text-on-primary">
+              Meal Planner
+            </Text>
+          </View>
           <Text style={typography.bodyMd} className="text-on-primary opacity-90">
             Build safe meals from what you have
           </Text>
@@ -109,7 +120,7 @@ export default function MealPlannerIndex() {
               1. Select the ingredients you have
             </Text>
             <Text style={typography.bodyMd} className="text-on-secondary-container opacity-90">
-              2. We'll build safe meals for your profile
+              2. We will build safe meals for your profile
             </Text>
           </View>
         </View>
@@ -198,11 +209,7 @@ export default function MealPlannerIndex() {
                 onPress={() => setSearchQuery("")}
                 style={{ marginRight: spacing.sm }}
               >
-                <MaterialIcon
-                  name="close"
-                  size={20}
-                  color={nutriSafeColors.onSurfaceVariant}
-                />
+                <MaterialIcon name="close" size={20} color={nutriSafeColors.onSurfaceVariant} />
               </TouchableOpacity>
             )}
           </View>
