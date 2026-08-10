@@ -13,6 +13,7 @@
   "dependencies": {
     "@better-auth/expo": "~1.6.15",
     "@convex-dev/better-auth": "^0.12.5",
+    "@expo/vector-icons": "^15.0.2",
     "@google/generative-ai": "^0.24.1",
     "@gorhom/bottom-sheet": "^5.2.9",
     "better-auth": "~1.6.15",
@@ -20,6 +21,7 @@
     "expo": "^57.0.0",
     "expo-blur": "^57.0.2",
     "expo-constants": "~57.0.9",
+    "expo-font": "~57.0.1",
     "expo-image-picker": "~57.0.8",
     "expo-linking": "~57.0.5",
     "expo-network": "^57.0.1",
@@ -29,7 +31,6 @@
     "expo-status-bar": "~57.0.1",
     "expo-web-browser": "^57.0.2",
     "heroui-native": "^1.0.8",
-    "nativewind": "^4.2.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.2",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@types/node": "^26.2.0",
     "@types/react": "~19.2.2",
     "convex-test": "^0.0.55",
     "eslint": "^9.25.1",
