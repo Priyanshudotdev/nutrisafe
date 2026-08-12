@@ -12,8 +12,12 @@ import authConfig from "../auth.config";
 // as well as helper methods for general use.
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
-// Expo Go sends an exp:// origin during development. Standalone builds use
-// the app's configured my-expo-app:// scheme instead.
+// Trusted origins for Better Auth to prevent CORS issues during development
+// This includes:
+// - Expo Go (exp://)
+// - Custom scheme (my-expo-app://)
+// - Localhost (for web and Metro dev server)
+// - Convex development servers
 const trustedOrigins = [
   "my-expo-app://",
   "exp://",

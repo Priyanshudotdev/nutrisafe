@@ -14,29 +14,36 @@ import { authClient } from "@/lib/auth-client";
 import { nutriSafeColors, radii, spacing, typography } from "@/components/NutriSafeTheme";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function LoginScreen() {
+export default function SignupScreen() {
   const router = useRouter();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleAuth = async () => {
-    if (!email || !password) {
+  const handleSignup = async () => {
+    if (!name || !email || !password) {
       Alert.alert("Error", "Please fill in all fields.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match.");
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters.");
       return;
     }
 
     setLoading(true);
     try {
-      if (isSignUp) {
-        router.push("/(auth)/signup");
-        return;
-      }
-      const { error } = await authClient.signIn.email({
+      const { error } = await authClient.signUp.email({
         email,
         password,
+        name,
       });
       if (error) throw new Error(error.message);
 
@@ -49,7 +56,7 @@ export default function LoginScreen() {
 
       router.replace("/");
     } catch (e: any) {
-      Alert.alert("Authentication Failed", e.message);
+      Alert.alert("Sign Up Failed", e.message);
     } finally {
       setLoading(false);
     }
@@ -103,12 +110,55 @@ export default function LoginScreen() {
               marginTop: 4,
             }}
           >
-            {isSignUp ? "Create your account" : "Welcome back"}
+            Create your account
           </Text>
         </View>
 
         {/* Form */}
         <View style={{ gap: spacing.md, marginBottom: spacing.xl }}>
+          <View>
+            <Text
+              style={{
+                ...typography.bodyMd,
+                color: nutriSafeColors.onSurface,
+                fontWeight: "600",
+                marginBottom: spacing.xs,
+              }}
+            >
+              Full Name
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#ffffff",
+                borderRadius: radii.xl,
+                borderWidth: 1.5,
+                borderColor: nutriSafeColors.outlineVariant,
+                paddingHorizontal: spacing.md,
+              }}
+            >
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={nutriSafeColors.onSurfaceVariant}
+                style={{ marginRight: spacing.sm }}
+              />
+              <TextInput
+                placeholder="Enter your name"
+                placeholderTextColor={nutriSafeColors.onSurfaceVariant}
+                value={name}
+                onChangeText={setName}
+                style={{
+                  flex: 1,
+                  color: nutriSafeColors.onSurface,
+                  paddingVertical: spacing.sm,
+                  fontSize: 16,
+                }}
+              />
+            </View>
+          </View>
+
           <View>
             <Text
               style={{
@@ -208,8 +258,62 @@ export default function LoginScreen() {
             </View>
           </View>
 
+          <View>
+            <Text
+              style={{
+                ...typography.bodyMd,
+                color: nutriSafeColors.onSurface,
+                fontWeight: "600",
+                marginBottom: spacing.xs,
+              }}
+            >
+              Confirm Password
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#ffffff",
+                borderRadius: radii.xl,
+                borderWidth: 1.5,
+                borderColor: nutriSafeColors.outlineVariant,
+                paddingHorizontal: spacing.md,
+              }}
+            >
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color={nutriSafeColors.onSurfaceVariant}
+                style={{ marginRight: spacing.sm }}
+              />
+              <TextInput
+                placeholder="Confirm your password"
+                placeholderTextColor={nutriSafeColors.onSurfaceVariant}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                style={{
+                  flex: 1,
+                  color: nutriSafeColors.onSurface,
+                  paddingVertical: spacing.sm,
+                  fontSize: 16,
+                }}
+              />
+              <Pressable
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{ padding: spacing.sm }}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color={nutriSafeColors.onSurfaceVariant}
+                />
+              </Pressable>
+            </View>
+          </View>
+
           <Pressable
-            onPress={handleAuth}
+            onPress={handleSignup}
             disabled={loading}
             style={{
               backgroundColor: nutriSafeColors.primary,
@@ -228,7 +332,7 @@ export default function LoginScreen() {
                 fontSize: 16,
               }}
             >
-              {loading ? "Signing in..." : isSignUp ? "Create Account" : "Sign In"}
+              {loading ? "Creating account..." : "Sign Up"}
             </Text>
           </Pressable>
         </View>
@@ -267,7 +371,7 @@ export default function LoginScreen() {
           />
         </View>
 
-        {/* Signup Link */}
+        {/* Login Link */}
         <View style={{ alignItems: "center" }}>
           <Text
             style={{
@@ -275,10 +379,10 @@ export default function LoginScreen() {
               color: nutriSafeColors.onSurface,
             }}
           >
-            {isSignUp ? "Already have an account? " : "Don't have an account? "}
+            Already have an account?{" "}
           </Text>
           <Pressable
-            onPress={() => setIsSignUp(!isSignUp)}
+            onPress={() => router.replace("/(auth)/login")}
             style={{ marginTop: spacing.xs }}
           >
             <Text
@@ -288,7 +392,7 @@ export default function LoginScreen() {
                 fontWeight: "700",
               }}
             >
-              {isSignUp ? "Sign In" : "Sign Up"}
+              Sign In
             </Text>
           </Pressable>
         </View>
