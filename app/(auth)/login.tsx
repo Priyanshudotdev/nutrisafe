@@ -16,13 +16,12 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleAuth = async () => {
+  const handleSignIn = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields.");
       return;
@@ -30,26 +29,12 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      if (isSignUp) {
-        router.push("/(auth)/signup");
-        return;
-      }
-      const { error } = await authClient.signIn.email({
-        email,
-        password,
-      });
+      const { error } = await authClient.signIn.email({ email, password });
       if (error) throw new Error(error.message);
-
-      const { data: session, error: sessionError } = await authClient.getSession({
-        fetchOptions: { throw: false },
-      });
-      if (sessionError || !session?.session) {
-        throw new Error("Authentication succeeded, but the session could not be loaded.");
-      }
-
+      // Let the index screen's auth-gate redirect to the correct route
       router.replace("/");
-    } catch (e: any) {
-      Alert.alert("Authentication Failed", e.message);
+    } catch (e: unknown) {
+      Alert.alert("Sign In Failed", e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -62,14 +47,14 @@ export default function LoginScreen() {
     >
       <ScrollView
         contentContainerStyle={{
-          flex: 1,
+          flexGrow: 1,
           justifyContent: "center",
           paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xl,
+          paddingVertical: spacing.xl,
         }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
+        {/* ── Logo ── */}
         <View style={{ alignItems: "center", marginBottom: spacing.xl * 2 }}>
           <View
             style={{
@@ -81,18 +66,10 @@ export default function LoginScreen() {
               justifyContent: "center",
             }}
           >
-            <Ionicons
-              name="leaf"
-              size={40}
-              color={nutriSafeColors.onPrimary}
-            />
+            <Ionicons name="leaf" size={40} color={nutriSafeColors.onPrimary} />
           </View>
           <Text
-            style={{
-              ...typography.h1,
-              color: nutriSafeColors.onSurface,
-              marginTop: spacing.md,
-            }}
+            style={{ ...typography.h1, color: nutriSafeColors.onSurface, marginTop: spacing.md }}
           >
             NutriSafe
           </Text>
@@ -103,12 +80,13 @@ export default function LoginScreen() {
               marginTop: 4,
             }}
           >
-            {isSignUp ? "Create your account" : "Welcome back"}
+            Welcome back
           </Text>
         </View>
 
-        {/* Form */}
+        {/* ── Form ── */}
         <View style={{ gap: spacing.md, marginBottom: spacing.xl }}>
+          {/* Email */}
           <View>
             <Text
               style={{
@@ -144,6 +122,7 @@ export default function LoginScreen() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
                 style={{
                   flex: 1,
                   color: nutriSafeColors.onSurface,
@@ -154,6 +133,7 @@ export default function LoginScreen() {
             </View>
           </View>
 
+          {/* Password */}
           <View>
             <Text
               style={{
@@ -208,8 +188,9 @@ export default function LoginScreen() {
             </View>
           </View>
 
+          {/* Submit */}
           <Pressable
-            onPress={handleAuth}
+            onPress={handleSignIn}
             disabled={loading}
             style={{
               backgroundColor: nutriSafeColors.primary,
@@ -228,59 +209,17 @@ export default function LoginScreen() {
                 fontSize: 16,
               }}
             >
-              {loading ? "Signing in..." : isSignUp ? "Create Account" : "Sign In"}
+              {loading ? "Signing in..." : "Sign In"}
             </Text>
           </Pressable>
         </View>
 
-        {/* Divider */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: spacing.sm,
-            marginVertical: spacing.lg,
-          }}
-        >
-          <View
-            style={{
-              flex: 1,
-              height: 1,
-              backgroundColor: nutriSafeColors.outlineVariant,
-            }}
-          />
-          <Text
-            style={{
-              ...typography.bodySm,
-              color: nutriSafeColors.onSurfaceVariant,
-            }}
-          >
-            or
+        {/* ── Sign Up Link ── */}
+        <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "center" }}>
+          <Text style={{ ...typography.bodyMd, color: nutriSafeColors.onSurfaceVariant }}>
+            Don't have an account?{" "}
           </Text>
-          <View
-            style={{
-              flex: 1,
-              height: 1,
-              backgroundColor: nutriSafeColors.outlineVariant,
-            }}
-          />
-        </View>
-
-        {/* Signup Link */}
-        <View style={{ alignItems: "center" }}>
-          <Text
-            style={{
-              ...typography.bodyMd,
-              color: nutriSafeColors.onSurface,
-            }}
-          >
-            {isSignUp ? "Already have an account? " : "Don't have an account? "}
-          </Text>
-          <Pressable
-            onPress={() => setIsSignUp(!isSignUp)}
-            style={{ marginTop: spacing.xs }}
-          >
+          <Pressable onPress={() => router.push("/(auth)/signup")}>
             <Text
               style={{
                 ...typography.bodyMd,
@@ -288,7 +227,7 @@ export default function LoginScreen() {
                 fontWeight: "700",
               }}
             >
-              {isSignUp ? "Sign In" : "Sign Up"}
+              Sign Up
             </Text>
           </Pressable>
         </View>
