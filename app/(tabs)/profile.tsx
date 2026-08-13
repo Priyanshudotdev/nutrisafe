@@ -13,12 +13,7 @@ import { useQuery } from "convex/react";
 import { router } from "expo-router";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
-import {
-  nutriSafeColors,
-  radii,
-  spacing,
-  typography,
-} from "@/components/NutriSafeTheme";
+import { nutriSafeColors, radii, spacing, typography } from "@/components/NutriSafeTheme";
 
 type MenuItemProps = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -29,14 +24,7 @@ type MenuItemProps = {
   iconBg?: string;
 };
 
-function MenuItem({
-  icon,
-  label,
-  subtitle,
-  onPress,
-  danger = false,
-  iconBg,
-}: MenuItemProps) {
+function MenuItem({ icon, label, subtitle, onPress, danger = false, iconBg }: MenuItemProps) {
   const iconColor = danger ? nutriSafeColors.error : nutriSafeColors.primary;
   const bg = iconBg ?? (danger ? `${nutriSafeColors.error}12` : `${nutriSafeColors.primary}12`);
 
@@ -94,24 +82,22 @@ function MenuItem({
         )}
       </View>
       {!danger && (
-        <Ionicons
-          name="chevron-forward"
-          size={18}
-          color={nutriSafeColors.onSurfaceVariant}
-        />
+        <Ionicons name="chevron-forward" size={18} color={nutriSafeColors.onSurfaceVariant} />
       )}
     </TouchableOpacity>
   );
 }
 
 export default function ProfileScreen() {
+  // Convex profile (medical data)
   const profile = useQuery(api.profile.get.get);
-  const updateProfile = useAction(api.profile.update.update);
+  // Better Auth session (account data — name, email)
+  const { data: session } = authClient.useSession();
   const [loading, setLoading] = useState(false);
 
   const isLoading = profile === undefined;
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert("Log Out", "Are you sure you want to log out?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -122,8 +108,8 @@ export default function ProfileScreen() {
           try {
             await authClient.signOut();
             router.replace("/(auth)/login");
-          } catch (e: any) {
-            Alert.alert("Error", e.message);
+          } catch (e: unknown) {
+            Alert.alert("Error", e instanceof Error ? e.message : "An error occurred");
           } finally {
             setLoading(false);
           }
@@ -133,25 +119,39 @@ export default function ProfileScreen() {
   };
 
   const conditionCount = (profile as any)?.conditions?.length ?? 0;
+  const userName = session?.user?.name ?? (profile as any)?.name ?? "User";
+  const userEmail = session?.user?.email ?? "";
 
-  // Initials
-  const name = (profile as any)?.name ?? "User";
-  const initials = name
+  // Initials from name
+  const initials = userName
     .split(" ")
     .slice(0, 2)
     .map((w: string) => w[0]?.toUpperCase() ?? "")
     .join("");
 
+  // Condition labels for subtitle
+  const CONDITION_LABELS: Record<string, string> = {
+    diabetes: "Diabetes",
+    ckd: "CKD",
+    heart_hypertension: "Heart / BP",
+    celiac: "Celiac",
+    food_allergy: "Allergies",
+  };
+  const conditionSummary =
+    conditionCount > 0
+      ? (profile as any).conditions
+          .slice(0, 3)
+          .map((c: string) => CONDITION_LABELS[c] ?? c)
+          .join(", ")
+      : "No conditions configured";
+
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: nutriSafeColors.background }}
-      edges={["top"]}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: nutriSafeColors.background }} edges={["top"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* ─── Header ─── */}
+        {/* ── Header ── */}
         <View
           style={{
             paddingHorizontal: spacing.lg,
@@ -159,14 +159,10 @@ export default function ProfileScreen() {
             paddingBottom: spacing.md,
           }}
         >
-          <Text
-            style={{ ...typography.h2, color: nutriSafeColors.onSurface }}
-          >
-            Profile
-          </Text>
+          <Text style={{ ...typography.h2, color: nutriSafeColors.onSurface }}>Profile</Text>
         </View>
 
-        {/* ─── Avatar + User Card ─── */}
+        {/* ── Avatar + User Card ── */}
         <View
           style={{
             marginHorizontal: spacing.lg,
@@ -186,7 +182,7 @@ export default function ProfileScreen() {
             <ActivityIndicator size="large" color={nutriSafeColors.primary} />
           ) : (
             <>
-              {/* Avatar */}
+              {/* Avatar circle */}
               <View
                 style={{
                   width: 84,
@@ -203,34 +199,21 @@ export default function ProfileScreen() {
                   elevation: 4,
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: 32,
-                    fontWeight: "700",
-                    color: "#ffffff",
-                  }}
-                >
+                <Text style={{ fontSize: 32, fontWeight: "700", color: "#ffffff" }}>
                   {initials || "U"}
                 </Text>
               </View>
 
               <Text
-                style={{
-                  ...typography.h3,
-                  color: nutriSafeColors.onSurface,
-                  marginBottom: 4,
-                }}
+                style={{ ...typography.h3, color: nutriSafeColors.onSurface, marginBottom: 4 }}
               >
-                {name}
+                {userName}
               </Text>
-              <Text
-                style={{
-                  ...typography.bodyMd,
-                  color: nutriSafeColors.onSurfaceVariant,
-                }}
-              >
-                {(profile as any)?.email ?? "user@example.com"}
-              </Text>
+              {userEmail ? (
+                <Text style={{ ...typography.bodyMd, color: nutriSafeColors.onSurfaceVariant }}>
+                  {userEmail}
+                </Text>
+              ) : null}
 
               {/* Stats row */}
               <View
@@ -247,46 +230,34 @@ export default function ProfileScreen() {
               >
                 <View style={{ alignItems: "center" }}>
                   <Text
-                    style={{
-                      fontSize: 22,
-                      fontWeight: "800",
-                      color: nutriSafeColors.primary,
-                    }}
+                    style={{ fontSize: 22, fontWeight: "800", color: nutriSafeColors.primary }}
                   >
                     {conditionCount}
                   </Text>
-                  <Text
-                    style={{
-                      ...typography.bodySm,
-                      color: nutriSafeColors.onSurfaceVariant,
-                    }}
-                  >
+                  <Text style={{ ...typography.bodySm, color: nutriSafeColors.onSurfaceVariant }}>
                     Conditions
                   </Text>
                 </View>
-                <View
-                  style={{
-                    width: 1,
-                    backgroundColor: nutriSafeColors.outlineVariant,
-                  }}
-                />
+                <View style={{ width: 1, backgroundColor: nutriSafeColors.outlineVariant }} />
                 <View style={{ alignItems: "center" }}>
                   <Text
-                    style={{
-                      fontSize: 22,
-                      fontWeight: "800",
-                      color: nutriSafeColors.primary,
-                    }}
+                    style={{ fontSize: 22, fontWeight: "800", color: nutriSafeColors.primary }}
                   >
-                    ✓
+                    {(profile as any)?.age ?? "—"}
                   </Text>
+                  <Text style={{ ...typography.bodySm, color: nutriSafeColors.onSurfaceVariant }}>
+                    Age
+                  </Text>
+                </View>
+                <View style={{ width: 1, backgroundColor: nutriSafeColors.outlineVariant }} />
+                <View style={{ alignItems: "center" }}>
                   <Text
-                    style={{
-                      ...typography.bodySm,
-                      color: nutriSafeColors.onSurfaceVariant,
-                    }}
+                    style={{ fontSize: 22, fontWeight: "800", color: nutriSafeColors.primary }}
                   >
-                    Active
+                    {(profile as any)?.weight ? `${(profile as any).weight}` : "—"}
+                  </Text>
+                  <Text style={{ ...typography.bodySm, color: nutriSafeColors.onSurfaceVariant }}>
+                    kg
                   </Text>
                 </View>
               </View>
@@ -294,7 +265,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* ─── Menu Sections ─── */}
+        {/* ── Menu Sections ── */}
         <View style={{ paddingHorizontal: spacing.lg }}>
           {/* Health */}
           <Text
@@ -314,31 +285,20 @@ export default function ProfileScreen() {
           <MenuItem
             icon="medical"
             label="Medical Profile"
-            subtitle={
-              conditionCount > 0
-                ? `${conditionCount} conditions configured`
-                : "Set up your medical conditions"
-            }
-            onPress={() =>
-              Alert.alert("Medical Profile", "Coming soon!")
-            }
+            subtitle={conditionSummary}
+            onPress={() => router.push("/(onboarding)/medical-profile")}
             iconBg={`${nutriSafeColors.primary}12`}
           />
           <MenuItem
             icon="nutrition"
             label="Dietary Preferences"
-            subtitle="Manage restrictions and allergies"
-            onPress={() =>
-              Alert.alert("Dietary Preferences", "Coming soon!")
+            subtitle={
+              (profile as any)?.allergies?.length > 0
+                ? `${(profile as any).allergies.length} allergen(s) tracked`
+                : "No allergies configured"
             }
+            onPress={() => router.push("/(onboarding)/medical-profile")}
             iconBg={`${nutriSafeColors.secondary}12`}
-          />
-          <MenuItem
-            icon="fitness"
-            label="Health Goals"
-            subtitle="Set and track your objectives"
-            onPress={() => Alert.alert("Health Goals", "Coming soon!")}
-            iconBg={`${nutriSafeColors.tertiary}12`}
           />
 
           {/* Account */}
@@ -365,16 +325,14 @@ export default function ProfileScreen() {
             iconBg={`${nutriSafeColors.primary}12`}
           />
           <MenuItem
-            icon="notifications"
-            label="Notifications"
-            subtitle="Customize alert preferences"
-            onPress={() =>
-              Alert.alert("Notifications", "Coming soon!")
-            }
-            iconBg={`${nutriSafeColors.onSurfaceVariant}12`}
+            icon="search"
+            label="Search Foods"
+            subtitle="Find and analyze any food"
+            onPress={() => router.push("/(tabs)/search")}
+            iconBg={`${nutriSafeColors.secondary}12`}
           />
 
-          {/* Support */}
+          {/* App info */}
           <Text
             style={{
               ...typography.bodySm,
@@ -387,26 +345,25 @@ export default function ProfileScreen() {
               marginLeft: 4,
             }}
           >
-            Support
+            About
           </Text>
 
           <MenuItem
             icon="information-circle"
             label="About NutriSafe"
-            subtitle="Version 1.0.0"
-            onPress={() => Alert.alert("About NutriSafe", "v1.0.0")}
+            subtitle="Version 1.0.0 — Medical food safety"
+            onPress={() =>
+              Alert.alert(
+                "NutriSafe",
+                "v1.0.0\n\nPersonalized food safety analysis powered by a medical rules engine and AI explanations.",
+                [{ text: "OK" }]
+              )
+            }
             iconBg={`${nutriSafeColors.primary}12`}
-          />
-          <MenuItem
-            icon="help-circle"
-            label="Help & Support"
-            subtitle="Get help or report an issue"
-            onPress={() => Alert.alert("Help", "Coming soon!")}
-            iconBg={`${nutriSafeColors.secondary}12`}
           />
 
           {/* Sign Out */}
-          <View style={{ marginTop: spacing.sm }}>
+          <View style={{ marginTop: spacing.md }}>
             <TouchableOpacity
               onPress={handleLogout}
               disabled={loading}
@@ -418,27 +375,18 @@ export default function ProfileScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: spacing.sm,
+                borderWidth: 1.5,
+                borderColor: `${nutriSafeColors.error}30`,
               }}
               activeOpacity={0.8}
             >
               {loading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={nutriSafeColors.error}
-                />
+                <ActivityIndicator size="small" color={nutriSafeColors.error} />
               ) : (
-                <Ionicons
-                  name="log-out"
-                  size={22}
-                  color={nutriSafeColors.error}
-                />
+                <Ionicons name="log-out-outline" size={22} color={nutriSafeColors.error} />
               )}
               <Text
-                style={{
-                  ...typography.bodyMd,
-                  color: nutriSafeColors.error,
-                  fontWeight: "700",
-                }}
+                style={{ ...typography.bodyMd, color: nutriSafeColors.error, fontWeight: "700" }}
               >
                 Log Out
               </Text>
