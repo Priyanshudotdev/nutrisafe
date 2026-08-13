@@ -7,8 +7,9 @@ export const get = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
 
+    // Return null instead of throwing — callers use this for conditional routing
     if (!identity) {
-      throw new Error("Unauthorized");
+      return null;
     }
 
     const profile = await ctx.db

@@ -9,8 +9,9 @@ export const getHistory = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
 
+    // Return empty array gracefully — saved screen shows empty state
     if (!identity) {
-      throw new Error("Unauthorized");
+      return [];
     }
 
     const analyses = await ctx.db
