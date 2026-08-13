@@ -13,7 +13,6 @@ if (!convexUrl) {
 }
 
 const convex = new ConvexReactClient(convexUrl, {
-  expectAuth: true,
   unsavedChangesWarning: false,
 });
 
@@ -24,7 +23,10 @@ export default function RootLayout() {
         <ConvexBetterAuthProvider client={convex} authClient={authClient as never}>
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="meal-planner" options={{ headerShown: false }} />
           </Stack>
         </ConvexBetterAuthProvider>
       </HeroUINativeProvider>
