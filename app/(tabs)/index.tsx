@@ -972,7 +972,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => router.push("/(tabs)/meal-planner")}
+                onPress={() => router.push("/meal-planner")}
                 style={{
                   backgroundColor: "#ffffff",
                   borderRadius: radii.xl,

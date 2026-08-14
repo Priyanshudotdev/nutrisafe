@@ -60,7 +60,7 @@ export default function MealPlannerResults() {
               marginBottom: spacing.sm,
             }}
           >
-            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: spacing.md }}>
+            <TouchableOpacity onPress={() => router.replace('/(tabs)/create')} style={{ marginRight: spacing.md }}>
               <MaterialIcon
                 name="arrow_back"
                 size={24}

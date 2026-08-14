@@ -40,8 +40,8 @@ export const identify = action({
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // gemini-1.5-flash supports multimodality and is fast
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // gemini-2.5-flash supports multimodality and is fast
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Identify the single main food item in this image. 
 Respond strictly with a JSON object containing a single key "foodName" with the generic name of the food (e.g. "Banana", "Apple", "Pizza").

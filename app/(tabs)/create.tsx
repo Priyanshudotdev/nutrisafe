@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useAction } from "convex/react";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "@/convex/_generated/api";
@@ -23,6 +23,20 @@ export default function CreateScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [identifying, setIdentifying] = useState(false);
   const [identifiedResult, setIdentifiedResult] = useState<any>(null);
+  const hasAutoLaunchedRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Only auto-launch camera on the very first focus with no existing state.
+      // Do NOT reset the ref on blur — resetting it caused the camera to
+      // re-launch every time the user navigated back from the results screen,
+      // and dismissing that camera left an empty stack which closed the app.
+      if (!imageUri && !identifying && !identifiedResult && !hasAutoLaunchedRef.current) {
+        hasAutoLaunchedRef.current = true;
+        requestPermissionAndScan("camera");
+      }
+    }, [imageUri, identifying, identifiedResult])
+  );
 
   const requestPermissionAndScan = async (source: "camera" | "gallery") => {
     let result;
@@ -83,7 +97,7 @@ export default function CreateScreen() {
   const handleAnalyze = () => {
     if (identifiedResult?.foodId) {
       router.push(
-        `/(tabs)/meal-planner/results?foodIds=${identifiedResult.foodId}`
+        `/meal-planner/results?foodIds=${identifiedResult.foodId}`
       );
     }
   };

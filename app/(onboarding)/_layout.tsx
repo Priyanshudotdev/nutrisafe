@@ -1,9 +1,9 @@
 import { Stack } from "expo-router";
 
-export default function AuthLayout() {
+export default function OnboardingLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="login" />
+      <Stack.Screen name="medical-profile" />
     </Stack>
   );
 }

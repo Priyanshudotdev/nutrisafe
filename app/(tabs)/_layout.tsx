@@ -114,13 +114,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Hide meal-planner from the tab bar; accessible via navigation */}
-      <Tabs.Screen
-        name="meal-planner"
-        options={{
-          href: null,
-        }}
-      />
       {/* Hide legacy camera route if it still exists */}
       <Tabs.Screen
         name="camera"

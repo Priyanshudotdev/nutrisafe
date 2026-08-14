@@ -4,7 +4,7 @@ import { convex } from "@convex-dev/better-auth/plugins";
 import { betterAuth } from "better-auth/minimal";
 import { components } from "../_generated/api";
 import { DataModel } from "../_generated/dataModel";
-import { query } from "../_generated/server";
+import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 import authConfig from "../auth.config";
 
@@ -35,10 +35,20 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
     trustedOrigins,
     database: authComponent.adapter(ctx),
-    // Configure simple, non-verified email/password to get started
-    emailAndPassword: {
-      enabled: true,
-      requireEmailVerification: false,
+    // Configure Google Sign-In
+    socialProviders: {
+      google: {
+        // @ts-ignore
+        clientId: process.env.GOOGLE_CLIENT_ID as string,
+        // @ts-ignore
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      },
+    },
+    account: {
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ["google"],
+      },
     },
     plugins: [
       // The Expo and Convex plugins are required
@@ -48,7 +58,6 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
   });
 };
 // Example function for getting the current user
-// Feel free to edit, omit, etc.
 export const getCurrentUser = query({
   args: {},
   returns: v.any(),
@@ -56,3 +65,45 @@ export const getCurrentUser = query({
     return authComponent.getAuthUser(ctx);
   },
 });
+
+export const clearBetterAuthData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const deletedUsers = await ctx.runMutation(components.betterAuth.adapter.deleteMany, {
+      input: {
+        model: "user",
+        where: [],
+      },
+      paginationOpts: {
+        numItems: 100,
+        cursor: null,
+      },
+    });
+
+    const deletedAccounts = await ctx.runMutation(components.betterAuth.adapter.deleteMany, {
+      input: {
+        model: "account",
+        where: [],
+      },
+      paginationOpts: {
+        numItems: 100,
+        cursor: null,
+      },
+    });
+
+    const deletedSessions = await ctx.runMutation(components.betterAuth.adapter.deleteMany, {
+      input: {
+        model: "session",
+        where: [],
+      },
+      paginationOpts: {
+        numItems: 100,
+        cursor: null,
+      },
+    });
+
+    return { deletedUsers, deletedAccounts, deletedSessions };
+  },
+});
+
+
