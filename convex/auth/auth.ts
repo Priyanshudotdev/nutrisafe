@@ -1,7 +1,7 @@
 import { expo } from "@better-auth/expo";
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
-import { betterAuth } from "better-auth/minimal";
+import { betterAuth } from "better-auth";
 import { components } from "../_generated/api";
 import { DataModel } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
