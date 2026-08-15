@@ -62,7 +62,7 @@ export default function LoginScreen() {
           throw new Error("Failed to retrieve Google ID token.");
         }
 
-        const { error } = await authClient.signIn.idToken({
+        const { error } = await authClient.signIn.social({
           provider: "google",
           idToken,
         });
