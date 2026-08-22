@@ -34,7 +34,14 @@ yarn-error.*
 *.pem
 
 # Local env files
+.env
 .env*.local
+
+# Server upload temp
+.tmp-uploads/
+
+# Server data (persisted accounts/history)
+server/data/
 
 # TypeScript
 *.tsbuildinfo

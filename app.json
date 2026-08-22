@@ -28,7 +28,14 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to photos to upload food images for analysis.",
+          "cameraPermission": "Allow camera access to scan food for safety analysis."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
