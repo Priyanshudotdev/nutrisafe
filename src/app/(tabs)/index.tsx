@@ -1,52 +1,275 @@
-import { Button, Card, Typography, useThemeColor } from "heroui-native";
-import type { JSX } from "react";
-import { View } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  Pressable,
+  StatusBar,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { colors, radius, spacing, typography } from "../../theme/tokens";
+import {
+  foodSafetyStore,
+  FOOD_SUGGESTIONS,
+  type PatientCondition,
+  type FoodSafetyAnalysis,
+} from "../../data/foodSafety";import { DietaryProfileBar } from "../../components/DietaryProfileBar";
+import { FoodCheckCard } from "../../components/FoodCheckCard";
+import { StepProgressState } from "../../components/StepProgressState";
+import { AppButton } from "../../components/AppButton";
+import { ErrorBanner } from "../../components/ErrorBanner";
+import { MedicalDisclaimer } from "../../components/MedicalDisclaimer";
+import {
+  analyzeFoodByText,
+  TEXT_ANALYSIS_STEPS,
+  type AnalysisStep,
+} from "../../services/foodAnalysis";
+import { updateProfile } from "../../services/profileService";
+import { notificationStore } from "../../services/notificationStore";
 
-function HeroUILogo({ tintColor }: { tintColor: string }): JSX.Element {
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+};
+
+export default function HomeScreen() {
+  const router = useRouter();
+  const [conditions, setConditions] = useState<PatientCondition[]>(foodSafetyStore.getSelectedConditions());
+  const [searchText, setSearchText] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [activeStep, setActiveStep] = useState<AnalysisStep | undefined>();
+  const [result, setResult] = useState<FoodSafetyAnalysis | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [patient, setPatient] = useState(foodSafetyStore.getPatient());
+  const [history, setHistory] = useState<FoodSafetyAnalysis[]>(foodSafetyStore.getHistory());
+
+  useEffect(() => {
+    return foodSafetyStore.subscribe(() => {
+      setPatient(foodSafetyStore.getPatient());
+      setHistory(foodSafetyStore.getHistory());
+      setConditions(foodSafetyStore.getSelectedConditions());
+    });
+  }, []);
+
+  const recentChecks = useMemo(() => history.slice(0, 3), [history]);
+
+  const handleConditionsChange = async (newConditions: PatientCondition[]) => {
+    if (newConditions.length === 0) return;
+    setConditions(newConditions);
+    foodSafetyStore.setSelectedConditions(newConditions);
+    setResult(null);
+    setError(null);
+    try {
+      const profile = await updateProfile({ conditions: newConditions });
+      foodSafetyStore.hydratePatient(profile);
+    } catch {
+      /* local selection still applies */
+    }
+  };
+
+  const handleSearchTextChange = (text: string) => {
+    setSearchText(text);
+    setResult(null);
+    setError(null);
+  };
+
+  const handleAnalyze = async () => {
+    if (!searchText.trim()) {
+      setError("Search for a food to see how it fits your dietary needs.");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setResult(null);
+    setError(null);
+    setActiveStep(undefined);
+
+    try {
+      const analysis = await analyzeFoodByText(searchText, conditions, setActiveStep);
+      setResult(analysis);
+      await notificationStore.push("Food check complete", `${analysis.foodName}: ${analysis.statusHeadline}`);
+    } catch {
+      setError("We couldn't complete the analysis right now. Please try again.");
+    } finally {
+      setIsAnalyzing(false);
+      setActiveStep(undefined);
+    }
+  };
+
+  const handleRecentPress = (foodName: string) => {
+    setSearchText(foodName);
+    setResult(null);
+    setError(null);
+  };
+
   return (
-    <Svg width={90} height={30} viewBox="0 0 140 44" fill="none">
-      <Path
-        d="M0.677734 11.3847V24.0405C0.677734 24.6387 0.985209 25.1946 1.49107 25.5109L10.1195 30.9067C11.2693 31.6257 12.7586 30.796 12.7586 29.4363V18.7981C12.7586 18.186 13.0803 17.6194 13.605 17.3074L18.8683 14.1785V41.4437C18.8683 42.7988 20.3486 43.6293 21.4988 42.9195L30.4044 37.4229C30.9152 37.1076 31.2264 36.549 31.2264 35.9471V9.76484C31.2264 8.41634 29.759 7.58483 28.6085 8.28139L18.8683 14.1785V2.55643C18.8683 1.21158 17.408 0.379537 16.2574 1.06878L1.51927 9.89703C0.997365 10.2097 0.677734 10.7747 0.677734 11.3847Z"
-        fill={tintColor}
-      />
-      <Path
-        d="M63.8763 24.0707C63.8763 20.4817 62.4078 18.8253 59.4709 18.8253C56.1076 18.8253 53.7391 21.0799 53.7391 26.1412V37.7363H47.6756V5.52769H53.7391V17.3069C55.2075 14.9142 57.6234 13.7179 60.9394 13.7179C66.5764 13.7179 69.8924 17.1688 69.8924 22.9664V37.7363H63.8763V24.0707Z"
-        fill={tintColor}
-      />
-      <Path
-        d="M84.8996 38.4725C77.3677 38.4725 72.5832 33.5952 72.5832 26.0952C72.5832 18.6872 77.3203 13.7179 84.8996 13.7179C93.0947 13.7179 97.5475 19.5154 96.3158 27.6596H78.6467C78.9783 31.5247 81.252 33.7333 84.8996 33.7333C87.8839 33.7333 89.684 32.2149 90.1577 30.6964H96.1737C95.2263 35.2057 91.0577 38.4725 84.8996 38.4725ZM78.7888 23.6566H90.4419C90.3945 20.4817 88.3102 18.3191 84.7574 18.3191C81.5836 18.3191 79.3572 20.1596 78.7888 23.6566Z"
-        fill={tintColor}
-      />
-      <Path
-        d="M99.6225 20.3437C99.6225 16.5246 101.754 14.4541 105.828 14.4541H113.597V19.4234H105.686V37.7363H99.6225V20.3437Z"
-        fill={tintColor}
-      />
-      <Path
-        d="M126.863 38.4725C119.189 38.4725 114.31 33.5492 114.31 26.0952C114.31 18.6412 119.189 13.7179 126.863 13.7179C134.442 13.7179 139.322 18.6412 139.322 26.0952C139.322 33.5492 134.442 38.4725 126.863 38.4725ZM126.863 33.4572C130.653 33.4572 133.163 30.5584 133.163 26.0952C133.163 21.632 130.653 18.6872 126.863 18.6872C123.026 18.6872 120.515 21.632 120.515 26.0952C120.515 30.5584 123.026 33.4572 126.863 33.4572Z"
-        fill={tintColor}
-      />
-    </Svg>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <Text style={styles.greeting}>
+          {getGreeting()}, {patient.name.split(" ")[0]}
+        </Text>
+
+        <DietaryProfileBar conditions={conditions} onConditionsChange={handleConditionsChange} />
+
+        <Text style={styles.mainHeading}>Can I eat this?</Text>
+
+        <View style={styles.searchRow}>
+          <View style={[styles.searchContainer, error && !searchText.trim() ? styles.searchError : null]}>
+            <Ionicons name="search-outline" size={20} color={colors.slateMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for a food..."
+              placeholderTextColor={colors.slateMuted}
+              value={searchText}
+              onChangeText={handleSearchTextChange}
+              returnKeyType="search"
+              onSubmitEditing={handleAnalyze}
+              accessibilityLabel="Food search input"
+            />
+            {searchText.length > 0 && (
+              <Pressable onPress={() => handleSearchTextChange("")} accessibilityLabel="Clear search">
+                <Ionicons name="close-circle" size={20} color={colors.slateMuted} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionsRow}>
+          {FOOD_SUGGESTIONS.map((food) => (
+            <Pressable key={food} style={styles.suggestionPill} onPress={() => handleSearchTextChange(food)}>
+              <Text style={styles.suggestionText}>{food}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        <View style={styles.actionRow}>
+          <AppButton
+            label={isAnalyzing ? "Checking…" : "Check Food"}
+            onPress={handleAnalyze}
+            variant="primary"
+            size="lg"
+            icon="shield-checkmark-outline"
+            loading={isAnalyzing}
+            disabled={!searchText.trim()}
+            style={styles.primaryAction}
+          />
+
+          <AppButton
+            label="Scan Food"
+            onPress={() => router.push("/(tabs)/scan")}
+            variant="secondary"
+            size="lg"
+            icon="camera-outline"
+            style={styles.secondaryAction}
+          />
+        </View>
+
+        {error && (
+          <View style={styles.errorWrap}>
+            <ErrorBanner message={error} />
+          </View>
+        )}
+
+        <StepProgressState visible={isAnalyzing} steps={TEXT_ANALYSIS_STEPS} activeStepId={activeStep} />
+
+        {result && !isAnalyzing && (
+          <View style={styles.resultSection}>
+            <FoodCheckCard analysis={result} expanded />
+            <MedicalDisclaimer />
+          </View>
+        )}
+
+        {!result && !isAnalyzing && recentChecks.length > 0 && (
+          <View style={styles.recentSection}>
+            <View style={styles.recentHeader}>
+              <Text style={styles.sectionLabel}>Recent</Text>
+              <Text style={styles.recentCount}>
+                {history.length} saved check{history.length === 1 ? "" : "s"}
+              </Text>
+            </View>
+            {recentChecks.map((item) => (
+              <Pressable key={item.id} style={styles.recentItem} onPress={() => handleRecentPress(item.foodName)}>
+                <Text style={styles.recentFood}>{item.foodName}</Text>
+                <Ionicons name="arrow-forward" size={14} color={colors.gray3} />
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-export default function HomeTab(): JSX.Element {
-  const themeColorForeground = useThemeColor("foreground");
-
-  return (
-    <View className="flex-1 bg-background justify-center px-6">
-      <Card className="items-center gap-8">
-        <HeroUILogo tintColor={themeColorForeground} />
-        <Typography.Paragraph className="text-center">
-          A modern starter for React Native, preconfigured with HeroUI Native, Uniwind, and Expo
-          Router. Edit{" "}
-          <Typography.Paragraph className="font-semibold">
-            app/(tabs)/index.tsx
-          </Typography.Paragraph>{" "}
-          and watch it reload.
-        </Typography.Paragraph>
-        <Button className="w-full">Get started</Button>
-      </Card>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+  greeting: {
+    fontSize: typography.caption.fontSize,
+    fontWeight: "600",
+    color: colors.slateLight,
+    marginBottom: spacing.md,
+  },
+  mainHeading: {
+    ...typography.display,
+    color: colors.dark,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  searchRow: { marginBottom: spacing.sm },
+  searchContainer: {
+    flexDirection: "row",
+    backgroundColor: colors.cardBg,
+    borderWidth: 1.5,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    height: 52,
+  },
+  searchError: { borderColor: colors.dangerBorder },
+  searchInput: { flex: 1, fontSize: typography.body.fontSize, marginLeft: 10, color: colors.dark },
+  suggestionsRow: { gap: spacing.sm, paddingVertical: spacing.sm },
+  suggestionPill: {
+    backgroundColor: colors.gray1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    marginRight: spacing.sm,
+  },
+  suggestionText: { fontSize: typography.micro.fontSize, color: colors.slateMuted, fontWeight: "500" },
+  actionRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
+  primaryAction: { flex: 1 },
+  secondaryAction: { flex: 1 },
+  errorWrap: { marginTop: spacing.md },
+  resultSection: { marginTop: spacing.xl, gap: spacing.md },
+  recentSection: { marginTop: spacing.xxl, gap: spacing.sm },
+  recentHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  sectionLabel: { ...typography.caption, fontWeight: "700", color: colors.slateLight, textTransform: "uppercase", letterSpacing: 0.5 },
+  recentCount: { ...typography.caption, color: colors.slateMuted },
+  recentItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.cardBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  recentFood: { fontSize: typography.bodySmall.fontSize + 1, fontWeight: "600", color: colors.dark },
+  bottomSpacer: { height: 100 },
+});
