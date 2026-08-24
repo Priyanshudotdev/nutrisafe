@@ -9,6 +9,9 @@ export type PatientCondition =
 
 export type SafetyStatus = "safe" | "moderation" | "not_recommended";
 
+export const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"] as const;
+export type GenderOption = (typeof GENDER_OPTIONS)[number];
+
 export interface ConditionMeta {
   id: PatientCondition;
   title: string;

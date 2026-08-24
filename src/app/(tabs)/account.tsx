@@ -17,11 +17,11 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import {
   foodSafetyStore,
+  GENDER_OPTIONS,
   PATIENT_CONDITIONS,
   type PatientCondition,
   type PatientProfile,
 } from "../../data/foodSafety";
-import { INDIAN_CITIES } from "../../data/indianFoods";
 import { colors, controlHeight, radius, sectionLabel, spacing, typography } from "../../theme/tokens";
 import { SegmentControl } from "../../components/SegmentControl";
 import { AppButton } from "../../components/AppButton";
@@ -38,7 +38,7 @@ import { authStore } from "../../services/authStore";
 
 type AccountTab = "profile" | "preferences" | "account";
 
-type EditField = "name" | "age" | "gender" | "notes" | "email" | "password" | null;
+type EditField = "name" | "age" | "gender" | "city" | "notes" | "email" | "password" | null;
 
 interface SettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -138,8 +138,11 @@ export default function AccountScreen() {
         const profile = await updateProfile({ age });
         foodSafetyStore.hydratePatient(profile);
       } else if (editField === "gender") {
-        if (!editValue.trim()) throw new Error("Gender is required.");
+        if (!editValue.trim()) throw new Error("Please select a gender.");
         const profile = await updateProfile({ gender: editValue.trim() });
+        foodSafetyStore.hydratePatient(profile);
+      } else if (editField === "city") {
+        const profile = await updateProfile({ city: editValue.trim() || null });
         foodSafetyStore.hydratePatient(profile);
       } else if (editField === "notes") {
         const profile = await updateProfile({ notes: editValue });
@@ -245,34 +248,7 @@ export default function AccountScreen() {
     );
   };
 
-  const handleSetCity = () => {
-    Alert.alert("Set location", "Choose your city for locally relevant alternatives.", [
-      ...INDIAN_CITIES.map((city) => ({
-        text: city,
-        onPress: async () => {
-          try {
-            const profile = await updateProfile({ city });
-            foodSafetyStore.hydratePatient(profile);
-          } catch (e) {
-            Alert.alert("Update failed", e instanceof ApiError ? e.message : "Could not update location.");
-          }
-        },
-      })),
-      {
-        text: "Clear location",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const profile = await updateProfile({ city: null });
-            foodSafetyStore.hydratePatient(profile);
-          } catch {
-            /* ignore */
-          }
-        },
-      },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
+
 
   const handleClearHistory = () => {
     const count = foodSafetyStore.getHistory().length;
@@ -454,9 +430,9 @@ export default function AccountScreen() {
               <View style={styles.divider} />
               <SettingsRow
                 icon="location-outline"
-                label="Location"
-                subtitle={patient.city ?? "Not set — uses India-wide suggestions"}
-                onPress={handleSetCity}
+                label="Location / City"
+                subtitle={patient.city || "Not set — tap to enter city"}
+                onPress={() => openEdit("city", patient.city ?? "")}
               />
               <View style={styles.divider} />
               <SettingsRow
@@ -549,7 +525,11 @@ export default function AccountScreen() {
                 ? "Change password"
                 : editField === "email"
                   ? "Change email"
-                  : `Edit ${editField}`}
+                  : editField === "gender"
+                    ? "Select Gender"
+                    : editField === "city"
+                      ? "Edit Location / City"
+                      : editField ? `Edit ${editField.charAt(0).toUpperCase() + editField.slice(1)}` : ""}
             </Text>
 
             {editError && <Text style={styles.modalError}>{editError}</Text>}
@@ -593,10 +573,32 @@ export default function AccountScreen() {
                   onChangeText={setEditValue2}
                 />
               </>
+            ) : editField === "gender" ? (
+              <View style={styles.genderModalOptions}>
+                {GENDER_OPTIONS.map((g) => {
+                  const selected = editValue === g;
+                  return (
+                    <Pressable
+                      key={g}
+                      style={[styles.genderModalPill, selected && styles.genderModalPillActive]}
+                      onPress={() => setEditValue(g)}
+                    >
+                      <Text style={[styles.genderModalText, selected && styles.genderModalTextActive]}>{g}</Text>
+                      {selected && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
+                    </Pressable>
+                  );
+                })}
+              </View>
             ) : (
               <TextInput
                 style={[styles.modalInput, editField === "notes" && styles.modalInputTall]}
-                placeholder={editField === "age" ? "Age" : "Value"}
+                placeholder={
+                  editField === "age"
+                    ? "Age (e.g. 35)"
+                    : editField === "city"
+                      ? "Enter your city (e.g. Mumbai, Delhi, London)"
+                      : "Value"
+                }
                 placeholderTextColor={colors.slateMuted}
                 keyboardType={editField === "age" ? "number-pad" : "default"}
                 multiline={editField === "notes"}
@@ -723,5 +725,20 @@ const styles = StyleSheet.create({
   },
   modalInputTall: { height: undefined, minHeight: 100, textAlignVertical: "top", paddingVertical: spacing.md },
   modalActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  genderModalOptions: { gap: spacing.sm },
+  genderModalPill: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.cardBg,
+  },
+  genderModalPillActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  genderModalText: { fontSize: typography.body.fontSize, fontWeight: "600", color: colors.dark },
+  genderModalTextActive: { color: colors.primaryDark, fontWeight: "700" },
   flex: { flex: 1 },
 });

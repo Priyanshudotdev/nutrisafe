@@ -18,8 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import { colors, controlHeight, radius, sectionLabel, spacing, typography } from "../theme/tokens";
 import { AppButton } from "../components/AppButton";
 import { ErrorBanner } from "../components/ErrorBanner";
-import { PATIENT_CONDITIONS, type PatientCondition } from "../data/foodSafety";
-import { INDIAN_CITIES } from "../data/indianFoods";
+import { GENDER_OPTIONS, PATIENT_CONDITIONS, type PatientCondition } from "../data/foodSafety";
 import { completeOnboarding } from "../services/onboardingService";
 import { formatAuthError } from "../services/authService";
 import { extractPrescriptionFromImage, type PrescriptionExtraction } from "../services/prescriptionVision";
@@ -304,46 +303,47 @@ export default function OnboardingScreen() {
             })}
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.field, styles.half]}>
-              <Text style={styles.label}>Age</Text>
-              <TextInput
-                style={styles.input}
-                value={age}
-                onChangeText={setAge}
-                keyboardType="number-pad"
-                placeholder="Optional"
-                placeholderTextColor={colors.slateMuted}
-              />
-            </View>
-            <View style={[styles.field, styles.half]}>
-              <Text style={styles.label}>Gender</Text>
-              <TextInput
-                style={styles.input}
-                value={gender}
-                onChangeText={setGender}
-                placeholder="Optional"
-                placeholderTextColor={colors.slateMuted}
-              />
+          <View style={styles.field}>
+            <Text style={styles.label}>Age</Text>
+            <TextInput
+              style={styles.input}
+              value={age}
+              onChangeText={setAge}
+              keyboardType="number-pad"
+              placeholder="Optional (e.g. 35)"
+              placeholderTextColor={colors.slateMuted}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Gender</Text>
+            <View style={styles.genderRow}>
+              {GENDER_OPTIONS.map((g) => {
+                const selected = gender === g;
+                return (
+                  <Pressable
+                    key={g}
+                    style={[styles.genderPill, selected && styles.genderPillActive]}
+                    onPress={() => setGender(selected ? "" : g)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                  >
+                    <Text style={[styles.genderText, selected && styles.genderTextActive]}>{g}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>City (India)</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cityRow}>
-              {INDIAN_CITIES.map((c) => {
-                const selected = city === c;
-                return (
-                  <Pressable
-                    key={c}
-                    style={[styles.cityPill, selected && styles.cityPillActive]}
-                    onPress={() => setCity(selected ? "" : c)}
-                  >
-                    <Text style={[styles.cityText, selected && styles.cityTextActive]}>{c}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <Text style={styles.label}>City / Location</Text>
+            <TextInput
+              style={styles.input}
+              value={city}
+              onChangeText={setCity}
+              placeholder="Enter your city (e.g. Mumbai, Delhi, London)"
+              placeholderTextColor={colors.slateMuted}
+            />
           </View>
 
           <View style={styles.field}>
@@ -522,18 +522,17 @@ const styles = StyleSheet.create({
     height: controlHeight.md,
   },
   notesInput: { height: undefined, minHeight: 88, textAlignVertical: "top", paddingVertical: spacing.md },
-  cityRow: { gap: spacing.sm },
-  cityPill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+  genderRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  genderPill: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
     borderRadius: radius.pill,
     borderWidth: 1.5,
     borderColor: colors.cardBorder,
     backgroundColor: colors.cardBg,
-    marginRight: spacing.sm,
   },
-  cityPillActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  cityText: { fontSize: typography.bodySmall.fontSize, fontWeight: "600", color: colors.slateMedium },
-  cityTextActive: { color: colors.primaryDark },
+  genderPillActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  genderText: { fontSize: typography.bodySmall.fontSize, fontWeight: "600", color: colors.slateMedium },
+  genderTextActive: { color: colors.primaryDark },
   submitButton: { marginTop: spacing.sm },
 });
