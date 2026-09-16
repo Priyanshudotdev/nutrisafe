@@ -17,11 +17,16 @@ Defaults to **http://localhost:4000**. Set `PORT` to change.
 | `PORT` | No (default 4000) | Server port |
 | `JWT_SECRET` | **Yes in prod** | Secret used to sign JWTs. Change from default. |
 | `GEMINI_API_KEY` | No | Google Gemini key — enables AI food identification + nutrition analysis. |
-| `GEMINI_MODEL` | No (default `gemini-2.0-flash`) | Gemini model id. |
+| `GEMINI_MODEL` | No (default `gemini-3.5-flash`) | Gemini model id. |
 | `OPENAI_API_KEY` | No | OpenAI-compatible key (OpenAI, OpenRouter, Groq, Ollama, ...). Used if no Gemini key. |
 | `OPENAI_BASE_URL` | No (default `https://api.openai.com/v1`) | Base URL for OpenAI-compatible providers. |
 | `OPENAI_MODEL` | No (default `gpt-4o-mini`) | Model id for OpenAI-compatible providers. |
 | `FOOD_VISION_API_URL` | No | Legacy override: proxy food images to an external vision endpoint instead of the built-in AI layer. |
+| `NUTRICHECK_DB_FILE` | No | Override the SQLite database path (tests use a temp file). |
+| `NUTRICHECK_SKIP_ENV_FILE` | No | Set to `1` to skip `.env.local`/`.env` loading (hermetic tests). |
+
+> Plain `node` doesn't inject Expo env, so the server loads `.env.local` then
+> `.env` from the project root itself. Real environment variables always win.
 
 **AI behavior:** with any provider configured, `/vision/identify` performs real
 food-image recognition and `/nutrition/analyze` returns a full structured
@@ -31,10 +36,13 @@ the app falls back to its built-in deterministic rules engine.
 
 ## Data persistence
 
-Accounts and history persist to `server/data/db.json` (gitignored) with atomic
-writes. Delete that file to reset all data. For production, swap `store.js`
-for a real database (SQLite, Postgres, etc.) — the rest of the server only
-touches `load()` / `save()`.
+Accounts and history persist to SQLite at `server/data/nutricheck.db` (gitignored,
+zero dependencies via Node's built-in `node:sqlite`). A legacy `db.json`, if
+present, is migrated automatically on first boot and renamed to
+`db.json.migrated`. Set `NUTRICHECK_DB_FILE` to override the path, or delete the
+`.db` file to reset all data. The server only touches `store.js` `load()` /
+`save()`, so swapping in Postgres later is a one-module change. For production,
+also set a real `JWT_SECRET`.
 
 ## Endpoints
 

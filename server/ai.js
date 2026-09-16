@@ -1,7 +1,7 @@
 /* NutriCheck — AI layer (server-side only, keys never reach the client)
  *
  * Providers (first match wins):
- *   1. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-2.0-flash)
+ *   1. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-3.5-flash)
  *   2. OpenAI-compatible      → OPENAI_API_KEY            (optional OPENAI_BASE_URL, OPENAI_MODEL)
  *      Works with OpenAI, OpenRouter, Groq, Together, Ollama, LM Studio, ...
  *
@@ -12,7 +12,7 @@
  * Without any key, isConfigured() returns false and routes degrade gracefully.
  */
 
-const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 

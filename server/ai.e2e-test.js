@@ -95,10 +95,18 @@ const PNG_B64 =
   console.log("✓ mock provider listening");
 
   // ── NutriCheck server with AI env ──
+  // Hermetic: strip any real provider keys from the parent env, skip .env.local
+  // loading, and point at a throwaway database so dev data is never touched.
+  const childEnv = { ...process.env };
+  delete childEnv.GEMINI_API_KEY;
+  delete childEnv.GEMINI_MODEL;
+  delete childEnv.OPENAI_API_KEY;
   const server = spawn(process.execPath, [path.join(__dirname, "index.js")], {
     env: {
-      ...process.env,
+      ...childEnv,
       PORT: String(API_PORT),
+      NUTRICHECK_SKIP_ENV_FILE: "1",
+      NUTRICHECK_DB_FILE: path.join(require("os").tmpdir(), `nutricheck-e2e-${Date.now()}.db`),
       OPENAI_API_KEY: "test-key",
       OPENAI_BASE_URL: `http://localhost:${MOCK_PORT}/v1`,
       OPENAI_MODEL: "mock-model",
