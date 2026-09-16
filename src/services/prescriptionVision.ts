@@ -6,6 +6,7 @@
 
 import { API_BASE_URL } from "../config/api";
 import { authStore } from "./authStore";
+import { buildImageForm } from "./imageUpload";
 import type { PatientCondition } from "../data/foodSafety";
 
 export interface PrescriptionExtraction {
@@ -35,12 +36,7 @@ interface PrescriptionApiResponse {
 const VALID_CONDITIONS: PatientCondition[] = ["diabetes", "ckd", "hypertension", "celiac", "allergy"];
 
 export async function extractPrescriptionFromImage(imageUri: string): Promise<PrescriptionExtraction> {
-  const formData = new FormData();
-  formData.append("image", {
-    uri: imageUri,
-    type: "image/jpeg",
-    name: "prescription.jpg",
-  } as unknown as Blob);
+  const { form: formData } = await buildImageForm(imageUri, "image", "prescription");
 
   const token = authStore.getToken();
 

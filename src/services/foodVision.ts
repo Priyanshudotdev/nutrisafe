@@ -1,5 +1,6 @@
 import { API_BASE_URL, FOOD_VISION_API_URL, VISION_CONFIDENCE_THRESHOLD } from "../config/api";
 import { authStore } from "./authStore";
+import { buildImageForm } from "./imageUpload";
 
 export interface FoodCandidate {
   name: string;
@@ -79,12 +80,7 @@ function normalizeResult(data: VisionApiResponse): FoodIdentificationResult {
  * Vision only identifies food — it never generates medical verdicts.
  */
 export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdentificationResult> {
-  const formData = new FormData();
-  formData.append("image", {
-    uri: imageUri,
-    type: "image/jpeg",
-    name: "food.jpg",
-  } as unknown as Blob);
+  const { form: formData } = await buildImageForm(imageUri, "image", "food");
 
   const token = authStore.getToken();
   const proxyUrl = `${API_BASE_URL}/vision/identify`;
