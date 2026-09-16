@@ -22,7 +22,7 @@ import {
   type PatientCondition,
   type PatientProfile,
 } from "../../data/foodSafety";
-import { controlHeight, radius, sectionLabel, spacing, typography, type ThemeColors } from "../../theme/tokens";
+import { controlHeight, getConditionColor, radius, sectionLabel, spacing, typography, type ThemeColors } from "../../theme/tokens";
 import { useThemeColors } from "../../hooks/useThemeColors";
 import { SegmentControl } from "../../components/SegmentControl";
 import { AppButton } from "../../components/AppButton";
@@ -64,8 +64,8 @@ function SettingsRow({ icon, label, subtitle, onPress, trailing, destructive }: 
         <Ionicons name={icon} size={18} color={destructive ? colors.dangerIcon : colors.primaryText} />
       </View>
       <View style={styles.settingsText}>
-        <Text style={[styles.settingsLabel, destructive && styles.settingsLabelDestructive]}>{label}</Text>
-        {subtitle ? <Text style={styles.settingsSubtitle}>{subtitle}</Text> : null}
+        <Text style={[styles.settingsLabel, destructive && styles.settingsLabelDestructive]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+        {subtitle ? <Text style={styles.settingsSubtitle} numberOfLines={1} ellipsizeMode="tail">{subtitle}</Text> : null}
       </View>
       {trailing ?? (onPress ? <Ionicons name="chevron-forward" size={18} color={colors.gray3} /> : null)}
     </Pressable>
@@ -330,9 +330,9 @@ export default function AccountScreen() {
               <View style={styles.avatarCircle}>
                 <Text style={styles.avatarText}>{(patient.name || "U").substring(0, 2).toUpperCase()}</Text>
               </View>
-              <View>
-                <Text style={styles.avatarName}>{patient.name}</Text>
-                <Text style={styles.avatarSubtitle}>
+              <View style={styles.avatarTextWrap}>
+                <Text style={styles.avatarName} numberOfLines={1} ellipsizeMode="tail">{patient.name}</Text>
+                <Text style={styles.avatarSubtitle} numberOfLines={1} ellipsizeMode="tail">
                   {patient.age != null ? `${patient.age} yrs` : "Age not set"}
                   {" · "}
                   {patient.gender ?? "Gender not set"}
@@ -370,21 +370,22 @@ export default function AccountScreen() {
               />
             </View>
 
-            <View style={[styles.conditionCard, { backgroundColor: colors.primaryMuted, borderColor: `${colors.primary}33` }]}>
+            <View style={[styles.conditionCard, { backgroundColor: colors.primaryMuted, borderColor: colors.primaryLight }]}>
               <Text style={styles.conditionLabel}>
                 Medical conditions · {activeConditions.length} selected
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.conditionPills}>
                 {PATIENT_CONDITIONS.map((cond) => {
                   const selected = activeConditions.includes(cond.id);
+                  const cc = getConditionColor(cond.id, isDark);
                   return (
                     <Pressable
                       key={cond.id}
-                      style={[styles.conditionPill, selected && { borderColor: cond.accentColor, backgroundColor: colors.cardBg }]}
+                      style={[styles.conditionPill, selected && { borderColor: cc.accent, backgroundColor: colors.cardBg }]}
                       onPress={() => toggleCondition(cond.id)}
                     >
-                      <Text style={[styles.conditionPillText, selected && { color: cond.accentColor }]}>{cond.shortName}</Text>
-                      {selected && <Ionicons name="checkmark" size={12} color={cond.accentColor} />}
+                      <Text style={[styles.conditionPillText, selected && { color: cc.accent }]} numberOfLines={1}>{cond.shortName}</Text>
+                      {selected && <Ionicons name="checkmark" size={12} color={cc.accent} />}
                     </Pressable>
                   );
                 })}
@@ -464,8 +465,8 @@ export default function AccountScreen() {
                 </View>
                 {notifications.slice(0, 5).map((n) => (
                   <View key={n.id} style={styles.notifItem}>
-                    <Text style={[styles.notifTitle, !n.read && styles.notifUnread]}>{n.title}</Text>
-                    <Text style={styles.notifBody}>{n.body}</Text>
+                    <Text style={[styles.notifTitle, !n.read && styles.notifUnread]} numberOfLines={1} ellipsizeMode="tail">{n.title}</Text>
+                    <Text style={styles.notifBody} numberOfLines={2} ellipsizeMode="tail">{n.body}</Text>
                   </View>
                 ))}
               </View>
@@ -653,6 +654,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { fontSize: 20, fontWeight: "800", color: colors.primaryText },
+  avatarTextWrap: { flex: 1, minWidth: 0 },
   avatarName: { ...typography.subheading, color: colors.dark },
   avatarSubtitle: { fontSize: typography.caption.fontSize, color: colors.slateMuted, marginTop: 2 },
   card: {
