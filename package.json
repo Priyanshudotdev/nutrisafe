@@ -2,6 +2,7 @@
   "name": "nutricheck",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@11.0.8",
   "main": "expo-router/entry",
   "scripts": {
     "api": "node ./server/index.js",
