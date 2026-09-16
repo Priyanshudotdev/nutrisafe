@@ -34,6 +34,9 @@ let db = null; // live in-memory shape: { users, userData }
 let sql = null; // DatabaseSync handle (sqlite mode only)
 let useJsonFallback = !sqlite;
 
+/** Oldest entries beyond this per user are trimmed on save (bounds rewrite cost). */
+const MAX_HISTORY_ITEMS = 500;
+
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
@@ -137,6 +140,10 @@ function saveToSqlite() {
   const insertHistory = sql.prepare(
     "INSERT INTO history (userId, analysis, createdAt) VALUES (?, ?, ?)"
   );
+  const trimHistory = sql.prepare(
+    `DELETE FROM history WHERE userId = ?
+     AND id NOT IN (SELECT id FROM history WHERE userId = ? ORDER BY id DESC LIMIT ?)`
+  );
 
   // node:sqlite has no transaction() helper — use explicit BEGIN/COMMIT.
   sql.exec("BEGIN");
@@ -157,6 +164,7 @@ function saveToSqlite() {
       for (const analysis of items) {
         insertHistory.run(userId, JSON.stringify(analysis), new Date().toISOString());
       }
+      trimHistory.run(userId, userId, MAX_HISTORY_ITEMS);
     }
     sql.exec("COMMIT");
   } catch (err) {
@@ -207,6 +215,12 @@ function load() {
 
 function save() {
   if (!db) return;
+  // Enforce the per-user cap in every backend (newest-first order).
+  for (const data of Object.values(db.userData)) {
+    if (Array.isArray(data.history) && data.history.length > MAX_HISTORY_ITEMS) {
+      data.history = data.history.slice(0, MAX_HISTORY_ITEMS);
+    }
+  }
   if (useJsonFallback) {
     writeLegacyJson();
     return;

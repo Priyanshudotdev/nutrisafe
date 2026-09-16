@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -17,10 +18,12 @@ import { controlHeight, radius, spacing, typography, type ThemeColors } from "..
 import { useThemeColors } from "../../hooks/useThemeColors";
 import { foodSafetyStore, type FoodSafetyAnalysis } from "../../data/foodSafety";
 import { HistoryItem, FoodCheckCard } from "../../components/FoodCheckCard";
+import { AppButton } from "../../components/AppButton";
 import { EmptyState } from "../../components/EmptyState";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { MedicalDisclaimer } from "../../components/MedicalDisclaimer";
-import { fetchHistory } from "../../services/historyService";
+import { fetchHistory, deleteAnalysis } from "../../services/historyService";
+import { notificationStore } from "../../services/notificationStore";
 
 export default function SearchHistoryScreen() {
   const { colors, isDark } = useThemeColors();
@@ -64,6 +67,32 @@ export default function SearchHistoryScreen() {
     );
   }, [history, searchQuery]);
 
+  const handleDeleteSelected = () => {
+    if (!selectedAnalysis) return;
+    const { id, foodName } = selectedAnalysis;
+    Alert.alert(
+      "Delete this check?",
+      `"${foodName}" will be permanently removed from your history. This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setSelectedAnalysis(null);
+            foodSafetyStore.removeAnalysis(id);
+            try {
+              await deleteAnalysis(id);
+              await notificationStore.push("Check deleted", `${foodName} was removed from history.`);
+            } catch {
+              /* local copy already removed */
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
@@ -91,7 +120,7 @@ export default function SearchHistoryScreen() {
 
       {isLoading ? (
         <View style={styles.loadingState}>
-          <ActivityIndicator size="small" color={colors.primaryDark} />
+          <ActivityIndicator size="small" color={colors.primaryText} />
           <Text style={styles.loadingText}>Loading your previous checks…</Text>
         </View>
       ) : (
@@ -140,6 +169,12 @@ export default function SearchHistoryScreen() {
                   <View style={styles.modalDisclaimer}>
                     <MedicalDisclaimer />
                   </View>
+                  <AppButton
+                    label="Delete this check"
+                    variant="danger"
+                    onPress={handleDeleteSelected}
+                    style={styles.modalDelete}
+                  />
                 </>
               )}
             </ScrollView>
@@ -185,4 +220,5 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   modalTitle: { fontSize: typography.subheading.fontSize, fontWeight: "700", color: colors.dark, letterSpacing: -0.2 },
   modalDisclaimer: { marginTop: spacing.lg },
+  modalDelete: { marginTop: spacing.md },
 });

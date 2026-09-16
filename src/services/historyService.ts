@@ -24,6 +24,14 @@ export async function saveAnalysis(analysis: FoodSafetyAnalysis): Promise<void> 
 }
 
 /**
+ * Delete one analysis from the server.
+ */
+export async function deleteAnalysis(id: string): Promise<void> {
+  if (!authStore.isAuthenticated()) return;
+  await apiFetch(`/history/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/**
  * Clear history on the server.
  */
 export async function clearHistory(): Promise<void> {

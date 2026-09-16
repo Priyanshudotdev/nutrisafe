@@ -86,8 +86,49 @@ const upload = multer({
 
 // ─── App setup ─────────────────────────────────────────────────────────────────
 const app = express();
-app.use(cors());
+
+// CORS: lock down via CORS_ORIGINS (comma-separated) in production.
+// The dev default stays open — Expo Go / LAN devices use unpredictable origins.
+const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+if (CORS_ORIGINS.length > 0) {
+  app.use(cors({ origin: CORS_ORIGINS }));
+} else {
+  app.use(cors());
+  console.warn("CORS is open to all origins (dev default). Set CORS_ORIGINS in production.");
+}
 app.use(express.json({ limit: "5mb" }));
+
+// ─── Rate limiting (in-memory fixed window, zero deps) ────────────────────────
+function rateLimit({ windowMs, max }) {
+  const buckets = new Map();
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip ?? "unknown";
+    let bucket = buckets.get(key);
+    if (!bucket || now - bucket.start > windowMs) {
+      bucket = { start: now, count: 0 };
+      buckets.set(key, bucket);
+      if (buckets.size > 1000) {
+        for (const [k, b] of buckets) {
+          if (now - b.start > windowMs) buckets.delete(k);
+          if (buckets.size <= 1000) break;
+        }
+      }
+    }
+    bucket.count += 1;
+    if (bucket.count > max) {
+      return res.status(429).json({ error: "Too many requests. Slow down and try again." });
+    }
+    next();
+  };
+}
+
+const authLimiter = rateLimit({ windowMs: 60_000, max: 60 });
+const aiLimiter = rateLimit({ windowMs: 60_000, max: 60 });
+app.use("/auth", authLimiter);
 
 // ─── Auth helpers ──────────────────────────────────────────────────────────────
 function signToken(userId) {
@@ -321,21 +362,53 @@ app.post("/onboarding", requireAuth, (req, res) => {
 });
 
 // ─── History ───────────────────────────────────────────────────────────────────
+const HISTORY_PAGE_DEFAULT = 200;
+const HISTORY_PAGE_MAX = 500;
+
 app.get("/history", requireAuth, (req, res) => {
   const data = userDataById.get(req.userId);
-  res.json({ history: data?.history ?? [] });
+  const history = data?.history ?? [];
+  const rawLimit = parseInt(String(req.query.limit ?? HISTORY_PAGE_DEFAULT), 10);
+  const limit = Math.min(Math.max(Number.isNaN(rawLimit) ? HISTORY_PAGE_DEFAULT : rawLimit, 1), HISTORY_PAGE_MAX);
+  res.json({ history: history.slice(0, limit) });
 });
+
+const VALID_STATUSES = ["safe", "moderation", "not_recommended"];
 
 app.post("/history", requireAuth, (req, res) => {
   const { analysis } = req.body;
-  if (!analysis) return res.status(400).json({ error: "analysis is required." });
+  if (!analysis || typeof analysis !== "object" || Array.isArray(analysis)) {
+    return res.status(400).json({ error: "analysis object is required." });
+  }
+  if (typeof analysis.id !== "string" || typeof analysis.foodName !== "string") {
+    return res.status(400).json({ error: "analysis must include string id and foodName." });
+  }
+  if (!VALID_STATUSES.includes(analysis.status)) {
+    return res.status(400).json({ error: "analysis.status must be safe, moderation or not_recommended." });
+  }
+  if (JSON.stringify(analysis).length > 100_000) {
+    return res.status(413).json({ error: "analysis object is too large." });
+  }
 
   const data = userDataById.get(req.userId);
   if (!data) return res.status(404).json({ error: "User data not found." });
 
-  data.history = [analysis, ...data.history];
+  // Upsert by id: retries/double-taps replace instead of duplicating.
+  data.history = [analysis, ...data.history.filter((a) => a?.id !== analysis.id)];
   persist();
   res.status(201).json({ analysis });
+});
+
+app.delete("/history/:id", requireAuth, (req, res) => {
+  const data = userDataById.get(req.userId);
+  if (!data) return res.status(404).json({ error: "User data not found." });
+  const before = data.history.length;
+  data.history = data.history.filter((a) => a?.id !== req.params.id);
+  if (data.history.length === before) {
+    return res.status(404).json({ error: "History item not found." });
+  }
+  persist();
+  res.json({ message: "History item deleted." });
 });
 
 app.delete("/history", requireAuth, (req, res) => {
@@ -347,7 +420,7 @@ app.delete("/history", requireAuth, (req, res) => {
 
 // ─── Vision — food identification from an image ──────────────────────────────
 // Priority: 1) explicit FOOD_VISION_API_URL proxy, 2) built-in AI layer, 3) clear error.
-app.post("/vision/identify", requireAuth, upload.single("image"), async (req, res) => {
+app.post("/vision/identify", requireAuth, aiLimiter, upload.single("image"), async (req, res) => {
   const imagePath = req.file?.path;
 
   if (!imagePath) {
@@ -406,7 +479,7 @@ app.post("/vision/identify", requireAuth, upload.single("image"), async (req, re
 // ({ source: "ai", analysis }) evaluated against ALL of the patient's
 // conditions (worst-case verdict). Without one it signals the client to use
 // the deterministic rules engine in src/data/foodSafety.ts.
-app.post("/nutrition/analyze", requireAuth, async (req, res) => {
+app.post("/nutrition/analyze", requireAuth, aiLimiter, async (req, res) => {
   const { foodName, condition, conditions, patient } = req.body;
   if (!foodName || (!conditions && !condition)) {
     return res.status(400).json({ error: "foodName and condition(s) are required." });
@@ -437,7 +510,7 @@ app.post("/nutrition/analyze", requireAuth, async (req, res) => {
 });
 
 // ─── Prescription extraction — read a doctor's prescription/report photo ─────
-app.post("/prescription/extract", requireAuth, upload.single("image"), async (req, res) => {
+app.post("/prescription/extract", requireAuth, aiLimiter, upload.single("image"), async (req, res) => {
   const imagePath = req.file?.path;
 
   if (!imagePath) {
@@ -477,6 +550,9 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`NutriCheck API server running on http://0.0.0.0:${PORT}`);
   console.log(`  Local:   http://localhost:${PORT}`);
   console.log(`  Data:    SQLite → ${process.env.NUTRICHECK_DB_FILE || path.join(__dirname, "data", "nutricheck.db")}`);
+  if (JWT_SECRET === "nutricheck-dev-secret-change-in-prod" && process.env.NODE_ENV === "production") {
+    console.error("  ✗  Running with the default JWT_SECRET in production — set JWT_SECRET.");
+  }
   if (FOOD_VISION_API_URL) {
     console.log(`  ✓  Vision proxy → ${FOOD_VISION_API_URL}`);
   } else if (ai.isConfigured()) {
