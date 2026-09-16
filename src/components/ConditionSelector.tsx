@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { PATIENT_CONDITIONS, type PatientCondition } from "../data/foodSafety";
-import { radius, spacing, type ThemeColors } from "../theme/tokens";
+import { radius, spacing, getConditionColor, type ThemeColors } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 
 interface ConditionSelectorProps {
@@ -16,7 +16,7 @@ export function ConditionSelector({
   selectedConditions,
   onToggleCondition,
 }: ConditionSelectorProps): JSX.Element {
-  const { colors } = useThemeColors();
+  const { colors, isDark } = useThemeColors();
   const styles = makeStyles(colors);
   const count = selectedConditions.length;
 
@@ -40,12 +40,13 @@ export function ConditionSelector({
       >
         {PATIENT_CONDITIONS.map((cond) => {
           const isSelected = selectedConditions.includes(cond.id);
+          const cc = getConditionColor(cond.id, isDark);
           return (
             <Pressable
               key={cond.id}
               style={[
                 styles.pillButton,
-                isSelected && [styles.pillButtonActive, { borderColor: cond.accentColor }],
+                isSelected && [styles.pillButtonActive, { borderColor: cc.accent }],
               ]}
               onPress={() => onToggleCondition(cond.id)}
               accessibilityRole="button"
@@ -55,7 +56,7 @@ export function ConditionSelector({
               <View
                 style={[
                   styles.iconWrap,
-                  { backgroundColor: isSelected ? cond.accentColor : colors.gray1 },
+                  { backgroundColor: isSelected ? cc.accent : colors.gray1 },
                 ]}
               >
                 <Ionicons
@@ -69,8 +70,10 @@ export function ConditionSelector({
                 <Text
                   style={[
                     styles.pillText,
-                    isSelected && [styles.pillTextActive, { color: cond.accentColor }],
+                    isSelected && [styles.pillTextActive, { color: cc.accent }],
                   ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
                   {cond.badgeLabel}
                 </Text>
@@ -79,7 +82,7 @@ export function ConditionSelector({
               <View
                 style={[
                   styles.checkCircle,
-                  isSelected && { backgroundColor: cond.accentColor, borderColor: cond.accentColor },
+                  isSelected && { backgroundColor: cc.accent, borderColor: cc.accent },
                 ]}
               >
                 {isSelected && <Ionicons name="checkmark" size={10} color={colors.white} />}

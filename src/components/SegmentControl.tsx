@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { radius, spacing, type ThemeColors } from "../theme/tokens";
+import { radius, shadow, spacing, type ThemeColors } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 
 interface SegmentControlProps<T extends string> {
@@ -53,11 +53,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   segmentActive: {
     backgroundColor: colors.cardBg,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadow.subtle,
   },
   segmentText: {
     fontSize: 13,

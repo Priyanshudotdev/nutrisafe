@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { controlHeight, radius, sectionLabel, spacing, typography, type ThemeColors } from "../theme/tokens";
+import { controlHeight, radius, sectionLabel, spacing, typography, getConditionColor, type ThemeColors } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 import { AppButton } from "../components/AppButton";
 import { ErrorBanner } from "../components/ErrorBanner";
@@ -219,7 +219,7 @@ export default function OnboardingScreen() {
                   </Text>
                 </View>
                 {rxResult.summary ? (
-                  <Text style={styles.rxSummary}>{rxResult.summary}</Text>
+                  <Text style={styles.rxSummary} numberOfLines={4} ellipsizeMode="tail">{rxResult.summary}</Text>
                 ) : null}
                 {rxResult.conditions && rxResult.conditions.length > 0 && (
                   <View style={styles.rxFoundRow}>
@@ -238,11 +238,11 @@ export default function OnboardingScreen() {
                 {rxResult.allergensList && rxResult.allergensList.length > 0 && (
                   <View style={styles.rxFoundRow}>
                     <Text style={styles.rxFoundLabel}>Allergens:</Text>
-                    <Text style={styles.rxFoundValue}>{rxResult.allergensList.join(", ")}</Text>
+                    <Text style={styles.rxFoundValue} numberOfLines={2} ellipsizeMode="tail">{rxResult.allergensList.join(", ")}</Text>
                   </View>
                 )}
                 {rxResult.doctorName ? (
-                  <Text style={styles.rxFoundValue}>Doctor: {rxResult.doctorName}</Text>
+                  <Text style={styles.rxFoundValue} numberOfLines={1} ellipsizeMode="tail">Doctor: {rxResult.doctorName}</Text>
                 ) : null}
                 <AppButton
                   label="Apply to my profile"
@@ -269,12 +269,14 @@ export default function OnboardingScreen() {
           <View style={styles.conditionGrid}>
             {PATIENT_CONDITIONS.map((cond) => {
               const selected = conditions.includes(cond.id);
+              // Themed wash: light pastels glare on dark surfaces, so resolve per theme.
+              const cc = getConditionColor(cond.id, isDark);
               return (
                 <Pressable
                   key={cond.id}
                   style={[
                     styles.conditionCard,
-                    selected && { borderColor: cond.accentColor, backgroundColor: cond.bgColor },
+                    selected && { borderColor: cc.accent, backgroundColor: cc.bg },
                   ]}
                   onPress={() => toggleCondition(cond.id)}
                   accessibilityRole="button"
@@ -284,18 +286,18 @@ export default function OnboardingScreen() {
                     <Ionicons
                       name={cond.iconName as keyof typeof Ionicons.glyphMap}
                       size={20}
-                      color={selected ? cond.accentColor : colors.slateLight}
+                      color={selected ? cc.accent : colors.slateLight}
                     />
                     <View
                       style={[
                         styles.conditionCheck,
-                        selected && { backgroundColor: cond.accentColor, borderColor: cond.accentColor },
+                        selected && { backgroundColor: cc.accent, borderColor: cc.accent },
                       ]}
                     >
                       {selected && <Ionicons name="checkmark" size={12} color={colors.white} />}
                     </View>
                   </View>
-                  <Text style={[styles.conditionTitle, selected && { color: cond.accentColor }]}>
+                  <Text style={[styles.conditionTitle, selected && { color: cc.accent }]}>
                     {cond.shortName}
                   </Text>
                   <Text style={styles.conditionDesc} numberOfLines={2}>
