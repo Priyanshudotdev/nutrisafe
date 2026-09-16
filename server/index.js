@@ -20,13 +20,45 @@ const fs = require("fs");
 const ai = require("./ai");
 const store = require("./store");
 
+// ─── Local env files ─────────────────────────────────────────────────────────
+// Plain `node` doesn't inject Expo's .env.local — load it (and .env) here so
+// GEMINI_API_KEY / OPENAI_* / PORT / JWT_SECRET just work. Real environment
+// variables always win; values already set are never overwritten.
+// Set NUTRICHECK_SKIP_ENV_FILE=1 to disable (used by hermetic tests).
+if (process.env.NUTRICHECK_SKIP_ENV_FILE !== "1") {
+for (const file of [".env.local", ".env"]) {
+  try {
+    const fs = require("fs");
+    const p = require("path").join(process.cwd(), file);
+    if (!fs.existsSync(p)) continue;
+    for (const line of fs.readFileSync(p, "utf8").split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq <= 0) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let value = trimmed.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      if (key && !(key in process.env)) process.env[key] = value;
+    }
+  } catch (err) {
+    console.warn(`Could not load ${file}:`, err.message);
+  }
+}
+}
+
 // ─── Config ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT ?? 4000;
 const JWT_SECRET = process.env.JWT_SECRET ?? "nutricheck-dev-secret-change-in-prod";
 const JWT_EXPIRES_IN = "7d";
 const FOOD_VISION_API_URL = process.env.FOOD_VISION_API_URL ?? ""; // optional direct vision endpoint override
 
-// ─── Persistent stores (JSON file via store.js) ───────────────────────────────
+// ─── Persistent stores (SQLite via store.js) ───────────────────────────────────
 const db = store.load();
 /** @type {Map<string, { id: string; email: string; passwordHash: string; profile: object; createdAt: string }>} */
 const usersByEmail = new Map(Object.entries(db.users));
@@ -444,7 +476,7 @@ app.use((err, _req, res, _next) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`NutriCheck API server running on http://0.0.0.0:${PORT}`);
   console.log(`  Local:   http://localhost:${PORT}`);
-  console.log(`  Data:    persisted to ${path.join(__dirname, "data", "db.json")}`);
+  console.log(`  Data:    SQLite → ${process.env.NUTRICHECK_DB_FILE || path.join(__dirname, "data", "nutricheck.db")}`);
   if (FOOD_VISION_API_URL) {
     console.log(`  ✓  Vision proxy → ${FOOD_VISION_API_URL}`);
   } else if (ai.isConfigured()) {
