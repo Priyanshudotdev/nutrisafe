@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   View,
@@ -9,7 +9,6 @@ import {
   Pressable,
   Modal,
   StatusBar,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,8 +21,10 @@ import { AppButton } from "../../components/AppButton";
 import { EmptyState } from "../../components/EmptyState";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { MedicalDisclaimer } from "../../components/MedicalDisclaimer";
-import { fetchHistory, deleteAnalysis } from "../../services/historyService";
-import { notificationStore } from "../../services/notificationStore";
+import { fetchHistory, deleteAnalysis, saveAnalysis } from "../../services/historyService";
+
+const UNDO_WINDOW_MS = 6000;
+const SKELETON_ROWS = 4;
 
 export default function SearchHistoryScreen() {
   const { colors, isDark } = useThemeColors();
@@ -33,6 +34,14 @@ export default function SearchHistoryScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAnalysis, setSelectedAnalysis] = useState<FoodSafetyAnalysis | null>(null);
+  const [lastDeleted, setLastDeleted] = useState<FoodSafetyAnalysis | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (undoTimer.current) clearTimeout(undoTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,18 +88,36 @@ export default function SearchHistoryScreen() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
+            const deleted = selectedAnalysis;
             setSelectedAnalysis(null);
+            setLastDeleted(null);
+            if (undoTimer.current) clearTimeout(undoTimer.current);
             foodSafetyStore.removeAnalysis(id);
             try {
               await deleteAnalysis(id);
-              await notificationStore.push("Check deleted", `${foodName} was removed from history.`);
             } catch {
               /* local copy already removed */
             }
+            // Completion state with a way back: Undo restores locally + re-saves.
+            setLastDeleted(deleted);
+            undoTimer.current = setTimeout(() => setLastDeleted(null), UNDO_WINDOW_MS);
           },
         },
       ]
     );
+  };
+
+  const handleUndoDelete = async () => {
+    if (!lastDeleted) return;
+    const restored = lastDeleted;
+    setLastDeleted(null);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    foodSafetyStore.setHistory([restored, ...foodSafetyStore.getHistory()]);
+    try {
+      await saveAnalysis(restored);
+    } catch {
+      /* local copy already restored */
+    }
   };
 
   return (
@@ -118,10 +145,28 @@ export default function SearchHistoryScreen() {
         </View>
       </View>
 
+      {lastDeleted && !isLoading && (
+        <View style={styles.undoBanner}>
+          <Text style={styles.undoText} numberOfLines={1} ellipsizeMode="tail">
+            “{lastDeleted.foodName}” deleted.
+          </Text>
+          <Pressable onPress={handleUndoDelete} accessibilityRole="button" accessibilityLabel="Undo delete">
+            <Text style={styles.undoAction}>Undo</Text>
+          </Pressable>
+        </View>
+      )}
+
       {isLoading ? (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="small" color={colors.primaryText} />
-          <Text style={styles.loadingText}>Loading your previous checks…</Text>
+        <View style={styles.listContent} accessibilityRole="progressbar" accessibilityLabel="Loading your previous checks">
+          {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+            <View key={`skeleton-${i}`} style={styles.skeletonRow}>
+              <View style={styles.skeletonIcon} />
+              <View style={styles.skeletonTextWrap}>
+                <View style={styles.skeletonLineWide} />
+                <View style={styles.skeletonLineNarrow} />
+              </View>
+            </View>
+          ))}
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.listContent}>
@@ -199,8 +244,37 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     height: controlHeight.md,
   },
   searchInput: { flex: 1, marginLeft: spacing.sm, fontSize: typography.bodySmall.fontSize, color: colors.dark },
-  loadingState: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md },
-  loadingText: { fontSize: typography.bodySmall.fontSize, color: colors.slateMuted, fontWeight: "500" },
+  undoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.cardBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  undoText: { flex: 1, minWidth: 0, fontSize: typography.bodySmall.fontSize, color: colors.slateMedium, fontWeight: "500" },
+  undoAction: { fontSize: typography.bodySmall.fontSize, fontWeight: "700", color: colors.primaryText },
+  skeletonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.cardBg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  skeletonIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.bgSubtle },
+  skeletonTextWrap: { flex: 1, gap: 6 },
+  skeletonLineWide: { height: 12, borderRadius: 6, backgroundColor: colors.bgSubtle, width: "60%" },
+  skeletonLineNarrow: { height: 10, borderRadius: 5, backgroundColor: colors.bgSubtle, width: "40%" },
   listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   bottomSpacer: { height: 100 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },

@@ -128,13 +128,15 @@ action across screens.
 - **Empty** — use `EmptyState`: what is empty, why, and the next useful action
   as its CTA. Never ship a blank region.
 - **Loading** — multi-step analysis uses `StepProgressState` (evidence of
-  progress beats raw speed); quick fetches use an inline `ActivityIndicator`.
+  progress beats raw speed); list screens render skeleton rows that mirror the
+  real row shape; quick fetches use an inline `ActivityIndicator`.
   Any button that triggers async work shows its loading state via `AppButton`.
 - **Error** — use `ErrorBanner`: explain what failed and how to recover.
   Field-level errors sit next to their field; destructive color only here.
 - **Completion** — meaningful actions confirm what happened (toast/notification
   via `notificationStore.push`, success state, or updated UI). Nothing should
-  vanish without explanation.
+  vanish without explanation. Single-item delete shows an inline Undo banner
+  (6s window, restores locally and re-saves).
 - **Destructive** — confirm before acting. Copy states the consequence plainly,
   includes the count of affected items, and says it cannot be undone when true.
   Destructive confirm buttons use `danger` styling.
