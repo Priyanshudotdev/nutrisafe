@@ -79,11 +79,6 @@ export function StepProgressState({
   );
 }
 
-/** @deprecated Use StepProgressState */
-export function AnalysisLoadingState({ visible }: { visible: boolean }): JSX.Element | null {
-  return <StepProgressState visible={visible} />;
-}
-
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginTop: spacing.lg,
