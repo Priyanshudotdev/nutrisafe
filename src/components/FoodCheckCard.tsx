@@ -74,8 +74,8 @@ export function FoodCheckCard({ analysis, expanded = false, onPress }: FoodCheck
       <View style={styles.heroSection}>
         <View style={styles.heroTop}>
           <View style={styles.foodNameWrap}>
-            <Text style={styles.foodName}>{analysis.foodName}</Text>
-            <Text style={styles.foodCategory}>{analysis.category}</Text>
+            <Text style={styles.foodName} numberOfLines={2} ellipsizeMode="tail">{analysis.foodName}</Text>
+            <Text style={styles.foodCategory} numberOfLines={1} ellipsizeMode="tail">{analysis.category}</Text>
           </View>
           <View style={[styles.conditionTag, { backgroundColor: cc.bg }]}>
             <Text style={[styles.conditionTagText, { color: cc.accent }]}>{conditionLabel}</Text>
@@ -85,7 +85,7 @@ export function FoodCheckCard({ analysis, expanded = false, onPress }: FoodCheck
         <SafetyStatusBadge status={analysis.status} headline={analysis.statusHeadline} size="large" />
       </View>
 
-      <Text style={styles.summary}>{analysis.summary}</Text>
+      <Text style={styles.summary} numberOfLines={showDetails ? undefined : 3} ellipsizeMode="tail">{analysis.summary}</Text>
 
       {showDetails && (
         <>
@@ -182,13 +182,13 @@ export function HistoryItem({ analysis, onPress }: HistoryItemProps): JSX.Elemen
         />
       </View>
       <View style={styles.historyContent}>
-        <Text style={styles.historyName}>{analysis.foodName}</Text>
+        <Text style={styles.historyName} numberOfLines={1} ellipsizeMode="tail">{analysis.foodName}</Text>
         <View style={styles.historyMetaRow}>
-          <Text style={styles.historyCondition}>{conditionLabel}</Text>
+          <Text style={styles.historyCondition} numberOfLines={1}>{conditionLabel}</Text>
           <Text style={styles.historyDot}>·</Text>
-          <Text style={styles.historyMeta}>{analysis.timestamp}</Text>
+          <Text style={styles.historyMeta} numberOfLines={1} ellipsizeMode="tail">{analysis.timestamp}</Text>
         </View>
-        <Text style={[styles.historyStatus, { color: sc.text }]}>{analysis.statusHeadline}</Text>
+        <Text style={[styles.historyStatus, { color: sc.text }]} numberOfLines={1} ellipsizeMode="tail">{analysis.statusHeadline}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.gray3} />
     </Pressable>
@@ -214,6 +214,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   foodNameWrap: {
     flex: 1,
+    minWidth: 0,
   },
   foodName: {
     fontSize: 22,
@@ -393,6 +394,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   historyContent: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   historyName: {
@@ -415,6 +417,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.gray3,
   },
   historyMeta: {
+    flexShrink: 1,
     fontSize: 12,
     color: colors.slateMuted,
     fontWeight: "500",

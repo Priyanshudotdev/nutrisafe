@@ -226,11 +226,18 @@ export default function FoodScannerScreen() {
             <Text style={styles.uncertainTitle}>Which food is this?</Text>
             <Text style={styles.uncertainText}>{identification.message}</Text>
             {identification.candidates.map((c) => (
-              <Pressable key={c.name} style={styles.candidateRow} onPress={() => runAnalysis(c.name)}>
-                <Text style={styles.candidateName}>{c.name}</Text>
+              <Pressable
+                key={c.name}
+                style={styles.candidateRow}
+                onPress={() => runAnalysis(c.name)}
+                accessibilityRole="button"
+                accessibilityLabel={`Confirm food as ${c.name}`}
+              >
+                <Text style={styles.candidateName} numberOfLines={1} ellipsizeMode="tail">{c.name}</Text>
                 {c.confidence > 0 && (
                   <Text style={styles.candidateConf}>{Math.round(c.confidence * 100)}% match</Text>
                 )}
+                <Ionicons name="chevron-forward" size={16} color={colors.gray3} />
               </Pressable>
             ))}
             <AppLinkButton label="Search manually instead" onPress={() => router.push("/(tabs)")} style={styles.linkButton} />
@@ -318,8 +325,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.bgSubtle,
     borderRadius: radius.md,
     padding: spacing.md,
+    gap: spacing.sm,
   },
-  candidateName: { fontSize: 15, fontWeight: "600", color: colors.dark },
+  candidateName: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600", color: colors.dark },
   candidateConf: { fontSize: 12, color: colors.slateMuted },
   errorCard: {
     marginTop: spacing.xl,

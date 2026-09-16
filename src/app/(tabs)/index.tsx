@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { radius, spacing, typography, type ThemeColors } from "../../theme/tokens";
+import { radius, spacing, typography, getStatusColors, type ThemeColors } from "../../theme/tokens";
 import { useThemeColors } from "../../hooks/useThemeColors";
 import {
   foodSafetyStore,
@@ -161,16 +161,14 @@ export default function HomeScreen() {
             icon="shield-checkmark-outline"
             loading={isAnalyzing}
             disabled={!searchText.trim()}
-            style={styles.primaryAction}
           />
 
           <AppButton
-            label="Scan Food"
+            label="Scan Food instead"
             onPress={() => router.push("/(tabs)/scan")}
-            variant="secondary"
-            size="lg"
+            variant="ghost"
+            size="md"
             icon="camera-outline"
-            style={styles.secondaryAction}
           />
         </View>
 
@@ -197,12 +195,25 @@ export default function HomeScreen() {
                 {history.length} saved check{history.length === 1 ? "" : "s"}
               </Text>
             </View>
-            {recentChecks.map((item) => (
-              <Pressable key={item.id} style={styles.recentItem} onPress={() => handleRecentPress(item.foodName)}>
-                <Text style={styles.recentFood}>{item.foodName}</Text>
-                <Ionicons name="arrow-forward" size={14} color={colors.gray3} />
-              </Pressable>
-            ))}
+            {recentChecks.map((item) => {
+              const sc = getStatusColors(item.status, isDark);
+              return (
+                <Pressable
+                  key={item.id}
+                  style={styles.recentItem}
+                  onPress={() => handleRecentPress(item.foodName)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.foodName}, ${item.statusHeadline}`}
+                >
+                  <View style={[styles.recentDot, { backgroundColor: sc.icon }]} />
+                  <View style={styles.recentTextWrap}>
+                    <Text style={styles.recentFood} numberOfLines={1} ellipsizeMode="tail">{item.foodName}</Text>
+                    <Text style={[styles.recentVerdict, { color: sc.text }]} numberOfLines={1} ellipsizeMode="tail">{item.statusHeadline}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.gray3} />
+                </Pressable>
+              );
+            })}
           </View>
         )}
 
@@ -249,9 +260,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     marginRight: spacing.sm,
   },
   suggestionText: { fontSize: typography.micro.fontSize, color: colors.slateMuted, fontWeight: "500" },
-  actionRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
-  primaryAction: { flex: 1 },
-  secondaryAction: { flex: 1 },
+  actionRow: { marginTop: spacing.md, gap: spacing.xs },
   errorWrap: { marginTop: spacing.md },
   resultSection: { marginTop: spacing.xl, gap: spacing.md },
   recentSection: { marginTop: spacing.xxl, gap: spacing.sm },
@@ -265,14 +274,17 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   recentItem: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: colors.cardBg,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    gap: spacing.sm,
   },
+  recentDot: { width: 8, height: 8, borderRadius: 4 },
+  recentTextWrap: { flex: 1, minWidth: 0, gap: 1 },
   recentFood: { fontSize: typography.bodySmall.fontSize + 1, fontWeight: "600", color: colors.dark },
+  recentVerdict: { fontSize: typography.micro.fontSize, fontWeight: "700" },
   bottomSpacer: { height: 100 },
 });
