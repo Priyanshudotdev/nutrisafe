@@ -865,8 +865,21 @@ class FoodSafetyStore {
     this.notify();
   }
 
+  removeAnalysis(id: string) {
+    this.history = this.history.filter((a) => a.id !== id);
+    this.notify();
+  }
+
   clearHistory() {
     this.history = [];
+    this.notify();
+  }
+
+  /** Signed-out state: no previous user's profile, conditions, or history leak through. */
+  resetSession() {
+    this.history = [];
+    this.currentPatient = { ...INITIAL_PATIENT };
+    this.selectedConditions = ["ckd"];
     this.notify();
   }
 }

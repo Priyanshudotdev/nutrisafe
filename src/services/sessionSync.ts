@@ -10,7 +10,7 @@ export async function hydrateSessionData(): Promise<void> {
   }
 
   if (!authStore.isAuthenticated()) {
-    foodSafetyStore.setHistory([]);
+    foodSafetyStore.resetSession();
     return;
   }
 

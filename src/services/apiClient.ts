@@ -64,6 +64,11 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   if (!response.ok) {
     const message = await parseErrorMessage(response);
+    if (response.status === 401) {
+      // Token expired/revoked: drop the dead session so AuthGate routes to
+      // login instead of failing every sync silently.
+      void authStore.logout();
+    }
     throw new ApiError(response.status, message);
   }
 

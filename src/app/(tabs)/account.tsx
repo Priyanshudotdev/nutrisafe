@@ -61,7 +61,7 @@ function SettingsRow({ icon, label, subtitle, onPress, trailing, destructive }: 
       accessibilityRole={onPress ? "button" : undefined}
     >
       <View style={[styles.settingsIcon, destructive && styles.settingsIconDestructive]}>
-        <Ionicons name={icon} size={18} color={destructive ? colors.dangerIcon : colors.primaryDark} />
+        <Ionicons name={icon} size={18} color={destructive ? colors.dangerIcon : colors.primaryText} />
       </View>
       <View style={styles.settingsText}>
         <Text style={[styles.settingsLabel, destructive && styles.settingsLabelDestructive]}>{label}</Text>
@@ -291,7 +291,7 @@ export default function AccountScreen() {
         style: "destructive",
         onPress: async () => {
           await logout();
-          foodSafetyStore.setHistory([]);
+          foodSafetyStore.resetSession();
           router.replace("/login");
         },
       },
@@ -502,7 +502,7 @@ export default function AccountScreen() {
                 onPress={() =>
                   Alert.alert(
                     "Data handling",
-                    "Your profile and food-check history are stored on the NutriCheck API server (in-memory for this development build). Vision API keys stay on the server."
+                    "Your profile and food-check history are stored in the app's local SQLite database on the NutriCheck API server. Vision API keys stay on the server."
                   )
                 }
               />
@@ -652,7 +652,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: 20, fontWeight: "800", color: colors.primaryDark },
+  avatarText: { fontSize: 20, fontWeight: "800", color: colors.primaryText },
   avatarName: { ...typography.subheading, color: colors.dark },
   avatarSubtitle: { fontSize: typography.caption.fontSize, color: colors.slateMuted, marginTop: 2 },
   card: {
@@ -666,7 +666,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   cardTitle: { ...typography.title, color: colors.dark },
   conditionCard: { borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1.5, gap: spacing.sm },
   conditionLabel: { fontSize: 12, fontWeight: "600", color: colors.slateLight },
-  conditionTitle: { fontSize: 16, fontWeight: "800" },
   conditionPills: { gap: spacing.sm, paddingTop: spacing.sm, alignItems: "center" },
   conditionPill: {
     flexDirection: "row",
@@ -700,7 +699,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   settingsSubtitle: { fontSize: typography.caption.fontSize, color: colors.slateMuted },
   divider: { height: 1, backgroundColor: colors.cardBorder, marginVertical: spacing.sm },
   notifHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
-  linkSmall: { fontSize: typography.caption.fontSize, fontWeight: "600", color: colors.primaryDark },
+  linkSmall: { fontSize: typography.caption.fontSize, fontWeight: "600", color: colors.primaryText },
   notifItem: { paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.cardBorder },
   notifTitle: { fontSize: typography.bodySmall.fontSize, fontWeight: "600", color: colors.slateMedium },
   notifUnread: { color: colors.dark, fontWeight: "700" },
@@ -744,6 +743,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   genderModalPillActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
   genderModalText: { fontSize: typography.body.fontSize, fontWeight: "600", color: colors.dark },
-  genderModalTextActive: { color: colors.primaryDark, fontWeight: "700" },
+  genderModalTextActive: { color: colors.primaryText, fontWeight: "700" },
   flex: { flex: 1 },
 });
