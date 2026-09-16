@@ -24,6 +24,7 @@ Defaults to **http://localhost:4000**. Set `PORT` to change.
 | `FOOD_VISION_API_URL` | No | Legacy override: proxy food images to an external vision endpoint instead of the built-in AI layer. |
 | `NUTRICHECK_DB_FILE` | No | Override the SQLite database path (tests use a temp file). |
 | `NUTRICHECK_SKIP_ENV_FILE` | No | Set to `1` to skip `.env.local`/`.env` loading (hermetic tests). |
+| `CORS_ORIGINS` | No | Comma-separated allowed origins. Defaults to open (dev); set in production. |
 
 > Plain `node` doesn't inject Expo env, so the server loads `.env.local` then
 > `.env` from the project root itself. Real environment variables always win.
@@ -37,7 +38,8 @@ the app falls back to its built-in deterministic rules engine.
 ## Data persistence
 
 Accounts and history persist to SQLite at `server/data/nutricheck.db` (gitignored,
-zero dependencies via Node's built-in `node:sqlite`). A legacy `db.json`, if
+zero dependencies via Node's built-in `node:sqlite`). History is capped at 500
+entries per user (oldest trimmed on save). A legacy `db.json`, if
 present, is migrated automatically on first boot and renamed to
 `db.json.migrated`. Set `NUTRICHECK_DB_FILE` to override the path, or delete the
 `.db` file to reset all data. The server only touches `store.js` `load()` /
@@ -64,8 +66,9 @@ also set a real `JWT_SECRET`.
 ### History
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/history` | Bearer | Get all food checks |
-| `POST` | `/history` | Bearer | Save a food check |
+| `GET` | `/history` | Bearer | Get food checks (`?limit=1..500`, default 200) |
+| `POST` | `/history` | Bearer | Save a food check (validated: id/foodName/status, ≤100KB) |
+| `DELETE` | `/history/:id` | Bearer | Delete one food check |
 | `DELETE` | `/history` | Bearer | Clear all history |
 
 ### Vision & Nutrition (AI)
