@@ -49,11 +49,11 @@ interface FoodCheckCardProps {
 }
 
 export function FoodCheckCard({ analysis, expanded = false, onPress }: FoodCheckCardProps): JSX.Element {
-  const { colors } = useThemeColors();
+  const { colors, isDark } = useThemeColors();
   const styles = makeStyles(colors);
   const [whyExpanded, setWhyExpanded] = useState(expanded);
-  const sc = getStatusColors(analysis.status);
-  const cc = getConditionColor(analysis.condition);
+  const sc = getStatusColors(analysis.status, isDark);
+  const cc = getConditionColor(analysis.condition, isDark);
   const conditionLabel = getConditionLabel(analysis.condition);
   const showDetails = expanded || whyExpanded;
 
@@ -122,7 +122,7 @@ export function FoodCheckCard({ analysis, expanded = false, onPress }: FoodCheck
 
       {analysis.portionGuidance && (
         <View style={[styles.portionBox, { backgroundColor: colors.primaryMuted, borderColor: colors.primaryLight }]}>
-          <Ionicons name="resize-outline" size={18} color={colors.primaryDark} />
+          <Ionicons name="resize-outline" size={18} color={colors.primaryText} />
           <View style={{ flex: 1 }}>
             <Text style={styles.portionLabel}>Portion guidance</Text>
             <Text style={styles.portionText}>{analysis.portionGuidance}</Text>
@@ -146,7 +146,7 @@ export function FoodCheckCard({ analysis, expanded = false, onPress }: FoodCheck
           accessibilityState={{ expanded: whyExpanded }}
         >
           <Text style={styles.expandButtonText}>{whyExpanded ? "Show less" : "See full analysis"}</Text>
-          <Ionicons name={whyExpanded ? "chevron-up" : "chevron-down"} size={16} color={colors.primaryDark} />
+          <Ionicons name={whyExpanded ? "chevron-up" : "chevron-down"} size={16} color={colors.primaryText} />
         </Pressable>
       )}
 
@@ -161,9 +161,9 @@ interface HistoryItemProps {
 }
 
 export function HistoryItem({ analysis, onPress }: HistoryItemProps): JSX.Element {
-  const { colors } = useThemeColors();
+  const { colors, isDark } = useThemeColors();
   const styles = makeStyles(colors);
-  const sc = getStatusColors(analysis.status);
+  const sc = getStatusColors(analysis.status, isDark);
   const conditionLabel = getConditionLabel(analysis.condition);
 
   return (
@@ -347,12 +347,12 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   portionLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: colors.primaryDark,
+    color: colors.primaryText,
     marginBottom: 2,
   },
   portionText: {
     fontSize: 12,
-    color: colors.primaryDeep,
+    color: colors.primaryText,
     lineHeight: 17,
     fontWeight: "500",
   },
@@ -371,7 +371,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   expandButtonText: {
     fontSize: 13,
     fontWeight: "700",
-    color: colors.primaryDark,
+    color: colors.primaryText,
   },
   historyRow: {
     flexDirection: "row",

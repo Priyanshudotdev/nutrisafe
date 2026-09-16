@@ -4,6 +4,7 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { SafetyStatus } from "../data/foodSafety";
 import { getStatusColors, radius } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 interface SafetyStatusBadgeProps {
   status: SafetyStatus;
@@ -28,7 +29,8 @@ export function SafetyStatusBadge({
   headline,
   size = "normal",
 }: SafetyStatusBadgeProps): JSX.Element {
-  const sc = getStatusColors(status);
+  const { isDark } = useThemeColors();
+  const sc = getStatusColors(status, isDark);
   const label = headline || STATUS_LABELS[status];
   const icon = STATUS_ICONS[status];
 

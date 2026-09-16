@@ -35,7 +35,7 @@ export default function TabsLayout() {
           paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: lightColors.primaryDark,
+        tabBarActiveTintColor: colors.primaryText,
         tabBarInactiveTintColor: colors.gray4,
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
         sceneStyle: { backgroundColor: colors.background },

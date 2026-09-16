@@ -165,7 +165,7 @@ export default function OnboardingScreen() {
           <View style={styles.rxCard}>
             <View style={styles.rxHeader}>
               <View style={styles.rxIcon}>
-                <Ionicons name="document-text-outline" size={18} color={colors.primaryDark} />
+                <Ionicons name="document-text-outline" size={18} color={colors.primaryText} />
               </View>
               <View style={styles.rxHeaderTextWrap}>
                 <Text style={styles.rxTitle}>Doctor&apos;s prescription</Text>
@@ -205,7 +205,7 @@ export default function OnboardingScreen() {
 
             {rxPhase === "extracting" && (
               <View style={styles.rxExtracting}>
-                <ActivityIndicator size="small" color={colors.primaryDark} />
+                <ActivityIndicator size="small" color={colors.primaryText} />
                 <Text style={styles.rxExtractingText}>Reading your prescription…</Text>
               </View>
             )}
@@ -400,7 +400,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
-  eyebrow: { ...sectionLabel, color: colors.primaryDark, marginBottom: spacing.sm },
+  eyebrow: { ...sectionLabel, color: colors.primaryText, marginBottom: spacing.sm },
   heading: { ...typography.display, color: colors.dark, marginBottom: 6 },
   subheading: { fontSize: typography.body.fontSize, color: colors.slateMuted, lineHeight: 20, marginBottom: spacing.xl },
   errorWrap: { marginBottom: spacing.lg },
@@ -536,6 +536,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   genderPillActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
   genderText: { fontSize: typography.bodySmall.fontSize, fontWeight: "600", color: colors.slateMedium },
-  genderTextActive: { color: colors.primaryDark },
+  genderTextActive: { color: colors.primaryText },
   submitButton: { marginTop: spacing.sm },
 });

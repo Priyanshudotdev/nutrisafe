@@ -31,8 +31,8 @@ const LABEL_SIZE: Record<Size, number> = { sm: 13, md: 14, lg: 15 };
 
 const getVariantColors = (colors: ThemeColors): Record<Variant, { bg: string; border: string; text: string }> => ({
   primary: { bg: colors.primaryDark, border: "transparent", text: colors.white },
-  secondary: { bg: colors.cardBg, border: colors.cardBorder, text: colors.primaryDark },
-  ghost: { bg: "transparent", border: "transparent", text: colors.primaryDark },
+  secondary: { bg: colors.cardBg, border: colors.cardBorder, text: colors.primaryText },
+  ghost: { bg: "transparent", border: "transparent", text: colors.primaryText },
   danger: { bg: colors.dangerBg, border: colors.dangerBorder, text: colors.dangerText },
 });
 
@@ -102,7 +102,7 @@ export function AppLinkButton({
       accessibilityRole="button"
       android_ripple={{ color: "rgba(0,0,0,0.04)" }}
     >
-      {icon ? <Ionicons name={icon} size={16} color={colors.primaryDark} /> : null}
+      {icon ? <Ionicons name={icon} size={16} color={colors.primaryText} /> : null}
       <Text style={styles.linkLabel}>{label}</Text>
     </Pressable>
   );
@@ -128,5 +128,5 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: 6,
     paddingVertical: 12,
   },
-  linkLabel: { fontSize: 14, fontWeight: "600", color: colors.primaryDark },
+  linkLabel: { fontSize: 14, fontWeight: "600", color: colors.primaryText },
 });

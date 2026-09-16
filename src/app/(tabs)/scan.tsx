@@ -185,7 +185,7 @@ export default function FoodScannerScreen() {
         {phase === "initial" && (
           <View style={styles.initialCard}>
             <View style={styles.scanIconCircle}>
-              <Ionicons name="camera-outline" size={32} color={colors.primaryDark} />
+              <Ionicons name="camera-outline" size={32} color={colors.primaryText} />
             </View>
             <Text style={styles.initialText}>
               Point your camera at the food or upload a clear photo of the full dish.

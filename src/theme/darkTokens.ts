@@ -16,4 +16,27 @@ export const darkColors = {
   gray4: "#64748B",
   gray5: "#94A3B8",
   white: "#0F172A",
+  // ─── Brand washes (light pastels would glare on dark surfaces) ──────────────
+  primaryText: "#5EEAD4",
+  primaryMuted: "#134E4A",
+  primaryLight: "#0F766E",
+  // ─── Status washes (NutrientRow reads these via themed `colors`) ─────────────
+  safeText: "#A7F3D0",
+  safeBg: "#064E3B",
+  safeBorder: "#059669",
+  safeIcon: "#34D399",
+  moderationText: "#FDE68A",
+  moderationBg: "#78350E",
+  moderationBorder: "#D97706",
+  moderationIcon: "#FBBF24",
+  dangerText: "#FECACA",
+  dangerBg: "#7F1D1D",
+  dangerBorder: "#DC2626",
+  dangerIcon: "#FCA5A5",
+  // ─── Condition chips (accents via getConditionColor(id, true)) ───────────────
+  diabetesBg: "#1E3A8A",
+  ckdBg: "#134E4A",
+  heartBg: "#7F1D1D",
+  celiacBg: "#78350E",
+  allergyBg: "#4C1D95",
 };

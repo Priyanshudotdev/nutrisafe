@@ -11,6 +11,8 @@ export const colors = {
   primary: "#0D9488",
   primaryDark: "#0F766E",
   primaryDeep: "#115E59",
+  /** Text/icons on dark surfaces — identical to primaryDark in light mode. */
+  primaryText: "#0F766E",
   primaryLight: "#CCFBF1",
   primaryMuted: "#F0FDFA",
 
@@ -147,7 +149,18 @@ export const shadow = {
 // ─── Status Helpers ────────────────────────────────────────────────────────────
 /** Resolved (light or dark) color tokens — the return type of `useThemeColors()`. */
 export type ThemeColors = typeof colors;
-export function getStatusColors(status: "safe" | "moderation" | "not_recommended") {
+// ─── Status Helpers (pass dark=true in dark mode) ─────────────────────────────
+export function getStatusColors(status: "safe" | "moderation" | "not_recommended", dark = false) {
+  if (dark) {
+    switch (status) {
+      case "safe":
+        return { text: "#A7F3D0", bg: "#064E3B", border: "#059669", icon: "#34D399" };
+      case "moderation":
+        return { text: "#FDE68A", bg: "#78350E", border: "#D97706", icon: "#FBBF24" };
+      case "not_recommended":
+        return { text: "#FECACA", bg: "#7F1D1D", border: "#DC2626", icon: "#FCA5A5" };
+    }
+  }
   switch (status) {
     case "safe":
       return { text: colors.safeText, bg: colors.safeBg, border: colors.safeBorder, icon: colors.safeIcon };
@@ -158,7 +171,23 @@ export function getStatusColors(status: "safe" | "moderation" | "not_recommended
   }
 }
 
-export function getConditionColor(conditionId: string): { accent: string; bg: string } {
+export function getConditionColor(conditionId: string, dark = false): { accent: string; bg: string } {
+  if (dark) {
+    switch (conditionId) {
+      case "diabetes":
+        return { accent: "#93C5FD", bg: "#1E3A8A" };
+      case "ckd":
+        return { accent: "#5EEAD4", bg: "#134E4A" };
+      case "hypertension":
+        return { accent: "#FCA5A5", bg: "#7F1D1D" };
+      case "celiac":
+        return { accent: "#FCD34D", bg: "#78350E" };
+      case "allergy":
+        return { accent: "#C4B5FD", bg: "#4C1D95" };
+      default:
+        return { accent: "#5EEAD4", bg: "#134E4A" };
+    }
+  }
   switch (conditionId) {
     case "diabetes":
       return { accent: colors.diabetesColor, bg: colors.diabetesBg };

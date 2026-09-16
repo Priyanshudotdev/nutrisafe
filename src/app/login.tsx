@@ -62,7 +62,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.logoArea}>
             <View style={styles.logoCircle}>
-              <Ionicons name="nutrition" size={32} color={colors.primaryDark} />
+              <Ionicons name="nutrition" size={32} color={colors.primaryText} />
             </View>
             <Text style={styles.appName}>NutriCheck</Text>
             <Text style={styles.tagline}>Food safety for your health profile</Text>
@@ -184,6 +184,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   submitButton: { marginTop: spacing.sm },
   linkButton: { alignItems: "center", marginTop: spacing.xl },
   linkText: { fontSize: typography.bodySmall.fontSize, color: colors.slateMuted },
-  linkTextBold: { color: colors.primaryDark, fontWeight: "700" },
+  linkTextBold: { color: colors.primaryText, fontWeight: "700" },
   devHint: { marginTop: spacing.xl, fontSize: typography.micro.fontSize, color: colors.slateMuted, textAlign: "center" },
 });

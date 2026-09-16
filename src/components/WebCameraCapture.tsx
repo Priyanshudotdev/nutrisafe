@@ -175,8 +175,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  secondaryButtonText: { color: colors.primaryDark, fontSize: 15, fontWeight: "700" },
+  secondaryButtonText: { color: colors.primaryText, fontSize: 15, fontWeight: "700" },
   linkButton: { paddingVertical: spacing.sm },
-  linkText: { color: colors.primaryDark, fontWeight: "600" },
+  linkText: { color: colors.primaryText, fontWeight: "600" },
   disabled: { opacity: 0.5 },
 });

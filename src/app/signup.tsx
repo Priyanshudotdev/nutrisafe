@@ -183,6 +183,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   submitButton: { marginTop: spacing.sm },
   linkButton: { alignItems: "center", marginTop: spacing.xl },
   linkText: { fontSize: typography.bodySmall.fontSize, color: colors.slateMuted },
-  linkTextBold: { color: colors.primaryDark, fontWeight: "700" },
+  linkTextBold: { color: colors.primaryText, fontWeight: "700" },
   devHint: { marginTop: spacing.xl, fontSize: typography.micro.fontSize, color: colors.slateMuted, textAlign: "center" },
 });

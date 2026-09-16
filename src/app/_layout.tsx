@@ -87,7 +87,7 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
     const isDark = themeStore.resolve(systemScheme) === "dark";
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: isDark ? darkColors.background : colors.background }}>
-        <ActivityIndicator color={colors.primaryDark} />
+        <ActivityIndicator color={colors.primaryText} />
       </View>
     );
   }

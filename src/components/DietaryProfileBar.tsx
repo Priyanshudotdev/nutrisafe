@@ -18,7 +18,7 @@ interface DietaryProfileBarProps {
 
 /** Compact bar showing all active conditions; opens a multi-select sheet. */
 export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryProfileBarProps): JSX.Element {
-  const { colors } = useThemeColors();
+  const { colors, isDark } = useThemeColors();
   const styles = makeStyles(colors);
   const [showPicker, setShowPicker] = useState(false);
   const [draft, setDraft] = useState<PatientCondition[]>(conditions);
@@ -46,13 +46,13 @@ export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryPro
     <>
       <View style={styles.bar}>
         <View style={styles.iconCircle}>
-          <Ionicons name="medical-outline" size={18} color={colors.primaryDark} />
+          <Ionicons name="medical-outline" size={18} color={colors.primaryText} />
         </View>
         <View style={styles.textWrap}>
           <Text style={styles.label}>Checking for</Text>
           <View style={styles.chipRow}>
             {visible.map((c) => {
-              const cc = getConditionColor(c);
+              const cc = getConditionColor(c, isDark);
               const meta = PATIENT_CONDITIONS.find((x) => x.id === c);
               return (
                 <View key={c} style={[styles.chip, { backgroundColor: cc.bg }]}>
@@ -162,7 +162,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   changeText: {
     fontSize: 13,
     fontWeight: "700",
-    color: colors.primaryDark,
+    color: colors.primaryText,
   },
   modalOverlay: {
     flex: 1,
