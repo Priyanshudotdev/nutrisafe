@@ -1,46 +1,83 @@
-# Welcome to your HeroUI Native app 👋
+# NutriCheck — "Can I eat this?" answered in seconds
 
-This is an [Expo](https://expo.dev) project preconfigured with
-[HeroUI Native](https://heroui.com/docs/native), [Uniwind](https://docs.uniwind.dev)
-(Tailwind CSS for React Native), and [Expo Router](https://docs.expo.dev/router/introduction)
-with a bottom-tab layout.
+A cross-platform mobile app (Android / iOS / Web from one React Native codebase)
+that acts as a personal food-safety gatekeeper for people living with chronic
+dietary restrictions — diabetes, chronic kidney disease (CKD), hypertension,
+celiac disease, and food allergies.
 
-## Get started
+Photograph food (or type its name) → AI identifies the dish → the app evaluates
+it against **your** medical profile → color-coded verdict (**Safe / Moderation /
+Not Recommended**) with a per-nutrient breakdown and safer alternatives.
+It can also read a **doctor's prescription photo** and apply the extracted
+conditions to your health profile.
 
-1. Install dependencies
+Full product spec: [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md).
+UI law: [`DESIGN_RULES.md`](./DESIGN_RULES.md).
+Backend docs: [`server/README.md`](./server/README.md).
+Beginner setup: [`EASY_SETUP_GUIDE.md`](./EASY_SETUP_GUIDE.md).
 
-   ```bash
-   npm install
-   ```
+## Quick start
 
-2. Start the app
+```bash
+pnpm install
+cp .env.example .env.local   # then add GEMINI_API_KEY (optional but recommended)
 
-   ```bash
-   npx expo start
-   ```
+pnpm api        # terminal 1 — Express backend on :4000 (SQLite, AI if configured)
+pnpm android    # terminal 2 — Expo (or: pnpm ios / pnpm start + scan QR in Expo Go)
+```
 
-In the output, you'll find options to open the app in a
+The client auto-resolves the API host: `localhost` on web, Metro LAN IP on
+physical devices, `10.0.2.2` on Android emulators.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+| Command           | What it does                                      |
+| ----------------- | ------------------------------------------------- |
+| `pnpm api`        | Start the backend (`server/index.js`, port 4000)  |
+| `pnpm android/ios/start` | Start Expo for a target                   |
+| `pnpm typecheck`  | `tsc --noEmit`                                    |
+| `pnpm lint`       | ESLint                                            |
+| `pnpm test`       | Server AI tests (mocked smoke + e2e, no keys needed) |
 
-You can start developing by editing the files inside the **src/app** directory. The tabs themselves live under `src/app/(tabs)/`. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## How it works
 
-## What's preconfigured
+```
+Expo client (src/) ──REST (JSON/multipart)──► Express server (server/:4000)
+  app/        expo-router screens                  JWT auth (bcrypt + jsonwebtoken)
+  components/ design-system primitives             SQLite persistence (server/data/)
+  services/   stores & API clients                 AI layer (server/ai.js):
+  data/       local rules engine (foodSafety.ts)     Gemini (default gemini-3.5-flash)
+  theme/      light tokens + dark overrides          or any OpenAI-compatible endpoint
+```
 
-- **HeroUI Native** (`heroui-native`) wrapped in `HeroUINativeProvider` and `GestureHandlerRootView` in `src/app/_layout.tsx`
-- **Uniwind** + **Tailwind CSS** wired through `metro.config.js` and `src/global.css`
-- All HeroUI Native mandatory peer dependencies: `react-native-reanimated`, `react-native-gesture-handler`, `react-native-worklets`, `react-native-safe-area-context`, `react-native-svg`, `react-native-screens`
-- `@gorhom/bottom-sheet` for bottom-sheet UIs
-- `@expo/vector-icons` (Ionicons) for tab bar icons
-- TypeScript with `strict: true` and `@/*` path alias to `./src/*`
-- React Compiler enabled
+- **Graceful degradation:** with no AI key, photo ID returns a clear
+  `not_configured` state and nutrition checks run through the local
+  deterministic rules engine — the app never hard-fails.
+- **Multi-condition logic:** each condition contributes factors; the most
+  restrictive verdict wins (a food must be safe for *all* conditions).
+- **Dark mode:** system / light / dark (Account → Preferences → Theme); every
+  screen resolves colors through `useThemeColors()`.
+- **Server env:** plain `node` doesn't inject Expo env, so the server loads
+  `.env.local` then `.env` itself (real environment variables always win).
 
-## Learn more
+## Environment
 
-- [HeroUI Native components](https://heroui.com/docs/native) — full component reference
-- [Expo documentation](https://docs.expo.dev/) — Expo fundamentals and guides
-- [Uniwind documentation](https://docs.uniwind.dev) — Tailwind for React Native
-- [Expo Router](https://docs.expo.dev/router/introduction) — file-based routing
+| Variable | Required | Description |
+| -------- | -------- | ----------- |
+| `EXPO_PUBLIC_API_URL` | No (default `http://localhost:4000`) | App → API base URL |
+| `JWT_SECRET` | **Yes in prod** | JWT signing secret |
+| `GEMINI_API_KEY` | No | Enables real food recognition + nutrition analysis |
+| `GEMINI_MODEL` | No (default `gemini-3.5-flash`) | Gemini model id |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL` | No | OpenAI-compatible alternative |
+| `NUTRICHECK_DB_FILE` | No | Override SQLite path |
+| `NUTRICHECK_SKIP_ENV_FILE` | No | `1` disables `.env.local`/`.env` loading (tests) |
+
+## Adding a medical condition
+
+See the checklist on `PATIENT_CONDITIONS` in `src/data/foodSafety.ts`:
+extend the `PatientCondition` union, add a `ConditionMeta`, add a rules branch,
+add the short label, and mirror the id in the server's `VALID_CONDITIONS` and
+`getConditionColor` in `src/theme/tokens.ts`.
+
+## CI
+
+`.github/workflows/ci.yml` runs typecheck, lint, and both server AI test suites
+on every push to `main` and every pull request.

@@ -9,8 +9,12 @@ A step-by-step guide for non-technical users to set up, install, and run the Nut
 Before starting, install these 3 items on your computer and phone:
 
 1. **Node.js (for PC)**:
-   - Download and install Node.js (LTS version) from [nodejs.org](https://nodejs.org/).
+   - Download and install Node.js (LTS version, 22 or newer) from [nodejs.org](https://nodejs.org/).
    - Click "Next" through all installation prompts.
+   - This project uses **pnpm** — after installing Node.js, enable it once:
+     ```cmd
+     corepack enable
+     ```
 
 2. **Git (for PC)**:
    - Download and install Git from [git-scm.com](https://git-scm.com/).
@@ -42,7 +46,7 @@ Before starting, install these 3 items on your computer and phone:
 Run the following command inside the `nutrisafe` folder to install all required packages:
 
 ```cmd
-npm install
+pnpm install
 ```
 *(This may take 1–2 minutes. Wait until it finishes completely.)*
 
@@ -54,11 +58,16 @@ The app requires the NutriCheck API backend server to handle account creation, l
 
 1. In your Command Prompt window, run:
    ```cmd
-   npm run api
+   pnpm api
    ```
 2. You will see a message:
    `NutriCheck API server running on http://0.0.0.0:4000`
 3. 📌 **Keep this terminal window OPEN!** Do not close it while using the app.
+
+> 🤖 **Optional — real photo recognition:** copy `.env.example` to `.env.local`,
+> add your `GEMINI_API_KEY` (free tier at Google AI Studio), and restart
+> `pnpm api`. Without a key the app still works — food checks use the built-in
+> rules engine and photo scans will tell you to use manual search instead.
 
 ---
 
@@ -72,7 +81,7 @@ The app requires the NutriCheck API backend server to handle account creation, l
    *(Or specify the full path if you saved it elsewhere, e.g. `cd C:\Users\priya\Code\testing\nutrisafe`)*
 3. Start the Expo mobile app server:
    ```cmd
-   npm run start
+   pnpm start
    ```
 4. A large **QR Code** will be displayed inside your terminal window.
 
@@ -90,7 +99,7 @@ The app requires the NutriCheck API backend server to handle account creation, l
 ## 💡 Troubleshooting & Common Fixes
 
 - **"Cannot reach NutriCheck API" or Connection Error**:
-  - Make sure **both** terminal windows are running: `npm run api` in one, and `npm run start` in the other.
+  - Make sure **both** terminal windows are running: `pnpm api` in one, and `pnpm start` in the other.
   - Ensure your phone and PC are connected to the **same Wi-Fi**.
   - If Windows Firewall prompts you, click **Allow access** for Node.js.
 

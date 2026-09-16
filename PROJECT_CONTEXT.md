@@ -161,10 +161,11 @@ cp .env.example .env.local   # then add GEMINI_API_KEY or OPENAI_API_KEY (option
 
 The client auto-resolves the API host: `localhost` on web, Metro LAN IP on physical devices, `10.0.2.2` on Android emulators — no manual URL juggling.
 
-## 9. Known Limitations / Roadmap
+## 9. Status / Roadmap
 
-- Dark mode themes tab chrome today; screen surfaces still read light tokens (`darkTokens.ts` exists, wiring pending).
-- Server persistence is a JSON file store — fine for dev, swap for a real DB before scale.
-- Rules engine covers the 5 modeled conditions; new conditions require adding `ConditionMeta` + factors.
-- `app.json` name/slug still carry template values ("my-app").
-- No automated CI; smoke/e2e scripts exist only for the AI layer (`server/ai.*-test.js`).
+- [x] Dark mode: every screen resolves colors via `useThemeColors()` (system/light/dark in Account → Preferences).
+- [x] Server persistence is SQLite (`server/data/nutricheck.db`, zero deps via `node:sqlite`); legacy `db.json` auto-migrates once. Swap for Postgres before multi-instance scale.
+- [x] Rules engine covers the 5 modeled conditions; `src/data/foodSafety.ts` documents the 5-step checklist for adding new ones.
+- [x] `app.json` / `package.json` carry NutriCheck branding (name/slug/scheme).
+- [x] CI (`.github/workflows/ci.yml`): typecheck + lint + server AI smoke/e2e on push/PR.
+- [ ] Validate the new default AI model (`gemini-3.5-flash`) with one real photo scan + one Rx scan; the old default (`gemini-2.0-flash`) was shut down by Google in June 2026.

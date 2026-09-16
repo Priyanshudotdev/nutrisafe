@@ -82,6 +82,15 @@ export function getProfileConditions(profile: Pick<PatientProfile, "primaryCondi
 }
 
 // ─── 5 Patient Medical Categories ─────────────────────────────────────────────
+// ADDING A NEW CONDITION:
+//   1. Extend `PatientCondition` with the new id (e.g. "gout").
+//   2. Add a `ConditionMeta` entry below (title, icon, accent/bg, keyNutrients).
+//   3. Add an `if (condition === "<id>")` branch in `evaluateFoodSafety`
+//      returning not_recommended / moderation / safe results.
+//   4. Add the short label to `CONDITION_SHORT` (used by the multi-merge).
+//   5. Mirror the id in the server's VALID_CONDITIONS (server/index.js) and in
+//      `getConditionColor` (src/theme/tokens.ts).
+// The multi-condition merge needs no changes — worst status wins automatically.
 export const PATIENT_CONDITIONS: ConditionMeta[] = [
   {
     id: "ckd",
