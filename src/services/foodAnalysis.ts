@@ -150,9 +150,8 @@ export async function analyzeFoodByText(
   }
 
   const base =
-    serverBase ??
-    applyLocationContext(evaluateFoodSafetyMulti(foodQuery, conditions));
-  return persistAnalysis(finalizeAnalysis(base, foodQuery, conditions));
+    serverBase ?? evaluateFoodSafetyMulti(foodQuery, conditions);
+  return persistAnalysis(applyLocationContext(finalizeAnalysis(base, foodQuery, conditions)));
 }
 
 export interface ScanAnalysisResult {
@@ -189,10 +188,9 @@ export async function analyzeFoodFromImage(
   }
 
   const base =
-    serverBase ??
-    applyLocationContext(evaluateFoodSafetyMulti(identification.foodName, conditions));
+    serverBase ?? evaluateFoodSafetyMulti(identification.foodName, conditions);
   const analysis = await persistAnalysis({
-    ...finalizeAnalysis(base, identification.foodName, conditions),
+    ...applyLocationContext(finalizeAnalysis(base, identification.foodName, conditions)),
     source: "scan",
     scanConfidence: identification.confidence,
   });
@@ -222,10 +220,9 @@ export async function analyzeConfirmedFood(
   }
 
   const base =
-    serverBase ??
-    applyLocationContext(evaluateFoodSafetyMulti(foodName, conditions));
+    serverBase ?? evaluateFoodSafetyMulti(foodName, conditions);
   return persistAnalysis({
-    ...finalizeAnalysis(base, foodName, conditions),
+    ...applyLocationContext(finalizeAnalysis(base, foodName, conditions)),
     source: "scan",
   });
 }

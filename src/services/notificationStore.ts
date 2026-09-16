@@ -77,7 +77,7 @@ class NotificationStore {
   async push(title: string, body: string): Promise<void> {
     if (!this.enabled) return;
     const item: AppNotification = {
-      id: `n_${Date.now()}`,
+      id: `n_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       title,
       body,
       createdAt: new Date().toISOString(),
