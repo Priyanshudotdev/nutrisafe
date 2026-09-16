@@ -12,6 +12,7 @@ import { notificationStore } from "../services/notificationStore";
 import { hydrateSessionData } from "../services/sessionSync";
 import { needsOnboarding } from "../services/onboardingService";
 import { colors } from "../theme/tokens";
+import { darkColors } from "../theme/darkTokens";
 import "../global.css";
 
 function subscribeAuth(cb: () => void) {
@@ -36,6 +37,7 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
   const segments = useSegments();
   const isAuthenticated = useSyncExternalStore(subscribeAuth, getAuthSnapshot, getAuthSnapshot);
   const profile = useSyncExternalStore(subscribeAuth, getProfileSnapshot, getProfileSnapshot);
+  const systemScheme = useColorScheme();
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -82,8 +84,9 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
   }, [isAuthenticated, initialized, segments, router, profile]);
 
   if (!initialized) {
+    const isDark = themeStore.resolve(systemScheme) === "dark";
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: isDark ? darkColors.background : colors.background }}>
         <ActivityIndicator color={colors.primaryDark} />
       </View>
     );

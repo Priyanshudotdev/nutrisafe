@@ -13,13 +13,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { colors, controlHeight, radius, spacing, typography } from "../theme/tokens";
+import { controlHeight, radius, spacing, typography, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 import { AppButton } from "../components/AppButton";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { signup, formatAuthError } from "../services/authService";
 import { getApiBaseUrl } from "../services/apiClient";
 
 export default function SignupScreen() {
+  const { colors, isDark } = useThemeColors();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -57,7 +60,7 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Pressable style={styles.back} onPress={() => router.back()} accessibilityLabel="Back">
@@ -149,7 +152,7 @@ export default function SignupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xxl },

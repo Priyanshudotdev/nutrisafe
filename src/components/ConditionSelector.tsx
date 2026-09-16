@@ -3,7 +3,8 @@ import type { JSX } from "react";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { PATIENT_CONDITIONS, type PatientCondition } from "../data/foodSafety";
-import { colors, radius, spacing } from "../theme/tokens";
+import { radius, spacing, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 interface ConditionSelectorProps {
   selectedConditions: PatientCondition[];
@@ -15,6 +16,8 @@ export function ConditionSelector({
   selectedConditions,
   onToggleCondition,
 }: ConditionSelectorProps): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   const count = selectedConditions.length;
 
   return (
@@ -89,7 +92,7 @@ export function ConditionSelector({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.cardBg,
     borderRadius: radius.xl,

@@ -2,9 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import type { JSX } from "react";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing } from "../theme/tokens";
+import { radius, spacing, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 export function MedicalDisclaimer(): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.container} accessibilityRole="text">
       <Ionicons name="information-circle-outline" size={16} color={colors.slateMuted} />
@@ -16,7 +19,7 @@ export function MedicalDisclaimer(): JSX.Element {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "flex-start",

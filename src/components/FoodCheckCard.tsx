@@ -3,7 +3,8 @@ import type { JSX } from "react";
 import React, { useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import { PATIENT_CONDITIONS, type FoodSafetyAnalysis, type NutrientFactor } from "../data/foodSafety";
-import { colors, getConditionColor, getStatusColors, radius, spacing } from "../theme/tokens";
+import { getConditionColor, getStatusColors, radius, spacing, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 import { SafetyStatusBadge } from "./SafetyStatusBadge";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -15,6 +16,8 @@ function getConditionLabel(conditionId: string): string {
 }
 
 function NutrientRow({ factor }: { factor: NutrientFactor }): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   const impactColors = {
     positive: { bg: colors.safeBg, text: colors.safeText, icon: colors.safeIcon },
     neutral: { bg: colors.gray1, text: colors.slateLight, icon: colors.slateMuted },
@@ -46,6 +49,8 @@ interface FoodCheckCardProps {
 }
 
 export function FoodCheckCard({ analysis, expanded = false, onPress }: FoodCheckCardProps): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   const [whyExpanded, setWhyExpanded] = useState(expanded);
   const sc = getStatusColors(analysis.status);
   const cc = getConditionColor(analysis.condition);
@@ -156,6 +161,8 @@ interface HistoryItemProps {
 }
 
 export function HistoryItem({ analysis, onPress }: HistoryItemProps): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   const sc = getStatusColors(analysis.status);
   const conditionLabel = getConditionLabel(analysis.condition);
 
@@ -188,7 +195,7 @@ export function HistoryItem({ analysis, onPress }: HistoryItemProps): JSX.Elemen
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     backgroundColor: colors.cardBg,
     borderRadius: radius.xl,

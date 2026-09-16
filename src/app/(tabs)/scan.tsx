@@ -14,7 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { colors, radius, spacing } from "../../theme/tokens";
+import { radius, spacing, type ThemeColors } from "../../theme/tokens";
+import { useThemeColors } from "../../hooks/useThemeColors";
 import { foodSafetyStore, type FoodSafetyAnalysis, type PatientCondition } from "../../data/foodSafety";
 import { DietaryProfileBar } from "../../components/DietaryProfileBar";
 import { FoodCheckCard } from "../../components/FoodCheckCard";
@@ -36,6 +37,8 @@ import { notificationStore } from "../../services/notificationStore";
 type ScanPhase = "initial" | "web_camera" | "preview" | "processing" | "result" | "uncertain" | "error";
 
 export default function FoodScannerScreen() {
+  const { colors, isDark } = useThemeColors();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const [conditions, setConditions] = useState<PatientCondition[]>(foodSafetyStore.getSelectedConditions());
   const [phase, setPhase] = useState<ScanPhase>("initial");
@@ -167,7 +170,7 @@ export default function FoodScannerScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <ScreenHeader
         title="Scan Food"
@@ -270,7 +273,7 @@ export default function FoodScannerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   scrollContent: { paddingHorizontal: spacing.xl },
   profileWrap: { paddingTop: spacing.md },

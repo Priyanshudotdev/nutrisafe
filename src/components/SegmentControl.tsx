@@ -1,7 +1,8 @@
 import type { JSX } from "react";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing } from "../theme/tokens";
+import { radius, spacing, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 interface SegmentControlProps<T extends string> {
   segments: { id: T; label: string }[];
@@ -14,6 +15,8 @@ export function SegmentControl<T extends string>({
   active,
   onChange,
 }: SegmentControlProps<T>): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.container} accessibilityRole="tablist">
       {segments.map((seg) => {
@@ -34,7 +37,7 @@ export function SegmentControl<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: "row",
     backgroundColor: colors.bgSubtle,

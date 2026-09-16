@@ -2,7 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import type { JSX } from "react";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing } from "../theme/tokens";
+import { radius, spacing, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 interface StepConfig {
   id: string;
@@ -26,6 +27,8 @@ export function StepProgressState({
   steps = DEFAULT_STEPS,
   activeStepId,
 }: StepProgressStateProps): JSX.Element | null {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -81,7 +84,7 @@ export function AnalysisLoadingState({ visible }: { visible: boolean }): JSX.Ele
   return <StepProgressState visible={visible} />;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginTop: spacing.lg,
     backgroundColor: colors.cardBg,

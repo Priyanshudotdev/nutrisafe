@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "../theme/tokens";
+import { radius, spacing, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 interface WebCameraCaptureProps {
   onCapture: (dataUri: string) => void;
@@ -18,6 +19,8 @@ export function WebCameraCapture({
   onCancel,
   onFallbackUpload,
 }: WebCameraCaptureProps): React.ReactElement | null {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   const videoRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +133,7 @@ export function WebCameraCapture({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     marginTop: spacing.xl,
     backgroundColor: colors.cardBg,

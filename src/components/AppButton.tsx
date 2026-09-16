@@ -2,7 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import type { JSX } from "react";
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
-import { colors, controlHeight, radius } from "../theme/tokens";
+import { controlHeight, radius, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
@@ -28,12 +29,12 @@ const HEIGHTS: Record<Size, number> = {
 
 const LABEL_SIZE: Record<Size, number> = { sm: 13, md: 14, lg: 15 };
 
-const VARIANT_COLORS: Record<Variant, { bg: string; border: string; text: string }> = {
+const getVariantColors = (colors: ThemeColors): Record<Variant, { bg: string; border: string; text: string }> => ({
   primary: { bg: colors.primaryDark, border: "transparent", text: colors.white },
   secondary: { bg: colors.cardBg, border: colors.cardBorder, text: colors.primaryDark },
   ghost: { bg: "transparent", border: "transparent", text: colors.primaryDark },
   danger: { bg: colors.dangerBg, border: colors.dangerBorder, text: colors.dangerText },
-};
+});
 
 /** The only button component in the app. One primary per view (DESIGN_RULES.md §5). */
 export function AppButton({
@@ -47,7 +48,9 @@ export function AppButton({
   style,
   accessibilityLabel,
 }: AppButtonProps): JSX.Element {
-  const vc = VARIANT_COLORS[variant];
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
+  const vc = getVariantColors(colors)[variant];
   const isInactive = disabled || loading;
 
   return (
@@ -90,6 +93,8 @@ export function AppLinkButton({
   icon?: keyof typeof Ionicons.glyphMap;
   style?: StyleProp<ViewStyle>;
 }): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   return (
     <Pressable
       style={[styles.link, style]}
@@ -103,7 +108,7 @@ export function AppLinkButton({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   base: {
     flexDirection: "row",
     alignItems: "center",

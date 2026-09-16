@@ -13,7 +13,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { colors, controlHeight, radius, spacing, typography } from "../../theme/tokens";
+import { controlHeight, radius, spacing, typography, type ThemeColors } from "../../theme/tokens";
+import { useThemeColors } from "../../hooks/useThemeColors";
 import { foodSafetyStore, type FoodSafetyAnalysis } from "../../data/foodSafety";
 import { HistoryItem, FoodCheckCard } from "../../components/FoodCheckCard";
 import { EmptyState } from "../../components/EmptyState";
@@ -22,6 +23,8 @@ import { MedicalDisclaimer } from "../../components/MedicalDisclaimer";
 import { fetchHistory } from "../../services/historyService";
 
 export default function SearchHistoryScreen() {
+  const { colors, isDark } = useThemeColors();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const [history, setHistory] = useState<FoodSafetyAnalysis[]>(foodSafetyStore.getHistory());
   const [isLoading, setIsLoading] = useState(true);
@@ -63,7 +66,7 @@ export default function SearchHistoryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <ScreenHeader title="History" />
 
@@ -147,7 +150,7 @@ export default function SearchHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   searchContainer: { paddingHorizontal: spacing.xl, marginBottom: spacing.sm },
   searchBar: {

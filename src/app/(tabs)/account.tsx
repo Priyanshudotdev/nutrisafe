@@ -22,7 +22,8 @@ import {
   type PatientCondition,
   type PatientProfile,
 } from "../../data/foodSafety";
-import { colors, controlHeight, radius, sectionLabel, spacing, typography } from "../../theme/tokens";
+import { controlHeight, radius, sectionLabel, spacing, typography, type ThemeColors } from "../../theme/tokens";
+import { useThemeColors } from "../../hooks/useThemeColors";
 import { SegmentControl } from "../../components/SegmentControl";
 import { AppButton } from "../../components/AppButton";
 import { ScreenHeader } from "../../components/ScreenHeader";
@@ -50,6 +51,8 @@ interface SettingsRowProps {
 }
 
 function SettingsRow({ icon, label, subtitle, onPress, trailing, destructive }: SettingsRowProps) {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   return (
     <Pressable
       style={styles.settingsRow}
@@ -70,6 +73,8 @@ function SettingsRow({ icon, label, subtitle, onPress, trailing, destructive }: 
 }
 
 export default function AccountScreen() {
+  const { colors, isDark } = useThemeColors();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const { mode, setMode } = useTheme();
   const [tab, setTab] = useState<AccountTab>("profile");
@@ -302,7 +307,7 @@ export default function AccountScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <ScreenHeader title="Account" />
 
@@ -625,7 +630,7 @@ export default function AccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   segmentWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   scrollContent: { paddingHorizontal: spacing.lg, gap: spacing.lg },

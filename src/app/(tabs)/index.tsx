@@ -11,7 +11,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { colors, radius, spacing, typography } from "../../theme/tokens";
+import { radius, spacing, typography, type ThemeColors } from "../../theme/tokens";
+import { useThemeColors } from "../../hooks/useThemeColors";
 import {
   foodSafetyStore,
   FOOD_SUGGESTIONS,
@@ -39,6 +40,8 @@ const getGreeting = () => {
 };
 
 export default function HomeScreen() {
+  const { colors, isDark } = useThemeColors();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const [conditions, setConditions] = useState<PatientCondition[]>(foodSafetyStore.getSelectedConditions());
   const [searchText, setSearchText] = useState("");
@@ -110,7 +113,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={styles.greeting}>
           {getGreeting()}, {patient.name.split(" ")[0]}
@@ -209,7 +212,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   greeting: {

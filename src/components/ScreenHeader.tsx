@@ -1,7 +1,8 @@
 import type { JSX } from "react";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, spacing, typography } from "../theme/tokens";
+import { spacing, typography, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 interface ScreenHeaderProps {
   title: string;
@@ -14,6 +15,8 @@ interface ScreenHeaderProps {
  * Optional trailing slot for one quiet action.
  */
 export function ScreenHeader({ title, subtitle, right }: ScreenHeaderProps): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.header}>
       <View style={styles.textWrap}>
@@ -25,7 +28,7 @@ export function ScreenHeader({ title, subtitle, right }: ScreenHeaderProps): JSX
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "flex-start",

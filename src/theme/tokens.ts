@@ -145,6 +145,8 @@ export const shadow = {
 };
 
 // ─── Status Helpers ────────────────────────────────────────────────────────────
+/** Resolved (light or dark) color tokens — the return type of `useThemeColors()`. */
+export type ThemeColors = typeof colors;
 export function getStatusColors(status: "safe" | "moderation" | "not_recommended") {
   switch (status) {
     case "safe":

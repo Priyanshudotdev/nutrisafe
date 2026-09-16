@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { type ComponentProps, type JSX } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing } from "../theme/tokens";
+import { radius, spacing, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 import { AppButton } from "./AppButton";
 
 interface EmptyStateProps {
@@ -19,6 +20,8 @@ export function EmptyState({
   actionLabel,
   onAction,
 }: EmptyStateProps): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.container}>
       <View style={styles.iconCircle}>
@@ -33,7 +36,7 @@ export function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     alignItems: "center",
     justifyContent: "center",

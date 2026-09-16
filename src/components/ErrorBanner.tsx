@@ -2,13 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import type { JSX } from "react";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing, typography } from "../theme/tokens";
+import { radius, spacing, typography, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 /**
  * Inline error message. Explains what failed; the caller provides the
  * recovery path (DESIGN_RULES.md §8).
  */
 export function ErrorBanner({ message }: { message: string }): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.banner} accessibilityRole="alert" accessibilityLiveRegion="polite">
       <Ionicons name="alert-circle-outline" size={16} color={colors.dangerIcon} />
@@ -17,7 +20,7 @@ export function ErrorBanner({ message }: { message: string }): JSX.Element {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   banner: {
     flexDirection: "row",
     alignItems: "flex-start",

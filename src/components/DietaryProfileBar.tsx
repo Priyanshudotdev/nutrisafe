@@ -6,7 +6,8 @@ import {
   PATIENT_CONDITIONS,
   type PatientCondition,
 } from "../data/foodSafety";
-import { colors, getConditionColor, radius, spacing } from "../theme/tokens";
+import { getConditionColor, radius, spacing, type ThemeColors } from "../theme/tokens";
+import { useThemeColors } from "../hooks/useThemeColors";
 import { ConditionSelector } from "./ConditionSelector";
 import { AppButton } from "./AppButton";
 
@@ -17,6 +18,8 @@ interface DietaryProfileBarProps {
 
 /** Compact bar showing all active conditions; opens a multi-select sheet. */
 export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryProfileBarProps): JSX.Element {
+  const { colors } = useThemeColors();
+  const styles = makeStyles(colors);
   const [showPicker, setShowPicker] = useState(false);
   const [draft, setDraft] = useState<PatientCondition[]>(conditions);
 
@@ -104,7 +107,7 @@ export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryPro
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
