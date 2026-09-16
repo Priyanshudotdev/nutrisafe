@@ -12,7 +12,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node server/ai.smoke-test.js && node server/ai.e2e-test.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.2",
