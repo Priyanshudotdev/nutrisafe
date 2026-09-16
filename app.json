@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "my-app",
-    "slug": "my-app",
+    "name": "NutriCheck",
+    "slug": "nutricheck",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "heroui-native-app",
+    "scheme": "nutricheck",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
