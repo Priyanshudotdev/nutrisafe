@@ -7,7 +7,11 @@ const ai = require("./ai");
 
 let mockMode = "";
 let mockResponse = null;
-global.fetch = async () => {
+let lastUrl = "";
+let lastOptions = null;
+global.fetch = async (url, options) => {
+  lastUrl = String(url);
+  lastOptions = options;
   if (mockMode === "network-error") throw new Error("ECONNREFUSED");
   return {
     ok: mockResponse.ok,
@@ -37,6 +41,18 @@ function setGemini(text) {
   assert.deepStrictEqual(ai.extractJson('Sure!\n```json\n{"a":1}\n```\nDone.'), { a: 1 });
   assert.deepStrictEqual(ai.extractJson('blah {"a":{"b":2}} blah'), { a: { b: 2 } });
   console.log("✓ extractJson handles plain / fenced / noisy responses");
+
+  // invalid JSON must throw AiError (not raw SyntaxError)
+  await assert.rejects(() => Promise.resolve().then(() => ai.extractJson('{"a":}')), (err) => {
+    assert.strictEqual(err.name, "AiError");
+    assert.match(err.message, /did not contain valid JSON/);
+    return true;
+  });
+  await assert.rejects(() => Promise.resolve().then(() => ai.extractJson('```json\n{"a":}\n```')), (err) => {
+    assert.strictEqual(err.name, "AiError");
+    return true;
+  });
+  console.log("✓ extractJson invalid JSON throws AiError");
 
   // ── provider resolution ──
   delete process.env.GEMINI_API_KEY;
@@ -88,6 +104,14 @@ function setGemini(text) {
   assert.strictEqual(r.status, "success");
   assert.strictEqual(r.foodName, "Idli");
   console.log("✓ identifyFood success path (Gemini)");
+
+  // Gemini auth must go via x-goog-api-key header, never ?key= in URL
+  assert.ok(!lastUrl.includes("key="), `Gemini URL must not contain key, got: ${lastUrl}`);
+  assert.ok(!lastUrl.includes("test-key"), "Gemini URL must not leak API key");
+  assert.strictEqual(lastOptions.headers["x-goog-api-key"], "test-key");
+  const geminiBody = JSON.parse(lastOptions.body);
+  assert.strictEqual(geminiBody.generationConfig.maxOutputTokens, 2048);
+  console.log("✓ Gemini uses x-goog-api-key header (no key in URL) + maxOutputTokens");
 
   // ── analyzeNutrition + normalizeAnalysis ──
   setGemini(

@@ -85,12 +85,17 @@ function extractJson(text) {
   if (start === -1 || end === -1 || end <= start) {
     throw new AiError("AI response did not contain JSON.");
   }
-  return JSON.parse(candidate.slice(start, end + 1));
+  try {
+    return JSON.parse(candidate.slice(start, end + 1));
+  } catch {
+    throw new AiError("AI response did not contain valid JSON.");
+  }
 }
 
 async function callGemini({ parts, systemPrompt, timeoutMs }) {
   const provider = resolveProvider();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent?key=${encodeURIComponent(provider.apiKey)}`;
+  // Auth via header — never put the key in the URL (avoids leaking in logs/proxies).
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent`;
 
   const contents = [];
   if (systemPrompt) contents.push({ role: "user", parts: [{ text: systemPrompt }] });
@@ -100,10 +105,10 @@ async function callGemini({ parts, systemPrompt, timeoutMs }) {
     url,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": provider.apiKey },
       body: JSON.stringify({
         contents,
-        generationConfig: { temperature: 0.3, responseMimeType: "application/json" },
+        generationConfig: { temperature: 0.3, responseMimeType: "application/json", maxOutputTokens: 2048 },
       }),
     },
     timeoutMs
@@ -144,8 +149,10 @@ async function callOpenAI({ messages, timeoutMs }) {
   );
 
   // Some OpenAI-compatible providers reject response_format — retry once without it.
+  // Clone before mutating so the original `body` object is never mutated in place.
   if (!response.ok && response.status === 400) {
-    delete body.response_format;
+    const retryBody = { ...body };
+    delete retryBody.response_format;
     response = await fetchWithTimeout(
       url,
       {
@@ -154,7 +161,7 @@ async function callOpenAI({ messages, timeoutMs }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${provider.apiKey}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(retryBody),
       },
       timeoutMs
     );
@@ -319,6 +326,14 @@ function normalizeAnalysis(raw, foodQuery, condition) {
 async function identifyFood(imageBuffer, mimetype) {
   const base64 = Buffer.from(imageBuffer).toString("base64");
 
+  // HEIC/HEIF (common from iPhones) is passed through as-is rather than
+  // remapped to image/jpeg — most vision endpoints sniff the bytes anyway.
+  // Log a warning since some providers reject HEIC outright.
+  const effectiveMime = mimetype || "image/jpeg";
+  if (/heic|heif/i.test(effectiveMime)) {
+    console.warn(`[ai] identifyFood received ${effectiveMime}; passing through (provider may reject HEIC).`);
+  }
+
   const prompt =
     "Identify the food dish in this photo. If the image contains no recognizable food, set foodName to null. " +
     'Respond with STRICT JSON only: {"foodName": string|null, "confidence": number between 0 and 1, ' +
@@ -327,7 +342,7 @@ async function identifyFood(imageBuffer, mimetype) {
 
   const parts = [
     { text: prompt },
-    { inline_data: { mime_type: mimetype || "image/jpeg", data: base64 } },
+    { inline_data: { mime_type: effectiveMime, data: base64 } },
   ];
 
   const messages = [
@@ -335,7 +350,7 @@ async function identifyFood(imageBuffer, mimetype) {
       role: "user",
       content: [
         { type: "text", text: prompt },
-        { type: "image_url", image_url: { url: `data:${mimetype || "image/jpeg"};base64,${base64}` } },
+        { type: "image_url", image_url: { url: `data:${effectiveMime};base64,${base64}` } },
       ],
     },
   ];
