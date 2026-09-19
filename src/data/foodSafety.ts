@@ -794,20 +794,37 @@ class FoodSafetyStore {
   }
 
   getHistory(): FoodSafetyAnalysis[] {
-    return [...this.history];
+    return this.history.map((h) => ({
+      ...h,
+      factors: [...h.factors],
+      alternatives: [...h.alternatives],
+      ...(h.conditions ? { conditions: [...h.conditions] } : {}),
+    }));
   }
 
   setHistory(history: FoodSafetyAnalysis[]) {
+    if (JSON.stringify(this.history) === JSON.stringify(history)) return;
     this.history = history;
     this.notify();
   }
 
   getPatient(): PatientProfile {
-    return { ...this.currentPatient };
+    return {
+      ...this.currentPatient,
+      ...(this.currentPatient.conditions
+        ? { conditions: [...this.currentPatient.conditions] }
+        : {}),
+      allergensList: [...this.currentPatient.allergensList],
+    };
   }
 
   updatePatient(profile: Partial<PatientProfile>) {
-    this.currentPatient = { ...this.currentPatient, ...profile };
+    const next = { ...this.currentPatient, ...profile };
+    if (profile.conditions && profile.conditions.length > 0) {
+      next.conditions = [...profile.conditions];
+    }
+    if (JSON.stringify(this.currentPatient) === JSON.stringify(next)) return;
+    this.currentPatient = next;
     if (profile.conditions && profile.conditions.length > 0) {
       this.selectedConditions = [...profile.conditions];
       this.currentPatient.primaryCondition = profile.conditions[0];
@@ -818,6 +835,11 @@ class FoodSafetyStore {
   }
 
   hydratePatient(profile: PatientProfile) {
+    const next = { ...profile };
+    if (JSON.stringify(this.currentPatient) === JSON.stringify(next)) {
+      const conds = getProfileConditions(profile);
+      if (JSON.stringify(this.selectedConditions) === JSON.stringify(conds)) return;
+    }
     this.currentPatient = { ...profile };
     const conds = getProfileConditions(profile);
     this.selectedConditions = conds;

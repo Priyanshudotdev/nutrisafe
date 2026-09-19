@@ -16,7 +16,12 @@ export async function hydrateSessionData(): Promise<void> {
 
   try {
     const history = await fetchHistory();
-    foodSafetyStore.setHistory(history);
+    if (history === null) return;
+    const local = foodSafetyStore.getHistory();
+    const remoteIds = new Set(history.map((h) => h.id));
+    const localOnly = local.filter((l) => !remoteIds.has(l.id));
+    const merged = [...localOnly, ...history];
+    foodSafetyStore.setHistory(merged);
   } catch {
     // Keep whatever local history exists if the network call fails.
   }

@@ -57,7 +57,7 @@ class NotificationStore {
   }
 
   getItems(): AppNotification[] {
-    return [...this.items];
+    return this.items.map((n) => ({ ...n }));
   }
 
   unreadCount(): number {
@@ -74,8 +74,8 @@ class NotificationStore {
     this.notify();
   }
 
-  async push(title: string, body: string): Promise<void> {
-    if (!this.enabled) return;
+  async push(title: string, body: string, opts?: { force?: boolean }): Promise<void> {
+    if (!this.enabled && !opts?.force) return;
     const item: AppNotification = {
       id: `n_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       title,

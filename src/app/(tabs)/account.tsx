@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -41,6 +41,10 @@ type AccountTab = "profile" | "preferences" | "account";
 
 type EditField = "name" | "age" | "gender" | "city" | "notes" | "email" | "password" | null;
 
+// Persist across remounts (tab switches / rotation) without lifting state up.
+let cachedAccountTab: AccountTab = "profile";
+let cachedDraft: { field: EditField; value: string; value2: string } | null = null;
+
 interface SettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -77,19 +81,32 @@ export default function AccountScreen() {
   const styles = makeStyles(colors);
   const router = useRouter();
   const { mode, setMode } = useTheme();
-  const [tab, setTab] = useState<AccountTab>("profile");
+  const [tab, setTabState] = useState<AccountTab>(cachedAccountTab);
+  const setTab = (t: AccountTab) => {
+    cachedAccountTab = t;
+    setTabState(t);
+  };
   const [patient, setPatient] = useState<PatientProfile>(foodSafetyStore.getPatient());
   const [historyCount, setHistoryCount] = useState(foodSafetyStore.getHistory().length);
   const [notifEnabled, setNotifEnabled] = useState(notificationStore.isEnabled());
   const [unread, setUnread] = useState(notificationStore.unreadCount());
   const [notifications, setNotifications] = useState(notificationStore.getItems());
 
-  const [editField, setEditField] = useState<EditField>(null);
-  const [editValue, setEditValue] = useState("");
-  const [editValue2, setEditValue2] = useState("");
+  const [editField, setEditField] = useState<EditField>(cachedDraft?.field ?? null);
+  const [editValue, setEditValue] = useState(cachedDraft?.value ?? "");
+  const [editValue2, setEditValue2] = useState(cachedDraft?.value2 ?? "");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [rxScanning, setRxScanning] = useState(false);
+  const [clearingHistory, setClearingHistory] = useState(false);
+  // Preserve edit drafts across remounts/rotation.
+  const editDraftRef = useRef(cachedDraft);
+  useEffect(() => {
+    editDraftRef.current = editField
+      ? { field: editField, value: editValue, value2: editValue2 }
+      : null;
+    cachedDraft = editDraftRef.current;
+  }, [editField, editValue, editValue2]);
 
   useEffect(() => {
     const unsubStore = foodSafetyStore.subscribe(() => {
@@ -138,8 +155,8 @@ export default function AccountScreen() {
         const profile = await updateProfile({ name: editValue.trim() });
         foodSafetyStore.hydratePatient(profile);
       } else if (editField === "age") {
-        const age = parseInt(editValue, 10);
-        if (Number.isNaN(age) || age < 1 || age > 120) throw new Error("Enter a valid age (1–120).");
+        const age = Number(editValue.trim());
+        if (!Number.isInteger(age) || age < 1 || age > 120) throw new Error("Enter a valid age (1–120).");
         const profile = await updateProfile({ age });
         foodSafetyStore.hydratePatient(profile);
       } else if (editField === "gender") {
@@ -160,7 +177,11 @@ export default function AccountScreen() {
         if (!editValue || !editValue2) throw new Error("Current and new password are required.");
         if (editValue2.length < 8) throw new Error("New password must be at least 8 characters.");
         await changePassword(editValue, editValue2);
-        await notificationStore.push("Password updated", "Your password was changed successfully.");
+        try {
+          await notificationStore.push("Password updated", "Your password was changed successfully.", { force: true });
+        } catch {
+          Alert.alert("Password updated", "Your password was changed successfully.");
+        }
       }
       setEditField(null);
     } catch (e) {
@@ -256,6 +277,7 @@ export default function AccountScreen() {
 
 
   const handleClearHistory = () => {
+    if (clearingHistory) return;
     const count = foodSafetyStore.getHistory().length;
     if (count === 0) {
       Alert.alert("Nothing to clear", "You have no saved food checks yet.");
@@ -270,12 +292,18 @@ export default function AccountScreen() {
           text: "Clear history",
           style: "destructive",
           onPress: async () => {
+            const snapshot = foodSafetyStore.getHistory();
+            setClearingHistory(true);
             foodSafetyStore.clearHistory();
             try {
               await clearServerHistory();
             } catch {
-              /* local already cleared */
+              foodSafetyStore.setHistory(snapshot);
+              Alert.alert("Couldn't clear history", "Your history could not be cleared. Please try again.");
+              setClearingHistory(false);
+              return;
             }
+            setClearingHistory(false);
             await notificationStore.push("History cleared", `${count} saved check${count === 1 ? "" : "s"} removed.`);
           },
         },
@@ -292,10 +320,15 @@ export default function AccountScreen() {
         onPress: async () => {
           await logout();
           foodSafetyStore.resetSession();
+          await notificationStore.clear();
           router.replace("/login");
         },
       },
     ]);
+  };
+
+  const handleNotifToggle = async (v: boolean) => {
+    await notificationStore.setEnabled(v);
   };
 
   const themeLabel = (m: ThemeMode) => (m === "system" ? "System" : m === "dark" ? "Dark" : "Light");
@@ -448,7 +481,7 @@ export default function AccountScreen() {
                 trailing={
                   <Switch
                     value={notifEnabled}
-                    onValueChange={(v) => notificationStore.setEnabled(v)}
+                    onValueChange={handleNotifToggle}
                     trackColor={{ false: colors.gray2, true: colors.primary }}
                   />
                 }
@@ -511,8 +544,8 @@ export default function AccountScreen() {
               <SettingsRow
                 icon="time-outline"
                 label="Search history"
-                subtitle={`${historyCount} saved check${historyCount === 1 ? "" : "s"}`}
-                onPress={handleClearHistory}
+                subtitle={clearingHistory ? "Clearing…" : `${historyCount} saved check${historyCount === 1 ? "" : "s"}`}
+                onPress={clearingHistory ? undefined : handleClearHistory}
               />
             </View>
           </>

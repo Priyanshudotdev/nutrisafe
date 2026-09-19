@@ -33,15 +33,26 @@ export default function SearchHistoryScreen() {
   const [history, setHistory] = useState<FoodSafetyAnalysis[]>(foodSafetyStore.getHistory());
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAnalysis, setSelectedAnalysis] = useState<FoodSafetyAnalysis | null>(null);
-  const [lastDeleted, setLastDeleted] = useState<FoodSafetyAnalysis | null>(null);
-  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedAnalysis = useMemo(
+    () => history.find((h) => h.id === selectedId) ?? null,
+    [history, selectedId]
+  );
+  const [undoItems, setUndoItems] = useState<FoodSafetyAnalysis[]>([]);
+  const pendingDeletes = useRef(
+    new Map<string, { analysis: FoodSafetyAnalysis; timer: ReturnType<typeof setTimeout> }>()
+  );
 
   useEffect(() => {
     return () => {
-      if (undoTimer.current) clearTimeout(undoTimer.current);
+      pendingDeletes.current.forEach((entry) => clearTimeout(entry.timer));
+      pendingDeletes.current.clear();
     };
   }, []);
+
+  // Modal derives from history: when the selected item disappears
+  // (deleted/undone), selectedAnalysis becomes null and the modal closes.
+  const visible = selectedAnalysis !== null;
 
   useEffect(() => {
     let cancelled = false;
@@ -50,10 +61,13 @@ export default function SearchHistoryScreen() {
     (async () => {
       try {
         const remote = await fetchHistory();
-        if (!cancelled && remote.length >= 0) {
-          foodSafetyStore.setHistory(remote);
-          setHistory(remote);
-        }
+        if (cancelled || remote === null) return;
+        const local = foodSafetyStore.getHistory();
+        const remoteIds = new Set(remote.map((r) => r.id));
+        const localOnly = local.filter((l) => !remoteIds.has(l.id));
+        const merged = [...localOnly, ...remote];
+        foodSafetyStore.setHistory(merged);
+        if (!cancelled) setHistory(merged);
       } catch {
         /* keep local */
       }
@@ -69,10 +83,21 @@ export default function SearchHistoryScreen() {
     };
   }, []);
 
+  const normalize = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
   const filteredHistory = useMemo(() => {
-    if (!searchQuery.trim()) return history;
+    const q = normalize(searchQuery.trim());
+    if (!q) return history;
     return history.filter((item) =>
-      item.foodName.toLowerCase().includes(searchQuery.toLowerCase())
+      normalize(
+        [item.foodName, item.category, item.statusHeadline, item.summary]
+          .filter(Boolean)
+          .join(" ")
+      ).includes(q)
     );
   }, [history, searchQuery]);
 
@@ -89,34 +114,51 @@ export default function SearchHistoryScreen() {
           style: "destructive",
           onPress: async () => {
             const deleted = selectedAnalysis;
-            setSelectedAnalysis(null);
-            setLastDeleted(null);
-            if (undoTimer.current) clearTimeout(undoTimer.current);
+            const snapshot = foodSafetyStore.getHistory();
+            setSelectedId(null);
+            const existing = pendingDeletes.current.get(id);
+            if (existing) clearTimeout(existing.timer);
+            pendingDeletes.current.delete(id);
+            setUndoItems((prev) => prev.filter((i) => i.id !== id));
             foodSafetyStore.removeAnalysis(id);
             try {
               await deleteAnalysis(id);
             } catch {
-              /* local copy already removed */
+              // Roll back to the snapshot if the server delete failed.
+              foodSafetyStore.setHistory(snapshot);
+              setHistory(snapshot);
+              return;
             }
             // Completion state with a way back: Undo restores locally + re-saves.
-            setLastDeleted(deleted);
-            undoTimer.current = setTimeout(() => setLastDeleted(null), UNDO_WINDOW_MS);
+            const timer = setTimeout(() => {
+              pendingDeletes.current.delete(id);
+              setUndoItems((prev) => prev.filter((i) => i.id !== id));
+            }, UNDO_WINDOW_MS);
+            pendingDeletes.current.set(id, { analysis: deleted, timer });
+            setUndoItems((prev) => [deleted, ...prev.filter((i) => i.id !== id)]);
           },
         },
       ]
     );
   };
 
-  const handleUndoDelete = async () => {
-    if (!lastDeleted) return;
-    const restored = lastDeleted;
-    setLastDeleted(null);
-    if (undoTimer.current) clearTimeout(undoTimer.current);
+  const handleUndoDelete = async (id: string) => {
+    const pending = pendingDeletes.current.get(id);
+    const restored = pending?.analysis ?? undoItems.find((i) => i.id === id);
+    if (!restored) return;
+    if (pending) clearTimeout(pending.timer);
+    pendingDeletes.current.delete(id);
+    setUndoItems((prev) => prev.filter((i) => i.id !== id));
+    const snapshot = foodSafetyStore.getHistory();
     foodSafetyStore.setHistory([restored, ...foodSafetyStore.getHistory()]);
     try {
       await saveAnalysis(restored);
     } catch {
-      /* local copy already restored */
+      // Local copy already restored; roll back only if the store changed unexpectedly.
+      const current = foodSafetyStore.getHistory();
+      if (!current.some((a) => a.id === restored.id)) {
+        foodSafetyStore.setHistory(snapshot);
+      }
     }
   };
 
@@ -145,14 +187,18 @@ export default function SearchHistoryScreen() {
         </View>
       </View>
 
-      {lastDeleted && !isLoading && (
-        <View style={styles.undoBanner}>
-          <Text style={styles.undoText} numberOfLines={1} ellipsizeMode="tail">
-            “{lastDeleted.foodName}” deleted.
-          </Text>
-          <Pressable onPress={handleUndoDelete} accessibilityRole="button" accessibilityLabel="Undo delete">
-            <Text style={styles.undoAction}>Undo</Text>
-          </Pressable>
+      {undoItems.length > 0 && !isLoading && (
+        <View>
+          {undoItems.map((item) => (
+            <View key={item.id} style={styles.undoBanner}>
+              <Text style={styles.undoText} numberOfLines={1} ellipsizeMode="tail">
+                “{item.foodName}” deleted.
+              </Text>
+              <Pressable onPress={() => handleUndoDelete(item.id)} accessibilityRole="button" accessibilityLabel={`Undo delete ${item.foodName}`}>
+                <Text style={styles.undoAction}>Undo</Text>
+              </Pressable>
+            </View>
+          ))}
         </View>
       )}
 
@@ -172,7 +218,7 @@ export default function SearchHistoryScreen() {
         <ScrollView contentContainerStyle={styles.listContent}>
           {filteredHistory.length > 0 ? (
             filteredHistory.map((item) => (
-              <HistoryItem key={item.id} analysis={item} onPress={() => setSelectedAnalysis(item)} />
+              <HistoryItem key={item.id} analysis={item} onPress={() => setSelectedId(item.id)} />
             ))
           ) : history.length === 0 ? (
             <EmptyState
@@ -194,16 +240,16 @@ export default function SearchHistoryScreen() {
       )}
 
       <Modal
-        visible={selectedAnalysis !== null}
+        visible={visible}
         transparent
         animationType="slide"
-        onRequestClose={() => setSelectedAnalysis(null)}
+        onRequestClose={() => setSelectedId(null)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Food Analysis</Text>
-              <Pressable onPress={() => setSelectedAnalysis(null)} accessibilityLabel="Close">
+              <Pressable onPress={() => setSelectedId(null)} accessibilityLabel="Close">
                 <Ionicons name="close-circle" size={28} color={colors.slateMedium} />
               </Pressable>
             </View>

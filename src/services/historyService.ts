@@ -4,10 +4,11 @@ import { authStore } from "./authStore";
 
 /**
  * Fetch the user's history from the server.
- * Falls back to the local foodSafetyStore if not authenticated.
+ * Returns null when not authenticated so callers can distinguish
+ * "no session" (skip / keep local) from "empty history" ([]).
  */
-export async function fetchHistory(): Promise<FoodSafetyAnalysis[]> {
-  if (!authStore.isAuthenticated()) return [];
+export async function fetchHistory(): Promise<FoodSafetyAnalysis[] | null> {
+  if (!authStore.isAuthenticated()) return null;
   const data = await apiFetch<{ history: FoodSafetyAnalysis[] }>("/history");
   return data.history;
 }
