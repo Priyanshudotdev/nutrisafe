@@ -13,6 +13,10 @@ function fileExtensionFor(mime: string): string {
   if (mime === "image/png") return "png";
   if (mime === "image/webp") return "webp";
   if (mime === "image/gif") return "gif";
+  // HEIC/HEIF: preserve the .heic extension so the server can detect the
+  // container and convert to JPEG before vision inference. Do NOT remap to
+  // .jpg — the filename must match the payload format.
+  if (mime === "image/heic" || mime === "image/heif") return "heic";
   return "jpg";
 }
 
@@ -28,6 +32,11 @@ export async function buildImageForm(
   field = "image",
   filename = "photo"
 ): Promise<{ form: FormData; mime: string }> {
+  // NOTE: content:// URIs (Android) carry no file extension, so
+  // guessMimeType falls through to image/jpeg — that default is intentional.
+  // NOTE (HEIC): when the mime is image/heic|heif we keep it as-is and
+  // preserve the .heic filename; the server must convert to JPEG before
+  // vision inference since most vision models don't accept HEIC directly.
   const mime = imageUri.startsWith("data:")
     ? (imageUri.slice(5, imageUri.indexOf(";")) || guessMimeType(imageUri))
     : guessMimeType(imageUri);

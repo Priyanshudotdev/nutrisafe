@@ -4,10 +4,13 @@
  * anything is applied to their profile.
  */
 
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrlCurrent } from "../config/api";
 import { authStore } from "./authStore";
 import { buildImageForm } from "./imageUpload";
 import type { PatientCondition } from "../data/foodSafety";
+
+/** Server extraction can be slow — abort long uploads/inference before they hang UX. */
+const PRESCRIPTION_VISION_TIMEOUT_MS = 45_000;
 
 export interface PrescriptionExtraction {
   status: "success" | "unreadable" | "failed" | "not_configured";
@@ -40,14 +43,17 @@ export async function extractPrescriptionFromImage(imageUri: string): Promise<Pr
 
   const token = authStore.getToken();
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PRESCRIPTION_VISION_TIMEOUT_MS);
   try {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    const response = await fetch(`${API_BASE_URL}/prescription/extract`, {
+    const response = await fetch(`${getApiBaseUrlCurrent()}/prescription/extract`, {
       method: "POST",
       body: formData,
       headers,
+      signal: controller.signal,
     });
 
     let data: PrescriptionApiResponse = {};
@@ -106,10 +112,21 @@ export async function extractPrescriptionFromImage(imageUri: string): Promise<Pr
       summary: data.summary ?? "",
       message: data.summary || "Prescription details extracted.",
     };
-  } catch {
+  } catch (err) {
+    if (
+      controller.signal.aborted ||
+      (err instanceof Error && err.name === "AbortError")
+    ) {
+      return {
+        status: "failed",
+        message: "Request timed out. Please check your connection and try again.",
+      };
+    }
     return {
       status: "failed",
       message: "We couldn't reach the extraction service. Check your connection and try again.",
     };
+  } finally {
+    clearTimeout(timer);
   }
 }

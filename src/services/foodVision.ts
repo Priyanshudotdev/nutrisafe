@@ -1,6 +1,9 @@
-import { API_BASE_URL, FOOD_VISION_API_URL, VISION_CONFIDENCE_THRESHOLD } from "../config/api";
+import { FOOD_VISION_API_URL, VISION_CONFIDENCE_THRESHOLD, getApiBaseUrlCurrent } from "../config/api";
 import { authStore } from "./authStore";
 import { buildImageForm } from "./imageUpload";
+
+/** Server vision can be slow — abort long uploads/inference before they hang UX. */
+const FOOD_VISION_TIMEOUT_MS = 45_000;
 
 export interface FoodCandidate {
   name: string;
@@ -83,9 +86,11 @@ export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdent
   const { form: formData } = await buildImageForm(imageUri, "image", "food");
 
   const token = authStore.getToken();
-  const proxyUrl = `${API_BASE_URL}/vision/identify`;
+  const proxyUrl = `${getApiBaseUrlCurrent()}/vision/identify`;
   const targetUrl = FOOD_VISION_API_URL || proxyUrl;
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FOOD_VISION_TIMEOUT_MS);
   try {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (!FOOD_VISION_API_URL && token) {
@@ -96,6 +101,7 @@ export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdent
       method: "POST",
       body: formData,
       headers,
+      signal: controller.signal,
     });
 
     let data: VisionApiResponse = {};
@@ -125,10 +131,21 @@ export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdent
     }
 
     return normalizeResult(data);
-  } catch {
+  } catch (err) {
+    if (
+      controller.signal.aborted ||
+      (err instanceof Error && err.name === "AbortError")
+    ) {
+      return {
+        status: "failed",
+        message: "Request timed out. Please check your connection and try again.",
+      };
+    }
     return {
       status: "failed",
       message: "We couldn't reach the identification service. Check your connection and try again.",
     };
+  } finally {
+    clearTimeout(timer);
   }
 }

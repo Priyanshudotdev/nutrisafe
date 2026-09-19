@@ -105,7 +105,7 @@ function finalizeAnalysis(
 ): FoodSafetyAnalysis {
   const conditionList = conditions.length > 0 ? conditions : (base.conditions ?? ["ckd"]);
   return {
-    id: `check-${Date.now()}`,
+    id: `check-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     foodName: base.foodName ?? foodQuery,
     category: base.category ?? "General Food",
     condition: conditionList[0],

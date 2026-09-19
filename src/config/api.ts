@@ -47,7 +47,7 @@ function rewriteLocalhostForDevice(url: string): string {
   }
 }
 
-function resolveApiBaseUrl(): string {
+export function resolveApiBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (fromEnv) return rewriteLocalhostForDevice(fromEnv);
 
@@ -61,6 +61,20 @@ function resolveApiBaseUrl(): string {
 }
 
 export const API_BASE_URL = resolveApiBaseUrl();
+
+/**
+ * Lazy getter — recomputes the base URL on each call so a stale
+ * module-evaluated const can't pin a wrong host (e.g. localhost cached
+ * before Expo's hostUri was available).
+ */
+export function getApiBaseUrlLazy(): string {
+  return resolveApiBaseUrl();
+}
+
+/** Alias kept for readability at call sites; same lazy recompute. */
+export function getApiBaseUrlCurrent(): string {
+  return resolveApiBaseUrl();
+}
 
 /**
  * Optional direct vision URL (bypasses NutriCheck proxy).

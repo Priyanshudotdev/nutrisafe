@@ -3,6 +3,15 @@
  * Listeners are notified whenever the auth state changes.
  *
  * Use authStore.init() once at app startup to rehydrate from storage.
+ *
+ * TODO(security): migrate the auth token to expo-secure-store (SecureStore)
+ * for encrypted at-rest storage; keep the profile in AsyncStorage.
+ * expo-secure-store is NOT currently installed, so AsyncStorage is kept for
+ * both token + profile to avoid adding a new dependency / breaking
+ * init/setSession/logout. When migrating: init() should read the token via
+ * SecureStore.getItemAsync(TOKEN_KEY), setSession() via
+ * SecureStore.setItemAsync, logout() via SecureStore.deleteItemAsync —
+ * profile stays on AsyncStorage.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
