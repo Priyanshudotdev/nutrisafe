@@ -13,34 +13,42 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import type { PatientProfile } from "../data/foodSafety";
 
-const TOKEN_KEY = "@nutrisafe:token";
+// SecureStore keys may contain ONLY alphanumeric characters, ".", "-", "_"
+// — so the token uses a dot-namespaced key there, while AsyncStorage
+// (web fallback + profile) keeps the usual "@scope:key" convention.
+const TOKEN_KEY_SECURE = "nutrisafe.token";
+const TOKEN_KEY_ASYNC = "@nutrisafe:token";
 const PROFILE_KEY = "@nutrisafe:profile";
 
 const useSecureStore = Platform.OS !== "web";
 
+async function secureAvailable(): Promise<boolean> {
+  return useSecureStore && (await SecureStore.isAvailableAsync());
+}
+
 async function readToken(): Promise<string | null> {
-  if (useSecureStore && (await SecureStore.isAvailableAsync())) {
-    return SecureStore.getItemAsync(TOKEN_KEY);
+  if (await secureAvailable()) {
+    return SecureStore.getItemAsync(TOKEN_KEY_SECURE);
   }
-  return AsyncStorage.getItem(TOKEN_KEY);
+  return AsyncStorage.getItem(TOKEN_KEY_ASYNC);
 }
 
 async function writeToken(token: string): Promise<void> {
-  if (useSecureStore && (await SecureStore.isAvailableAsync())) {
-    await SecureStore.setItemAsync(TOKEN_KEY, token, {
+  if (await secureAvailable()) {
+    await SecureStore.setItemAsync(TOKEN_KEY_SECURE, token, {
       keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     });
     return;
   }
-  await AsyncStorage.setItem(TOKEN_KEY, token);
+  await AsyncStorage.setItem(TOKEN_KEY_ASYNC, token);
 }
 
 async function deleteToken(): Promise<void> {
-  if (useSecureStore && (await SecureStore.isAvailableAsync())) {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  if (await secureAvailable()) {
+    await SecureStore.deleteItemAsync(TOKEN_KEY_SECURE);
     return;
   }
-  await AsyncStorage.removeItem(TOKEN_KEY);
+  await AsyncStorage.removeItem(TOKEN_KEY_ASYNC);
 }
 
 type AuthListener = () => void;
