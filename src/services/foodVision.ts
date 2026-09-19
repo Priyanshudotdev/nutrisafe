@@ -90,9 +90,15 @@ export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdent
   const targetUrl = FOOD_VISION_API_URL || proxyUrl;
 
   const controller = new AbortController();
+  // Keep the 45s timeout: server vision (upload + inference) can be slow.
+  // An abort maps to a "failed" timeout message below (not a throw), so UX
+  // can offer retry without a stuck spinner.
   const timer = setTimeout(() => controller.abort(), FOOD_VISION_TIMEOUT_MS);
   try {
     const headers: Record<string, string> = { Accept: "application/json" };
+    // Auth only applies to the server proxy path. A direct third-party
+    // FOOD_VISION_API_URL uses its own key/ auth scheme, so no Bearer token
+    // is attached there — that omission is intentional.
     if (!FOOD_VISION_API_URL && token) {
       headers.Authorization = `Bearer ${token}`;
     }

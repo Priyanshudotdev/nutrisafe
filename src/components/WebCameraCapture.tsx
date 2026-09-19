@@ -8,6 +8,7 @@ interface WebCameraCaptureProps {
   onCapture: (dataUri: string) => void;
   onCancel: () => void;
   onFallbackUpload: () => void;
+  onRetry?: () => void;
 }
 
 /**
@@ -18,6 +19,7 @@ export function WebCameraCapture({
   onCapture,
   onCancel,
   onFallbackUpload,
+  onRetry,
 }: WebCameraCaptureProps): React.ReactElement | null {
   const { colors } = useThemeColors();
   const styles = makeStyles(colors);
@@ -25,10 +27,20 @@ export function WebCameraCapture({
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+    // Detach the video element so the camera indicator turns off and the
+    // stream can be garbage-collected on unmount/capture/cancel.
+    if (videoRef.current) {
+      try {
+        videoRef.current.srcObject = null;
+      } catch {
+        /* ignore */
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -55,10 +67,22 @@ export function WebCameraCapture({
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
-          setReady(true);
+          if (!cancelled) {
+            setReady(true);
+          }
         }
-      } catch {
-        setError("Camera permission denied or unavailable. Upload a photo instead.");
+      } catch (e) {
+        if (cancelled) return;
+        const name = e instanceof Error ? e.name : "";
+        if (name === "NotAllowedError" || name === "SecurityError") {
+          setError("Camera permission was denied. Allow camera access, or upload a photo instead.");
+        } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+          setError("No camera was found on this device. Upload a photo instead.");
+        } else if (name === "NotReadableError" || name === "AbortError") {
+          setError("The camera is busy or unavailable right now. Try again, or upload a photo.");
+        } else {
+          setError("Camera permission denied or unavailable. Upload a photo instead.");
+        }
       }
     }
 
@@ -67,15 +91,31 @@ export function WebCameraCapture({
       cancelled = true;
       stopStream();
     };
-  }, [stopStream]);
+  }, [stopStream, attempt]);
+
+  const handleRetry = () => {
+    onRetry?.();
+    setError(null);
+    setReady(false);
+    stopStream();
+    setAttempt((a) => a + 1);
+  };
 
   const handleCapture = () => {
     const video = videoRef.current;
     if (!video || !ready) return;
+    // The video element reports 0 dimensions before metadata loads — refuse
+    // to capture a blank frame and wait for the stream to become ready.
+    const videoWidth = video.videoWidth as number;
+    const videoHeight = video.videoHeight as number;
+    if (!videoWidth || videoWidth <= 0 || !videoHeight || videoHeight <= 0) return;
 
+    // Cap the upload width so phone sensors don't produce huge data-URIs.
+    const MAX_WIDTH = 1280;
+    const scale = Math.min(1, MAX_WIDTH / videoWidth);
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width = Math.round(videoWidth * scale);
+    canvas.height = Math.round(videoHeight * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -91,6 +131,9 @@ export function WebCameraCapture({
       <View style={styles.card}>
         <Ionicons name="videocam-off-outline" size={28} color={colors.dangerIcon} />
         <Text style={styles.errorText}>{error}</Text>
+        <Pressable style={styles.primaryButton} onPress={handleRetry}>
+          <Text style={styles.primaryButtonText}>Retry</Text>
+        </Pressable>
         <Pressable style={styles.primaryButton} onPress={onFallbackUpload}>
           <Text style={styles.primaryButtonText}>Upload Photo</Text>
         </Pressable>

@@ -1,5 +1,15 @@
 import { Platform } from "react-native";
 
+function parseDataUriMime(uri: string): string | null {
+  if (!uri.startsWith("data:")) return null;
+  // Explicit data-URI parse: require the ";" terminator (e.g. "data:image/jpeg;base64,...").
+  // Without it the slice would be meaningless, so fall back to extension guessing.
+  const semi = uri.indexOf(";", 5);
+  if (semi === -1) return null;
+  const mime = uri.slice(5, semi).trim().toLowerCase();
+  return mime.includes("/") ? mime : null;
+}
+
 function guessMimeType(uri: string): string {
   const clean = uri.split("?")[0].split("#")[0].toLowerCase();
   if (clean.endsWith(".png")) return "image/png";
@@ -37,13 +47,17 @@ export async function buildImageForm(
   // NOTE (HEIC): when the mime is image/heic|heif we keep it as-is and
   // preserve the .heic filename; the server must convert to JPEG before
   // vision inference since most vision models don't accept HEIC directly.
-  const mime = imageUri.startsWith("data:")
-    ? (imageUri.slice(5, imageUri.indexOf(";")) || guessMimeType(imageUri))
-    : guessMimeType(imageUri);
+  // NOTE (size guard): no client-side byte cap here — captures are already
+  // downscaled (max width 1280, JPEG q0.85) and picker quality is 0.8; the
+  // server enforces the upload size limit and returns 413 when exceeded.
+  const mime = parseDataUriMime(imageUri) ?? guessMimeType(imageUri);
   const name = `${filename}.${fileExtensionFor(mime)}`;
 
   const form = new FormData();
-  if (Platform.OS === "web" && imageUri.startsWith("data:")) {
+  if (Platform.OS === "web") {
+    // On web, always materialize a real Blob — fetch() handles data:, blob:,
+    // and http(s): URIs. The RN `{ uri, type, name }` convention would
+    // serialize to "[object Object]" on web and the server rejects it.
     const blob = await (await fetch(imageUri)).blob();
     form.append(field, blob, name);
   } else {

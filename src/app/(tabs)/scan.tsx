@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -47,6 +47,8 @@ export default function FoodScannerScreen() {
   const [identification, setIdentification] = useState<FoodIdentificationResult | null>(null);
   const [result, setResult] = useState<FoodSafetyAnalysis | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const busyRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   const handleConditionsChange = async (c: PatientCondition[]) => {
     if (c.length === 0) return;
@@ -120,6 +122,9 @@ export default function FoodScannerScreen() {
   };
 
   const resetScan = () => {
+    // Invalidate any in-flight analysis so its post-await setters are ignored.
+    requestIdRef.current += 1;
+    busyRef.current = false;
     setPhase("initial");
     setImageUri(null);
     setResult(null);
@@ -129,42 +134,73 @@ export default function FoodScannerScreen() {
   };
 
   const runAnalysis = async (foodOverride?: string) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    const requestId = ++requestIdRef.current;
+    const isCurrent = () => requestId === requestIdRef.current;
     setPhase("processing");
     setActiveStep(undefined);
     setErrorMessage(null);
 
     try {
       if (foodOverride) {
+        // Preserve the vision candidate confidence so the result card can
+        // still show "Identified with X% confidence" on the manual-confirm path.
+        const candidateConfidence = identification?.candidates?.find(
+          (c) => c.name === foodOverride
+        )?.confidence;
         const analysis = await analyzeConfirmedFood(foodOverride, conditions, setActiveStep);
-        setResult(analysis);
-        await notificationStore.push("Food check complete", `${analysis.foodName}: ${analysis.statusHeadline}`);
+        if (!isCurrent()) return;
+        setResult(
+          candidateConfidence !== undefined
+            ? { ...analysis, scanConfidence: candidateConfidence }
+            : analysis
+        );
+        void notificationStore
+          .push("Food check complete", `${analysis.foodName}: ${analysis.statusHeadline}`)
+          .catch(() => {});
+        if (!isCurrent()) return;
         setPhase("result");
         return;
       }
 
-      if (!imageUri) return;
+      if (!imageUri && !foodOverride) {
+        setPhase("preview");
+        return;
+      }
 
-      const scanResult = await analyzeFoodFromImage(imageUri, conditions, setActiveStep);
+      const scanResult = await analyzeFoodFromImage(imageUri as string, conditions, setActiveStep);
+      if (!isCurrent()) return;
       setIdentification(scanResult.identification);
 
       if (scanResult.analysis) {
+        if (!isCurrent()) return;
         setResult(scanResult.analysis);
-        await notificationStore.push(
-          "Food check complete",
-          `${scanResult.analysis.foodName}: ${scanResult.analysis.statusHeadline}`
-        );
+        void notificationStore
+          .push(
+            "Food check complete",
+            `${scanResult.analysis.foodName}: ${scanResult.analysis.statusHeadline}`
+          )
+          .catch(() => {});
+        if (!isCurrent()) return;
         setPhase("result");
       } else if (scanResult.identification.status === "uncertain" && scanResult.identification.candidates) {
+        if (!isCurrent()) return;
         setPhase("uncertain");
       } else {
+        if (!isCurrent()) return;
         setErrorMessage(scanResult.identification.message);
         setPhase("error");
       }
     } catch {
+      if (!isCurrent()) return;
       setErrorMessage("We couldn't complete the scan. Please try again or search manually.");
       setPhase("error");
     } finally {
-      setActiveStep(undefined);
+      if (isCurrent()) {
+        setActiveStep(undefined);
+      }
+      busyRef.current = false;
     }
   };
 
@@ -224,6 +260,9 @@ export default function FoodScannerScreen() {
           <View style={styles.uncertainCard}>
             <Ionicons name="help-circle-outline" size={28} color={colors.moderationIcon} />
             <Text style={styles.uncertainTitle}>Which food is this?</Text>
+            {imageUri && (
+              <Image source={{ uri: imageUri }} style={styles.previewImage} accessibilityLabel="Scanned food photo" />
+            )}
             <Text style={styles.uncertainText}>{identification.message}</Text>
             {identification.candidates.map((c) => (
               <Pressable
@@ -240,7 +279,9 @@ export default function FoodScannerScreen() {
                 <Ionicons name="chevron-forward" size={16} color={colors.gray3} />
               </Pressable>
             ))}
-            <AppLinkButton label="Search manually instead" onPress={() => router.push("/(tabs)")} style={styles.linkButton} />
+            <AppButton label="Retake" onPress={() => setPhase("preview")} variant="secondary" size="md" />
+            {/* Manual food search lives on Home (index); the "search" tab is History. */}
+            <AppLinkButton label="Enter food name manually" onPress={() => router.push("/(tabs)")} style={styles.linkButton} />
           </View>
         )}
 
