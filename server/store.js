@@ -73,7 +73,20 @@ function writeLegacyJson() {
 
 function openSqlite() {
   ensureDataDir();
-  sql = new sqlite.DatabaseSync(DB_FILE);
+  try {
+    sql = new sqlite.DatabaseSync(DB_FILE, { timeout: 5000 });
+  } catch {
+    // Older Node: DatabaseSync may not accept an options argument.
+    sql = new sqlite.DatabaseSync(DB_FILE);
+  }
+  // Best-effort concurrency hardening (single-instance SQLite).
+  // WAL lets readers proceed during writes; busy_timeout makes writers
+  // wait instead of failing immediately with SQLITE_BUSY.
+  try {
+    sql.exec("PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;");
+  } catch {
+    /* ignore — DB remains usable without WAL/timeout */
+  }
   sql.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -128,6 +141,12 @@ function loadFromSqlite() {
 }
 
 function saveToSqlite() {
+  if (!db) return;
+  // NOTE: full-history rewrite per user (DELETE all + INSERT all) is kept
+  // intentionally: single-instance SQLite, history capped at
+  // MAX_HISTORY_ITEMS, and index.js mutates the live object directly via
+  // Maps so dirty tracking isn't simple. WAL + busy_timeout above keep
+  // this transactional rewrite from failing under brief contention.
   const insertUser = sql.prepare(`
     INSERT INTO users (id, email, passwordHash, profile, createdAt)
     VALUES (?, ?, ?, ?, ?)
@@ -226,9 +245,22 @@ function save() {
     return;
   }
   try {
+    ensureDataDir();
+  } catch {
+    /* ignore — open handle may still be valid */
+  }
+  try {
     saveToSqlite();
   } catch (err) {
-    console.error("[store] SQLite save failed:", err.message);
+    // Sync code can't await/retry with setTimeout; on SQLITE_BUSY just warn
+    // and keep the in-memory state — the next save() will retry. Never throw.
+    const msg = (err && err.message) || "";
+    const code = err && (err.code || err.errno);
+    if (code === "SQLITE_BUSY" || /SQLITE_BUSY|database is locked/i.test(msg)) {
+      console.warn("[store] SQLite busy (SQLITE_BUSY) — keeping in-memory state, next save() will retry.");
+      return;
+    }
+    console.error("[store] SQLite save failed:", msg || err);
   }
 }
 
