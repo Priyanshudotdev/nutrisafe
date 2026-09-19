@@ -57,7 +57,7 @@ class NotificationStore {
   }
 
   getItems(): AppNotification[] {
-    return this.items;
+    return [...this.items];
   }
 
   unreadCount(): number {

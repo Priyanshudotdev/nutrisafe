@@ -286,7 +286,13 @@ export function evaluateFoodSafety(
 ): FoodSafetyAnalysis {
   const query = foodQuery.toLowerCase().trim();
 
-  const isIndianStaple = (terms: string[]) => terms.some((t) => query.includes(t));
+  // Word-boundary term matcher — avoids false positives from naive
+  // query.includes() (e.g. "rice" matching "price", "egg" matching "eggplant").
+  // Multi-word phrases (e.g. "canned soup", "soy sauce") match as a whole phrase.
+  const hasTerm = (terms: string[]) =>
+    terms.some((t) => new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(query));
+
+  const isIndianStaple = (terms: string[]) => hasTerm(terms);
 
   // Helper template generator
   const createResult = (
@@ -302,7 +308,7 @@ export function evaluateFoodSafety(
   ): FoodSafetyAnalysis => {
     const now = new Date();
     return {
-      id: `check-${Date.now()}`,
+      id: `check-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       foodName: name,
       category: cat,
       condition,
@@ -319,7 +325,7 @@ export function evaluateFoodSafety(
 
   // ─── 1. CHRONIC KIDNEY DISEASE (CKD) ──────────────────────────────
   if (condition === "ckd") {
-    if (query.includes("banana") || query.includes("avocado") || query.includes("spinach") || query.includes("potato") || query.includes("tomato") || query.includes("orange")) {
+    if (hasTerm(["banana", "avocado", "spinach", "potato", "tomato", "orange"])) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
         "Fresh Produce",
@@ -341,7 +347,7 @@ export function evaluateFoodSafety(
       );
     }
 
-    if (query.includes("pizza") || query.includes("bacon") || query.includes("sausage") || query.includes("canned") || query.includes("instant") || query.includes("soda")) {
+    if (hasTerm(["pizza", "bacon", "sausage", "canned", "instant", "soda"])) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
         "Processed Foods",
@@ -385,7 +391,7 @@ export function evaluateFoodSafety(
 
   // ─── 2. DIABETES ──────────────────────────────────────────────────
   if (condition === "diabetes") {
-    if (query.includes("sugar") || query.includes("soda") || query.includes("cake") || query.includes("donut") || query.includes("candy") || query.includes("juice") || query.includes("syrup")) {
+    if (hasTerm(["sugar", "soda", "cake", "donut", "candy", "juice", "syrup"])) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
         "High Sugar Food",
@@ -407,13 +413,7 @@ export function evaluateFoodSafety(
     }
 
     if (
-      isIndianStaple(["idli", "dosa", "poha", "upma", "paratha", "chapati"]) ||
-      query.includes("rice") ||
-      query.includes("bread") ||
-      query.includes("potato") ||
-      query.includes("pasta") ||
-      query.includes("banana") ||
-      query.includes("mango")
+      hasTerm(["idli", "dosa", "poha", "upma", "paratha", "chapati", "rice", "bread", "potato", "pasta", "banana", "mango"])
     ) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
@@ -481,15 +481,7 @@ export function evaluateFoodSafety(
   // ─── 3. HEART DISEASE & HYPERTENSION ──────────────────────────────
   if (condition === "hypertension") {
     if (
-      isIndianStaple(["biryani", "pickle", "papad", "namkeen"]) ||
-      query.includes("pizza") ||
-      query.includes("canned soup") ||
-      query.includes("chips") ||
-      query.includes("hot dog") ||
-      query.includes("sausage") ||
-      query.includes("soy sauce") ||
-      query.includes("ramen") ||
-      query.includes("bacon")
+      hasTerm(["biryani", "pickle", "papad", "namkeen", "pizza", "canned soup", "chips", "hot dog", "sausage", "soy sauce", "ramen", "bacon"])
     ) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
@@ -512,13 +504,7 @@ export function evaluateFoodSafety(
     }
 
     if (
-      isIndianStaple(["paneer", "butter chicken", "malai", "ghee"]) ||
-      query.includes("cheese") ||
-      query.includes("butter") ||
-      query.includes("steak") ||
-      query.includes("beef") ||
-      query.includes("pork") ||
-      query.includes("burger")
+      hasTerm(["paneer", "butter chicken", "malai", "ghee", "cheese", "butter", "steak", "beef", "pork", "burger"])
     ) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
@@ -564,16 +550,7 @@ export function evaluateFoodSafety(
   // ─── 4. CELIAC DISEASE ────────────────────────────────────────────
   if (condition === "celiac") {
     if (
-      isIndianStaple(["roti", "chapati", "naan", "paratha", "puri", "bhatura"]) ||
-      query.includes("wheat") ||
-      query.includes("bread") ||
-      query.includes("pasta") ||
-      query.includes("pizza") ||
-      query.includes("beer") ||
-      query.includes("barley") ||
-      query.includes("rye") ||
-      query.includes("cookie") ||
-      query.includes("flour")
+      hasTerm(["roti", "chapati", "naan", "paratha", "puri", "bhatura", "wheat", "bread", "pasta", "pizza", "beer", "barley", "rye", "cookie", "flour"])
     ) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
@@ -595,7 +572,7 @@ export function evaluateFoodSafety(
       );
     }
 
-    if (query.includes("oats") || query.includes("soy sauce") || query.includes("dressing") || query.includes("gravy") || query.includes("processed meat")) {
+    if (hasTerm(["oats", "soy sauce", "dressing", "gravy", "processed meat"])) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
         "Potential Cross-Contact",
@@ -637,7 +614,7 @@ export function evaluateFoodSafety(
 
   // ─── 5. FOOD ALLERGY ──────────────────────────────────────────────
   if (condition === "allergy") {
-    if (query.includes("peanut") || query.includes("shellfish") || query.includes("shrimp") || query.includes("crab") || query.includes("lobster") || query.includes("walnut") || query.includes("almond") || query.includes("cashew")) {
+    if (hasTerm(["peanut", "shellfish", "shrimp", "crab", "lobster", "walnut", "almond", "cashew"])) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
         "Major Allergen",
@@ -658,7 +635,7 @@ export function evaluateFoodSafety(
       );
     }
 
-    if (query.includes("milk") || query.includes("cheese") || query.includes("egg") || query.includes("soy") || query.includes("sesame")) {
+    if (hasTerm(["milk", "cheese", "egg", "soy", "sesame"])) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
         "Common Allergenic Item",
@@ -778,7 +755,7 @@ export function evaluateFoodSafetyMulti(
   );
 
   return {
-    id: `check-${Date.now()}`,
+    id: `check-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     foodName: worst.foodName,
     category: worst.category,
     condition: unique[0],
@@ -817,7 +794,7 @@ class FoodSafetyStore {
   }
 
   getHistory(): FoodSafetyAnalysis[] {
-    return this.history;
+    return [...this.history];
   }
 
   setHistory(history: FoodSafetyAnalysis[]) {
@@ -826,7 +803,7 @@ class FoodSafetyStore {
   }
 
   getPatient(): PatientProfile {
-    return this.currentPatient;
+    return { ...this.currentPatient };
   }
 
   updatePatient(profile: Partial<PatientProfile>) {
@@ -849,7 +826,7 @@ class FoodSafetyStore {
   }
 
   getSelectedConditions(): PatientCondition[] {
-    return this.selectedConditions;
+    return [...this.selectedConditions];
   }
 
   setSelectedConditions(conditions: PatientCondition[]) {
