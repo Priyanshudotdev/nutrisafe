@@ -20,7 +20,7 @@ export function ScreenHeader({ title, subtitle, right }: ScreenHeaderProps): JSX
   return (
     <View style={styles.header}>
       <View style={styles.textWrap}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title} accessibilityRole="header">{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       {right}
@@ -45,6 +45,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   subtitle: {
     ...typography.bodySmall,
     color: colors.slateMuted,
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
 });

@@ -3,8 +3,11 @@ import type { JSX } from "react";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { SafetyStatus } from "../data/foodSafety";
-import { getStatusColors, radius } from "../theme/tokens";
+import { getStatusColors, radius, spacing, typography } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
+
+// A11y outline exception (documented): status icons stay outline-style
+// ("checkmark-circle", "alert-circle", "close-circle") per design — do NOT change icons.
 
 interface SafetyStatusBadgeProps {
   status: SafetyStatus;
@@ -69,15 +72,15 @@ const styles = StyleSheet.create({
   compactBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    gap: 4,
+    gap: spacing.xs,
     alignSelf: "flex-start",
   },
   compactText: {
-    fontSize: 11,
+    ...typography.micro,
     fontWeight: "700",
   },
   normalBadge: {
@@ -85,12 +88,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 1.2,
-    gap: 8,
+    gap: spacing.sm,
   },
   normalText: {
-    fontSize: 14,
+    ...typography.body,
     fontWeight: "700",
     flex: 1,
   },
@@ -98,7 +101,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     borderWidth: 1.5,
     gap: 14,
   },
@@ -106,12 +109,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   largeLabel: {
-    fontSize: 18,
+    ...typography.subheading,
     fontWeight: "800",
-    letterSpacing: -0.3,
   },
   largeStatus: {
-    fontSize: 13,
+    ...typography.bodySmall,
     fontWeight: "600",
     opacity: 0.8,
     marginTop: 2,

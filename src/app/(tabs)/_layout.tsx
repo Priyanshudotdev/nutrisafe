@@ -3,7 +3,7 @@ import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors as lightColors } from "../../theme/tokens";
+import { colors as lightColors, typography } from "../../theme/tokens";
 import { darkColors } from "../../theme/darkTokens";
 import { themeStore } from "../../services/themeStore";
 
@@ -37,7 +37,7 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: colors.primaryText,
         tabBarInactiveTintColor: colors.gray4,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarLabelStyle: { ...typography.micro },
         sceneStyle: { backgroundColor: colors.background },
       }}
     >

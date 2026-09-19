@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { type ComponentProps, type JSX } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { radius, spacing, type ThemeColors } from "../theme/tokens";
+import { radius, spacing, typography, type ThemeColors } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 import { AppButton } from "./AppButton";
 
@@ -22,6 +22,10 @@ export function EmptyState({
 }: EmptyStateProps): JSX.Element {
   const { colors } = useThemeColors();
   const styles = makeStyles(colors);
+  if (__DEV__ && actionLabel && !onAction) {
+    console.warn("EmptyState: actionLabel provided without onAction — button will not render.");
+  }
+  const showAction = Boolean(actionLabel && onAction);
   return (
     <View style={styles.container}>
       <View style={styles.iconCircle}>
@@ -29,8 +33,8 @@ export function EmptyState({
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
-      {actionLabel && onAction && (
-        <AppButton label={actionLabel} onPress={onAction} size="md" style={styles.actionButton} />
+      {showAction && (
+        <AppButton label={actionLabel!} onPress={onAction} size="md" style={styles.actionButton} />
       )}
     </View>
   );
@@ -53,17 +57,15 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "700",
+    ...typography.subheading,
     color: colors.dark,
     marginBottom: spacing.sm,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 14,
+    ...typography.body,
     color: colors.slateMuted,
     textAlign: "center",
-    lineHeight: 20,
     maxWidth: 280,
   },
   actionButton: { marginTop: spacing.xl, minWidth: 180 },

@@ -60,14 +60,26 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
     const inTabs = root === "(tabs)";
     const onAuthPage = root === "login" || root === "signup";
     const onOnboarding = root === "onboarding";
-    const onboardingPending = needsOnboarding(profile);
 
     if (!isAuthenticated) {
-      if (inTabs || onOnboarding) {
+      // Unauthed: any protected surface (tabs, onboarding, or bare root) goes to login.
+      // Idempotent: only replace when not already on an auth page.
+      if ((inTabs || onOnboarding || !root) && !onAuthPage) {
         router.replace("/login");
       }
       return;
     }
+
+    // Authenticated — wait for profile hydration before deciding.
+    // profile===null means unknown (pending), not complete.
+    if (profile === null) {
+      if (!onOnboarding) {
+        router.replace("/onboarding");
+      }
+      return;
+    }
+
+    const onboardingPending = needsOnboarding(profile);
 
     // Authenticated
     if (onboardingPending) {

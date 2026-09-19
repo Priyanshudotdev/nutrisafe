@@ -8,7 +8,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,7 +21,7 @@ import { needsOnboarding } from "../services/onboardingService";
 import { getApiBaseUrl } from "../services/apiClient";
 
 export default function LoginScreen() {
-  const { colors, isDark } = useThemeColors();
+  const { colors } = useThemeColors();
   const styles = makeStyles(colors);
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -57,7 +56,6 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.logoArea}>
@@ -72,7 +70,7 @@ export default function LoginScreen() {
 
           {error && (
             <View style={styles.errorWrap}>
-              <ErrorBanner message={error} />
+              <ErrorBanner message={error} onRetry={handleLogin} />
             </View>
           )}
 
@@ -110,6 +108,10 @@ export default function LoginScreen() {
                 style={styles.showPasswordButton}
                 onPress={() => setShowPassword((v) => !v)}
                 accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: showPassword }}
+                accessibilityHint={showPassword ? "Hide password text" : "Show password text"}
+                hitSlop={12}
               >
                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.slateLight} />
               </Pressable>
@@ -124,7 +126,7 @@ export default function LoginScreen() {
             style={styles.submitButton}
           />
 
-          <Pressable style={styles.linkButton} onPress={() => router.push("/signup")}>
+          <Pressable style={styles.linkButton} onPress={() => router.push("/signup")} accessibilityRole="link" accessibilityHint="Go to sign up">
             <Text style={styles.linkText}>
               Don&apos;t have an account? <Text style={styles.linkTextBold}>Create one</Text>
             </Text>
@@ -152,12 +154,12 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: spacing.md,
   },
   appName: { ...typography.heading, color: colors.dark },
-  tagline: { fontSize: typography.bodySmall.fontSize, color: colors.slateMuted, marginTop: 4 },
-  heading: { ...typography.display, color: colors.dark, marginBottom: spacing.lg },
+  tagline: { ...typography.bodySmall, color: colors.slateMuted, marginTop: spacing.xs },
+  heading: { ...typography.heading, color: colors.dark, marginBottom: spacing.lg },
   errorWrap: { marginBottom: spacing.lg },
   field: { marginBottom: spacing.lg },
   label: {
-    fontSize: typography.bodySmall.fontSize,
+    ...typography.bodySmall,
     fontWeight: "700",
     color: colors.dark,
     marginBottom: spacing.sm,
@@ -168,22 +170,25 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.cardBorder,
     paddingHorizontal: spacing.lg,
-    fontSize: typography.body.fontSize + 1,
+    ...typography.body,
     color: colors.dark,
     height: controlHeight.md,
   },
   passwordRow: { position: "relative" },
-  passwordInput: { paddingRight: 52 },
+  passwordInput: { paddingRight: spacing.xxxl + spacing.xl },
   showPasswordButton: {
     position: "absolute",
     right: 14,
     top: 0,
     bottom: 0,
     justifyContent: "center",
+    alignItems: "center",
+    minWidth: 44,
+    minHeight: 44,
   },
   submitButton: { marginTop: spacing.sm },
   linkButton: { alignItems: "center", marginTop: spacing.xl },
-  linkText: { fontSize: typography.bodySmall.fontSize, color: colors.slateMuted },
+  linkText: { ...typography.bodySmall, color: colors.slateMuted },
   linkTextBold: { color: colors.primaryText, fontWeight: "700" },
-  devHint: { marginTop: spacing.xl, fontSize: typography.micro.fontSize, color: colors.slateMuted, textAlign: "center" },
+  devHint: { marginTop: spacing.xl, ...typography.micro, color: colors.slateMuted, textAlign: "center" },
 });

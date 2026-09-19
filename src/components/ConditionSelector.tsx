@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { PATIENT_CONDITIONS, type PatientCondition } from "../data/foodSafety";
-import { radius, spacing, getConditionColor, type ThemeColors } from "../theme/tokens";
+import { radius, spacing, typography, sectionLabel as sectionLabelToken, getConditionColor, type ThemeColors } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 
 interface ConditionSelectorProps {
@@ -12,6 +12,8 @@ interface ConditionSelectorProps {
 }
 
 /** Multi-select condition picker — toggles are instant; parent closes when done. */
+const FALLBACK_ICON = "help-circle-outline" as const;
+
 export function ConditionSelector({
   selectedConditions,
   onToggleCondition,
@@ -41,6 +43,7 @@ export function ConditionSelector({
         {PATIENT_CONDITIONS.map((cond) => {
           const isSelected = selectedConditions.includes(cond.id);
           const cc = getConditionColor(cond.id, isDark);
+          const iconName = (cond.iconName in Ionicons.glyphMap ? cond.iconName : FALLBACK_ICON) as keyof typeof Ionicons.glyphMap;
           return (
             <Pressable
               key={cond.id}
@@ -49,18 +52,21 @@ export function ConditionSelector({
                 isSelected && [styles.pillButtonActive, { borderColor: cc.accent }],
               ]}
               onPress={() => onToggleCondition(cond.id)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: isSelected, selected: isSelected }}
               accessibilityLabel={cond.title}
+              accessibilityHint={`${isSelected ? "Remove" : "Add"} ${cond.title} ${isSelected ? "from" : "to"} dietary profile`}
+              hitSlop={spacing.sm}
             >
               <View
                 style={[
                   styles.iconWrap,
                   { backgroundColor: isSelected ? cc.accent : colors.gray1 },
                 ]}
+                accessible={false}
               >
                 <Ionicons
-                  name={cond.iconName as keyof typeof Ionicons.glyphMap}
+                  name={iconName}
                   size={16}
                   color={isSelected ? colors.white : colors.slateLight}
                 />
@@ -84,6 +90,7 @@ export function ConditionSelector({
                   styles.checkCircle,
                   isSelected && { backgroundColor: cc.accent, borderColor: cc.accent },
                 ]}
+                accessible={false}
               >
                 {isSelected && <Ionicons name="checkmark" size={10} color={colors.white} />}
               </View>
@@ -105,18 +112,14 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   headerRow: {
     marginBottom: spacing.md,
-    gap: 4,
+    gap: spacing.xs,
   },
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.slateLight,
+    ...sectionLabelToken,
   },
   selectedTitle: {
-    fontSize: 17,
-    fontWeight: "800",
+    ...typography.subheading,
     color: colors.dark,
-    letterSpacing: -0.2,
   },
   scrollList: {
     gap: spacing.sm,
@@ -128,7 +131,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.background,
     borderWidth: 1.5,
     borderColor: colors.cardBorder,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
@@ -139,7 +142,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   iconWrap: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -147,7 +150,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     maxWidth: 120,
   },
   pillText: {
-    fontSize: 12,
+    ...typography.caption,
     fontWeight: "600",
     color: colors.slateMedium,
   },
@@ -157,7 +160,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   checkCircle: {
     width: 16,
     height: 16,
-    borderRadius: 8,
+    borderRadius: radius.pill,
     borderWidth: 1.5,
     borderColor: colors.gray3,
     alignItems: "center",

@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { JSX } from "react";
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
-import { controlHeight, radius, type ThemeColors } from "../theme/tokens";
+import { controlHeight, radius, typography, type ThemeColors } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -27,7 +27,11 @@ const HEIGHTS: Record<Size, number> = {
   lg: controlHeight.lg,
 };
 
-const LABEL_SIZE: Record<Size, number> = { sm: 13, md: 14, lg: 15 };
+const LABEL_TEXT: Record<Size, { fontSize: number; lineHeight?: number }> = {
+  sm: typography.bodySmall,
+  md: typography.body,
+  lg: typography.title,
+};
 
 const getVariantColors = (colors: ThemeColors): Record<Variant, { bg: string; border: string; text: string }> => ({
   primary: { bg: colors.primaryDark, border: "transparent", text: colors.white },
@@ -74,7 +78,7 @@ export function AppButton({
       ) : (
         <>
           {icon ? <Ionicons name={icon} size={size === "sm" ? 15 : 18} color={vc.text} /> : null}
-          <Text style={[styles.label, { color: vc.text, fontSize: LABEL_SIZE[size] }]}>{label}</Text>
+          <Text style={[LABEL_TEXT[size], styles.label, { color: vc.text }]}>{label}</Text>
         </>
       )}
     </Pressable>
@@ -128,5 +132,5 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: 6,
     paddingVertical: 12,
   },
-  linkLabel: { fontSize: 14, fontWeight: "600", color: colors.primaryText },
+  linkLabel: { ...typography.body, fontWeight: "600", color: colors.primaryText },
 });

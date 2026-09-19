@@ -8,7 +8,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,7 +20,7 @@ import { signup, formatAuthError } from "../services/authService";
 import { getApiBaseUrl } from "../services/apiClient";
 
 export default function SignupScreen() {
-  const { colors, isDark } = useThemeColors();
+  const { colors } = useThemeColors();
   const styles = makeStyles(colors);
   const router = useRouter();
   const [name, setName] = useState("");
@@ -60,10 +59,16 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Pressable style={styles.back} onPress={() => router.back()} accessibilityLabel="Back">
+          <Pressable
+            style={styles.back}
+            onPress={() => router.back()}
+            accessibilityLabel="Back"
+            accessibilityRole="button"
+            accessibilityHint="Go back to previous screen"
+            hitSlop={12}
+          >
             <Ionicons name="arrow-back" size={22} color={colors.dark} />
           </Pressable>
 
@@ -74,7 +79,7 @@ export default function SignupScreen() {
 
           {error && (
             <View style={styles.errorWrap}>
-              <ErrorBanner message={error} />
+              <ErrorBanner message={error} onRetry={handleSignup} />
             </View>
           )}
 
@@ -123,6 +128,10 @@ export default function SignupScreen() {
                 style={styles.showPasswordButton}
                 onPress={() => setShowPassword((v) => !v)}
                 accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: showPassword }}
+                accessibilityHint={showPassword ? "Hide password text" : "Show password text"}
+                hitSlop={12}
               >
                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.slateLight} />
               </Pressable>
@@ -137,7 +146,7 @@ export default function SignupScreen() {
             style={styles.submitButton}
           />
 
-          <Pressable style={styles.linkButton} onPress={() => router.push("/login")}>
+          <Pressable style={styles.linkButton} onPress={() => router.push("/login")} accessibilityRole="link" accessibilityHint="Go to sign in">
             <Text style={styles.linkText}>
               Already have an account? <Text style={styles.linkTextBold}>Sign in</Text>
             </Text>
@@ -156,13 +165,13 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xxl },
-  back: { marginBottom: spacing.lg },
-  heading: { ...typography.display, color: colors.dark, marginBottom: 6 },
-  subheading: { fontSize: typography.body.fontSize, color: colors.slateMuted, lineHeight: 20, marginBottom: spacing.xl },
+  back: { marginBottom: spacing.lg, minWidth: 44, minHeight: 44, justifyContent: "center" },
+  heading: { ...typography.heading, color: colors.dark, marginBottom: spacing.sm },
+  subheading: { ...typography.body, color: colors.slateMuted, marginBottom: spacing.xl },
   errorWrap: { marginBottom: spacing.lg },
   field: { marginBottom: spacing.lg },
   label: {
-    fontSize: typography.bodySmall.fontSize,
+    ...typography.bodySmall,
     fontWeight: "700",
     color: colors.dark,
     marginBottom: spacing.sm,
@@ -173,16 +182,16 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.cardBorder,
     paddingHorizontal: spacing.lg,
-    fontSize: typography.body.fontSize + 1,
+    ...typography.body,
     color: colors.dark,
     height: controlHeight.md,
   },
   passwordRow: { position: "relative" },
-  passwordInput: { paddingRight: 52 },
-  showPasswordButton: { position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center" },
+  passwordInput: { paddingRight: spacing.xxxl + spacing.xl },
+  showPasswordButton: { position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center", alignItems: "center", minWidth: 44, minHeight: 44 },
   submitButton: { marginTop: spacing.sm },
   linkButton: { alignItems: "center", marginTop: spacing.xl },
-  linkText: { fontSize: typography.bodySmall.fontSize, color: colors.slateMuted },
+  linkText: { ...typography.bodySmall, color: colors.slateMuted },
   linkTextBold: { color: colors.primaryText, fontWeight: "700" },
-  devHint: { marginTop: spacing.xl, fontSize: typography.micro.fontSize, color: colors.slateMuted, textAlign: "center" },
+  devHint: { marginTop: spacing.xl, ...typography.micro, color: colors.slateMuted, textAlign: "center" },
 });

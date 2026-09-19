@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { radius, shadow, spacing, type ThemeColors } from "../theme/tokens";
+import { radius, shadow, spacing, typography, type ThemeColors } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 
 interface SegmentControlProps<T extends string> {
@@ -28,6 +28,8 @@ export function SegmentControl<T extends string>({
             onPress={() => onChange(seg.id)}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
+            accessibilityLabel={seg.label}
+            accessibilityHint={`Select ${seg.label}`}
           >
             <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>{seg.label}</Text>
           </Pressable>
@@ -42,8 +44,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     backgroundColor: colors.bgSubtle,
     borderRadius: radius.lg,
-    padding: 4,
-    gap: 4,
+    padding: spacing.xs,
+    gap: spacing.xs,
   },
   segment: {
     flex: 1,
@@ -56,7 +58,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     ...shadow.subtle,
   },
   segmentText: {
-    fontSize: 13,
+    ...typography.bodySmall,
     fontWeight: "600",
     color: colors.slateMuted,
   },

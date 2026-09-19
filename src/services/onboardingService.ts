@@ -28,6 +28,6 @@ export async function completeOnboarding(payload: OnboardingPayload): Promise<Pa
 }
 
 export function needsOnboarding(profile: PatientProfile | null | undefined): boolean {
-  if (!profile) return false;
+  if (!profile) return true;
   return profile.onboardingCompleted !== true;
 }
