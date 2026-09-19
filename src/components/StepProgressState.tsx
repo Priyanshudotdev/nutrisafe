@@ -47,7 +47,12 @@ export function StepProgressState({
   const progress = ((activeIndex + 1) / steps.length) * 100;
 
   return (
-    <View style={styles.container} accessibilityRole="progressbar" accessibilityLabel={currentLabel}>
+    <View
+      style={styles.container}
+      accessibilityRole="progressbar"
+      accessibilityLabel={currentLabel}
+      accessibilityValue={{ min: 0, max: steps.length, now: activeIndex + 1 }}
+    >
       <View style={styles.stepsList}>
         {steps.map((step, index) => {
           const isActive = index === activeIndex;

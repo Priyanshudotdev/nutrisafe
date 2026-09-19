@@ -51,8 +51,10 @@ async function persistAnalysis(analysis: FoodSafetyAnalysis): Promise<FoodSafety
   foodSafetyStore.addAnalysis(analysis);
   try {
     await saveAnalysis(analysis);
-  } catch {
+  } catch (e) {
     // Local history still updated; server sync can retry later.
+    // Return analysis as local-only rather than throwing.
+    console.warn("persistAnalysis: server sync failed, keeping local-only", e);
   }
   return analysis;
 }
@@ -66,12 +68,22 @@ interface ServerNutritionResponse {
  * Ask the server's AI layer for a full analysis across ALL selected conditions.
  * Returns null when the server has no AI configured, errors out, or the user
  * is offline/unauthenticated — the caller then uses the local rules engine.
+ * Null is kept as the fallback signal (signature compatible); failures are
+ * logged instead of failing silently.
  */
+export type ServerFallbackReason =
+  | "unauthenticated"
+  | "no-ai"
+  | "error";
+
 async function requestServerAnalysis(
   foodName: string,
   conditions: PatientCondition[]
 ): Promise<Partial<FoodSafetyAnalysis> | null> {
-  if (!authStore.isAuthenticated()) return null;
+  if (!authStore.isAuthenticated()) {
+    console.warn("requestServerAnalysis: unauthenticated, using local engine");
+    return null;
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SERVER_ANALYSIS_TIMEOUT_MS);
@@ -90,8 +102,10 @@ async function requestServerAnalysis(
     if (data.source === "ai" && data.analysis && data.analysis.status) {
       return data.analysis;
     }
+    console.warn("requestServerAnalysis: no AI result, using local engine");
     return null;
-  } catch {
+  } catch (e) {
+    console.warn("requestServerAnalysis failed, using local engine", e);
     return null;
   } finally {
     clearTimeout(timer);
@@ -104,9 +118,10 @@ function finalizeAnalysis(
   conditions: PatientCondition[]
 ): FoodSafetyAnalysis {
   const conditionList = conditions.length > 0 ? conditions : (base.conditions ?? ["ckd"]);
+  const trimmedQuery = foodQuery.trim();
   return {
     id: `check-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    foodName: base.foodName ?? foodQuery,
+    foodName: base.foodName?.trim() ? base.foodName.trim() : trimmedQuery,
     category: base.category ?? "General Food",
     condition: conditionList[0],
     conditions: conditionList,

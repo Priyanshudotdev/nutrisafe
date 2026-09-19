@@ -78,7 +78,13 @@ export function FoodCheckCard({ analysis, expanded = false, onPress }: FoodCheck
             <Text style={styles.foodCategory} numberOfLines={1} ellipsizeMode="tail">{analysis.category}</Text>
           </View>
           <View style={[styles.conditionTag, { backgroundColor: cc.bg }]}>
-            <Text style={[styles.conditionTagText, { color: cc.accent }]}>{conditionLabel}</Text>
+            <Text
+              style={[styles.conditionTagText, { color: cc.accent }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {conditionLabel}
+            </Text>
           </View>
         </View>
 
@@ -184,7 +190,7 @@ export function HistoryItem({ analysis, onPress }: HistoryItemProps): JSX.Elemen
       <View style={styles.historyContent}>
         <Text style={styles.historyName} numberOfLines={1} ellipsizeMode="tail">{analysis.foodName}</Text>
         <View style={styles.historyMetaRow}>
-          <Text style={styles.historyCondition} numberOfLines={1}>{conditionLabel}</Text>
+          <Text style={styles.historyCondition} numberOfLines={1} ellipsizeMode="tail">{conditionLabel}</Text>
           <Text style={styles.historyDot}>·</Text>
           <Text style={styles.historyMeta} numberOfLines={1} ellipsizeMode="tail">{analysis.timestamp}</Text>
         </View>
@@ -233,6 +239,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radius.sm,
     marginLeft: spacing.sm,
+    flexShrink: 0,
+    maxWidth: 110,
   },
   conditionTagText: {
     fontSize: 11,

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TextInput,
   Pressable,
   StatusBar,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -51,6 +52,9 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [patient, setPatient] = useState(foodSafetyStore.getPatient());
   const [history, setHistory] = useState<FoodSafetyAnalysis[]>(foodSafetyStore.getHistory());
+  const busyRef = useRef(false);
+  const runIdRef = useRef(0);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     return foodSafetyStore.subscribe(() => {
@@ -58,6 +62,13 @@ export default function HomeScreen() {
       setHistory(foodSafetyStore.getHistory());
       setConditions(foodSafetyStore.getSelectedConditions());
     });
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const recentChecks = useMemo(() => history.slice(0, 3), [history]);
@@ -83,10 +94,17 @@ export default function HomeScreen() {
   };
 
   const handleAnalyze = async () => {
-    if (!searchText.trim()) {
+    const query = searchText.trim();
+    if (!query) {
       setError("Search for a food to see how it fits your dietary needs.");
       return;
     }
+    if (isAnalyzing || busyRef.current) {
+      return;
+    }
+    busyRef.current = true;
+    const runId = ++runIdRef.current;
+    Keyboard.dismiss();
 
     setIsAnalyzing(true);
     setResult(null);
@@ -94,14 +112,28 @@ export default function HomeScreen() {
     setActiveStep(undefined);
 
     try {
-      const analysis = await analyzeFoodByText(searchText, conditions, setActiveStep);
+      const liveConditions = foodSafetyStore.getSelectedConditions();
+      const analysis = await analyzeFoodByText(query, liveConditions, setActiveStep);
+      if (runId !== runIdRef.current || !mountedRef.current) {
+        return;
+      }
       setResult(analysis);
-      await notificationStore.push("Food check complete", `${analysis.foodName}: ${analysis.statusHeadline}`);
+      if (analysis.status === "not_recommended") {
+        await notificationStore.push("Food check complete", `${analysis.foodName}: ${analysis.statusHeadline}`);
+      }
     } catch {
+      if (runId !== runIdRef.current || !mountedRef.current) {
+        return;
+      }
       setError("We couldn't complete the analysis right now. Please try again.");
     } finally {
-      setIsAnalyzing(false);
-      setActiveStep(undefined);
+      if (runId === runIdRef.current && mountedRef.current) {
+        setIsAnalyzing(false);
+        setActiveStep(undefined);
+      }
+      if (runId === runIdRef.current) {
+        busyRef.current = false;
+      }
     }
   };
 
@@ -116,7 +148,7 @@ export default function HomeScreen() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={styles.greeting}>
-          {getGreeting()}, {patient.name.split(" ")[0]}
+          {getGreeting()}, {(patient.name || "there").split(" ")[0]}
         </Text>
 
         <DietaryProfileBar conditions={conditions} onConditionsChange={handleConditionsChange} />
@@ -137,7 +169,12 @@ export default function HomeScreen() {
               accessibilityLabel="Food search input"
             />
             {searchText.length > 0 && (
-              <Pressable onPress={() => handleSearchTextChange("")} accessibilityLabel="Clear search">
+              <Pressable
+                onPress={() => handleSearchTextChange("")}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                accessibilityHint="Clears search box"
+              >
                 <Ionicons name="close-circle" size={20} color={colors.slateMuted} />
               </Pressable>
             )}
@@ -146,7 +183,14 @@ export default function HomeScreen() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionsRow}>
           {FOOD_SUGGESTIONS.map((food) => (
-            <Pressable key={food} style={styles.suggestionPill} onPress={() => handleSearchTextChange(food)}>
+            <Pressable
+              key={food}
+              style={styles.suggestionPill}
+              onPress={() => handleSearchTextChange(food)}
+              accessibilityRole="button"
+              accessibilityLabel={`${food} suggestion`}
+              accessibilityHint="Fills search box with this food"
+            >
               <Text style={styles.suggestionText}>{food}</Text>
             </Pressable>
           ))}
@@ -204,6 +248,7 @@ export default function HomeScreen() {
                   onPress={() => handleRecentPress(item.foodName)}
                   accessibilityRole="button"
                   accessibilityLabel={`${item.foodName}, ${item.statusHeadline}`}
+                  accessibilityHint="Fills search box"
                 >
                   <View style={[styles.recentDot, { backgroundColor: sc.icon }]} />
                   <View style={styles.recentTextWrap}>

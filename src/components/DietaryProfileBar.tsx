@@ -23,8 +23,10 @@ export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryPro
   const [showPicker, setShowPicker] = useState(false);
   const [draft, setDraft] = useState<PatientCondition[]>(conditions);
 
+  // Draft syncs on every open (openPicker) so external condition changes
+  // are picked up without clobbering in-progress edits while open.
   const openPicker = () => {
-    setDraft(conditions.length > 0 ? conditions : draft);
+    setDraft([...conditions]);
     setShowPicker(true);
   };
 
