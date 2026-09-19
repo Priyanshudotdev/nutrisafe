@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
+  Alert,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -51,6 +53,14 @@ export default function OnboardingScreen() {
   const [rxPhase, setRxPhase] = useState<PrescriptionPhase>("idle");
   const [rxResult, setRxResult] = useState<PrescriptionExtraction | null>(null);
   const [rxError, setRxError] = useState<string | null>(null);
+  const [rxExpanded, setRxExpanded] = useState(false);
+  const rxCancelled = useRef(false);
+  const preApplyRef = useRef<{
+    conditions: PatientCondition[];
+    allergens: string;
+    notes: string;
+    doctorName: string;
+  } | null>(null);
 
   const toggleCondition = (c: PatientCondition) => {
     setError(null);
@@ -59,52 +69,142 @@ export default function OnboardingScreen() {
     );
   };
 
+  const showRxSettingsAlert = (source: "camera" | "library") => {
+    Alert.alert(
+      "Photo access needed",
+      "Allow photo access to scan your prescription, or fill the form manually.",
+      [
+        ...(source === "camera"
+          ? [{ text: "Upload instead", onPress: () => void handlePickPrescription("library") } as const]
+          : []),
+        { text: "Open Settings", onPress: () => void Linking.openSettings() },
+        { text: "Fill manually", style: "cancel" as const },
+      ]
+    );
+  };
+
   const handlePickPrescription = async (source: "camera" | "library") => {
-    const permitted =
-      source === "camera"
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permitted.status !== "granted") {
+    try {
+      const current =
+        source === "camera"
+          ? await ImagePicker.getCameraPermissionsAsync()
+          : await ImagePicker.getMediaLibraryPermissionsAsync();
+
+      let status = current.status;
+      if (status !== "granted") {
+        if (current.canAskAgain === false) {
+          showRxSettingsAlert(source);
+          return;
+        }
+        const requested =
+          source === "camera"
+            ? await ImagePicker.requestCameraPermissionsAsync()
+            : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        status = requested.status;
+        if (status !== "granted") {
+          if (requested.canAskAgain === false) {
+            showRxSettingsAlert(source);
+          } else {
+            setRxError("Allow photo access to scan your prescription, or fill the form manually.");
+          }
+          return;
+        }
+      }
+    } catch {
       setRxError("Allow photo access to scan your prescription, or fill the form manually.");
       return;
     }
 
-    const result =
-      source === "camera"
-        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
+    let imageUri: string | null = null;
+    try {
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 })
+          : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
 
-    if (result.canceled || !result.assets[0]?.uri) return;
+      if (result.canceled || !result.assets[0]?.uri) return;
+      imageUri = result.assets[0].uri;
+    } catch {
+      setRxError("Couldn't open the photo picker. Try again or fill the form manually.");
+      return;
+    }
 
+    rxCancelled.current = false;
     setRxPhase("extracting");
     setRxError(null);
     setRxResult(null);
+    setRxExpanded(false);
 
-    const extraction = await extractPrescriptionFromImage(result.assets[0].uri);
-    if (extraction.status === "success") {
-      setRxResult(extraction);
-      setRxPhase("preview");
-    } else {
-      setRxError(extraction.message);
+    try {
+      const extraction = await extractPrescriptionFromImage(imageUri);
+      if (rxCancelled.current) return;
+      if (extraction.status === "success") {
+        setRxResult(extraction);
+        setRxPhase("preview");
+      } else {
+        setRxError(extraction.message);
+        setRxPhase("idle");
+      }
+    } catch {
+      if (rxCancelled.current) return;
+      setRxError("We couldn't read the prescription. Try a clearer photo or enter details manually.");
       setRxPhase("idle");
     }
   };
 
+  const cancelRxExtraction = () => {
+    rxCancelled.current = true;
+    setRxPhase("idle");
+  };
+
   const applyPrescription = () => {
     if (!rxResult) return;
+    preApplyRef.current = { conditions, allergens, notes, doctorName };
+
     if (rxResult.conditions && rxResult.conditions.length > 0) {
-      setConditions(rxResult.conditions);
+      setConditions(Array.from(new Set([...conditions, ...rxResult.conditions])));
     }
-    if (rxResult.allergensList && rxResult.allergensList.length > 0) {
-      setAllergens(rxResult.allergensList.join(", "));
+    const rxAllergens = (rxResult.allergensList ?? []).map((a) => a.trim()).filter(Boolean);
+    if (rxAllergens.length > 0) {
+      const existingList = allergens
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
+      const seen = new Set(existingList.map((a) => a.toLowerCase()));
+      const merged = [...existingList];
+      for (const a of rxAllergens) {
+        if (!seen.has(a.toLowerCase())) {
+          seen.add(a.toLowerCase());
+          merged.push(a);
+        }
+      }
+      setAllergens(merged.join(", "));
     }
-    if (rxResult.notes) {
-      setNotes(rxResult.notes);
+    const rxNotes = (rxResult.notes ?? "").trim();
+    if (rxNotes) {
+      if (!notes) {
+        setNotes(rxNotes);
+      } else if (!notes.includes(rxNotes)) {
+        setNotes(`${notes}\n${rxNotes}`);
+      }
     }
-    if (rxResult.doctorName) {
+    if (rxResult.doctorName && !doctorName.trim()) {
       setDoctorName(rxResult.doctorName);
     }
     setRxPhase("applied");
+  };
+
+  const undoApplyPrescription = () => {
+    const snap = preApplyRef.current;
+    if (snap) {
+      setConditions(snap.conditions);
+      setAllergens(snap.allergens);
+      setNotes(snap.notes);
+      setDoctorName(snap.doctorName);
+      preApplyRef.current = null;
+    }
+    setRxExpanded(false);
+    setRxPhase(rxResult ? "preview" : "idle");
   };
 
   const handleContinue = async () => {
@@ -207,6 +307,12 @@ export default function OnboardingScreen() {
               <View style={styles.rxExtracting}>
                 <ActivityIndicator size="small" color={colors.primaryText} />
                 <Text style={styles.rxExtractingText}>Reading your prescription…</Text>
+                <AppButton
+                  label="Cancel"
+                  onPress={cancelRxExtraction}
+                  variant="secondary"
+                  size="sm"
+                />
               </View>
             )}
 
@@ -219,7 +325,24 @@ export default function OnboardingScreen() {
                   </Text>
                 </View>
                 {rxResult.summary ? (
-                  <Text style={styles.rxSummary} numberOfLines={4} ellipsizeMode="tail">{rxResult.summary}</Text>
+                  <View style={styles.rxSummaryWrap}>
+                    <Text
+                      style={styles.rxSummary}
+                      numberOfLines={rxExpanded ? undefined : 4}
+                      ellipsizeMode="tail"
+                    >
+                      {rxResult.summary}
+                    </Text>
+                    <Pressable
+                      onPress={() => setRxExpanded((v) => !v)}
+                      accessibilityRole="button"
+                      accessibilityLabel={rxExpanded ? "Show less" : "Show more"}
+                    >
+                      <Text style={styles.rxExpandToggle}>
+                        {rxExpanded ? "Show less" : "Show more"}
+                      </Text>
+                    </Pressable>
+                  </View>
                 ) : null}
                 {rxResult.conditions && rxResult.conditions.length > 0 && (
                   <View style={styles.rxFoundRow}>
@@ -255,11 +378,35 @@ export default function OnboardingScreen() {
             )}
 
             {rxPhase === "applied" && (
-              <View style={[styles.rxPreview, styles.rxApplied]}>
-                <Ionicons name="checkmark-circle" size={18} color={colors.safeIcon} />
-                <Text style={styles.rxAppliedText}>
-                  Applied below — review and edit anything before continuing.
-                </Text>
+              <View style={styles.rxAppliedWrap}>
+                <View style={[styles.rxPreview, styles.rxApplied]}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.safeIcon} />
+                  <Text style={styles.rxAppliedText}>
+                    Applied below — review and edit anything before continuing.
+                  </Text>
+                </View>
+                <View style={styles.rxActions}>
+                  <AppButton
+                    label="Re-scan"
+                    onPress={() => {
+                      setRxPhase("idle");
+                      setRxError(null);
+                      setRxExpanded(false);
+                    }}
+                    variant="secondary"
+                    size="sm"
+                    icon="camera-outline"
+                    style={styles.flex}
+                  />
+                  <AppButton
+                    label="Undo"
+                    onPress={undoApplyPrescription}
+                    variant="secondary"
+                    size="sm"
+                    icon="arrow-undo-outline"
+                    style={styles.flex}
+                  />
+                </View>
               </View>
             )}
           </View>
@@ -390,6 +537,7 @@ export default function OnboardingScreen() {
             onPress={handleContinue}
             size="lg"
             loading={isLoading}
+            disabled={rxPhase === "extracting"}
             style={styles.submitButton}
           />
         </ScrollView>
@@ -463,7 +611,10 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   rxAppliedText: { flex: 1, fontSize: 12, color: colors.safeText, fontWeight: "600", lineHeight: 17 },
   rxPreviewHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
   rxPreviewTitle: { fontSize: 13, fontWeight: "700", color: colors.safeText, textTransform: "capitalize" },
+  rxSummaryWrap: { gap: 2 },
   rxSummary: { fontSize: 12, color: colors.slateMedium, lineHeight: 17 },
+  rxExpandToggle: { fontSize: 12, fontWeight: "700", color: colors.primaryText },
+  rxAppliedWrap: { gap: spacing.sm },
   rxFoundRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" },
   rxFoundLabel: { fontSize: 12, fontWeight: "700", color: colors.slateLight },
   rxFoundValue: { fontSize: 12, color: colors.slateMedium, flexShrink: 1 },
