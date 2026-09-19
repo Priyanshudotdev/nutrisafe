@@ -1,7 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { JSX } from "react";
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { controlHeight, radius, typography, type ThemeColors } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 
@@ -33,7 +40,9 @@ const LABEL_TEXT: Record<Size, { fontSize: number; lineHeight?: number }> = {
   lg: typography.title,
 };
 
-const getVariantColors = (colors: ThemeColors): Record<Variant, { bg: string; border: string; text: string }> => ({
+const getVariantColors = (
+  colors: ThemeColors
+): Record<Variant, { bg: string; border: string; text: string }> => ({
   primary: { bg: colors.primaryDark, border: "transparent", text: colors.white },
   secondary: { bg: colors.cardBg, border: colors.cardBorder, text: colors.primaryText },
   ghost: { bg: "transparent", border: "transparent", text: colors.primaryText },
@@ -112,25 +121,26 @@ export function AppLinkButton({
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  base: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    paddingHorizontal: 20,
-  },
-  secondaryBorder: { borderColor: colors.cardBorder },
-  inactive: { opacity: 0.5 },
-  label: { fontWeight: "700" },
-  link: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
-  },
-  linkLabel: { ...typography.body, fontWeight: "600", color: colors.primaryText },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    base: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      paddingHorizontal: 20,
+    },
+    secondaryBorder: { borderColor: colors.cardBorder },
+    inactive: { opacity: 0.5 },
+    label: { fontWeight: "700" },
+    link: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 12,
+    },
+    linkLabel: { ...typography.body, fontWeight: "600", color: colors.primaryText },
+  });

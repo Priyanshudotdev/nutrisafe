@@ -1,5 +1,5 @@
 /* End-to-end AI integration test.
- * Starts a mock OpenAI-compatible provider + the NutriCheck server (with AI env),
+ * Starts a mock OpenAI-compatible provider + the NutriSafe server (with AI env),
  * then exercises /vision/identify and /nutrition/analyze for real.
  * Run: node server/ai.e2e-test.js
  */
@@ -33,7 +33,13 @@ function post(port, reqPath, body, headers = {}) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const req = http.request(
-      { host: "localhost", port, path: reqPath, method: "POST", headers: { "Content-Type": "application/json", ...headers } },
+      {
+        host: "localhost",
+        port,
+        path: reqPath,
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+      },
       (res) => {
         let out = "";
         res.on("data", (c) => (out += c));
@@ -58,9 +64,10 @@ const PNG_B64 =
       const parsed = JSON.parse(body);
       const userContent = parsed.messages?.find((m) => m.role === "user")?.content;
       const textPart = Array.isArray(userContent)
-        ? userContent.find((p) => p.type === "text")?.text ?? ""
-        : userContent ?? "";
-      const hasImage = Array.isArray(userContent) && userContent.some((p) => p.type === "image_url");
+        ? (userContent.find((p) => p.type === "text")?.text ?? "")
+        : (userContent ?? "");
+      const hasImage =
+        Array.isArray(userContent) && userContent.some((p) => p.type === "image_url");
 
       let reply;
       if (hasImage) {
@@ -94,7 +101,7 @@ const PNG_B64 =
   await new Promise((r) => mock.listen(MOCK_PORT, r));
   console.log("✓ mock provider listening");
 
-  // ── NutriCheck server with AI env ──
+  // ── NutriSafe server with AI env ──
   // Hermetic: strip any real provider keys from the parent env, skip .env.local
   // loading, and point at a throwaway database so dev data is never touched.
   const childEnv = { ...process.env };
@@ -105,8 +112,8 @@ const PNG_B64 =
     env: {
       ...childEnv,
       PORT: String(API_PORT),
-      NUTRICHECK_SKIP_ENV_FILE: "1",
-      NUTRICHECK_DB_FILE: path.join(require("os").tmpdir(), `nutricheck-e2e-${Date.now()}.db`),
+      NUTRISAFE_SKIP_ENV_FILE: "1",
+      NUTRISAFE_DB_FILE: path.join(require("os").tmpdir(), `nutrisafe-e2e-${Date.now()}.db`),
       OPENAI_API_KEY: "test-key",
       OPENAI_BASE_URL: `http://localhost:${MOCK_PORT}/v1`,
       OPENAI_MODEL: "mock-model",
@@ -119,7 +126,7 @@ const PNG_B64 =
 
   try {
     await waitFor(`http://localhost:${API_PORT}/health`);
-    console.log("✓ NutriCheck server up with AI env");
+    console.log("✓ NutriSafe server up with AI env");
 
     // Signup → token
     const signup = await post(API_PORT, "/auth/signup", {
@@ -142,12 +149,15 @@ const PNG_B64 =
     assertOk(nut.body.source === "ai", "nutrition source=ai");
     assertOk(nut.body.analysis?.foodName === "Banana", "nutrition foodName");
     assertOk(nut.body.analysis?.status === "moderation", "nutrition status value");
-    assertOk(Array.isArray(nut.body.analysis?.factors) && nut.body.analysis.factors.length > 0, "factors");
+    assertOk(
+      Array.isArray(nut.body.analysis?.factors) && nut.body.analysis.factors.length > 0,
+      "factors"
+    );
     console.log("✓ /nutrition/analyze returns full AI analysis");
     console.log(`   → ${nut.body.analysis.statusHeadline}: ${nut.body.analysis.summary}`);
 
     // Vision identify via AI (multipart by hand)
-    const boundary = "----nutrichecktest" + Date.now();
+    const boundary = "----nutrisafetest" + Date.now();
     const multipart = Buffer.from(
       `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="food.png"\r\nContent-Type: image/png\r\n\r\n`
     );
@@ -183,7 +193,9 @@ const PNG_B64 =
     assertOk(visionRes.body.foodName === "Margherita Pizza", "vision foodName");
     assertOk(Math.abs(visionRes.body.confidence - 0.92) < 1e-9, "vision confidence");
     console.log("✓ /vision/identify identifies food via AI");
-    console.log(`   → ${visionRes.body.foodName} (${Math.round(visionRes.body.confidence * 100)}% confidence)`);
+    console.log(
+      `   → ${visionRes.body.foodName} (${Math.round(visionRes.body.confidence * 100)}% confidence)`
+    );
 
     console.log("\nAll E2E AI tests passed.");
   } catch (err) {

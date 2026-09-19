@@ -58,7 +58,19 @@ export async function buildImageForm(
     // On web, always materialize a real Blob — fetch() handles data:, blob:,
     // and http(s): URIs. The RN `{ uri, type, name }` convention would
     // serialize to "[object Object]" on web and the server rejects it.
-    const blob = await (await fetch(imageUri)).blob();
+    let blob: Blob;
+    try {
+      const res = await fetch(imageUri);
+      if (!res.ok) {
+        throw new Error(`image fetch failed with status ${res.status}`);
+      }
+      blob = await res.blob();
+    } catch (e) {
+      throw new Error(
+        `Could not read the selected image (${e instanceof Error ? e.message : "unknown error"}). ` +
+          "Try picking the photo again."
+      );
+    }
     form.append(field, blob, name);
   } else {
     form.append(field, {

@@ -40,33 +40,34 @@ export function EmptyState({
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.xxxl,
-    paddingHorizontal: spacing.xl,
-  },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.pill,
-    backgroundColor: colors.bgSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.lg,
-  },
-  title: {
-    ...typography.subheading,
-    color: colors.dark,
-    marginBottom: spacing.sm,
-    textAlign: "center",
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.slateMuted,
-    textAlign: "center",
-    maxWidth: 280,
-  },
-  actionButton: { marginTop: spacing.xl, minWidth: 180 },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: spacing.xxxl,
+      paddingHorizontal: spacing.xl,
+    },
+    iconCircle: {
+      width: 72,
+      height: 72,
+      borderRadius: radius.pill,
+      backgroundColor: colors.bgSubtle,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.lg,
+    },
+    title: {
+      ...typography.subheading,
+      color: colors.dark,
+      marginBottom: spacing.sm,
+      textAlign: "center",
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.slateMuted,
+      textAlign: "center",
+      maxWidth: 280,
+    },
+    actionButton: { marginTop: spacing.xl, minWidth: 180 },
+  });

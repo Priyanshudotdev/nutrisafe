@@ -1,4 +1,4 @@
-# NutriCheck Design Rules
+# NutriSafe Design Rules
 
 Single source of truth for every UI decision in this app. AI coding sessions and
 humans must follow these rules instead of inventing new values.
@@ -14,13 +14,13 @@ humans must follow these rules instead of inventing new values.
 Every screen answers exactly one question. Anything that does not support that
 question belongs on another page or nowhere.
 
-| Page | Primary question |
-| --- | --- |
-| Home (`index`) | "Can I eat this?" — check one food right now |
-| Scan (`scan`) | "Is this dish safe?" — photo-based check |
-| History (`search`) | "What have I already checked, and what was the verdict?" |
-| Account (`account`) | "How do I configure my profile and app?" |
-| Onboarding | "What conditions should checks account for?" |
+| Page                | Primary question                                         |
+| ------------------- | -------------------------------------------------------- |
+| Home (`index`)      | "Can I eat this?" — check one food right now             |
+| Scan (`scan`)       | "Is this dish safe?" — photo-based check                 |
+| History (`search`)  | "What have I already checked, and what was the verdict?" |
+| Account (`account`) | "How do I configure my profile and app?"                 |
+| Onboarding          | "What conditions should checks account for?"             |
 
 No KPI cards on pages whose job is not data review. The Home page shows at most
 a quiet count of past checks — never a dashboard of repeated stats.
@@ -47,18 +47,19 @@ section backgrounds, more than one saturated accent fighting for attention.
 Scale defined in `typography` export of `tokens.ts`. Never introduce a new
 font size or weight.
 
-| Token | Size/Weight | Use for |
-| --- | --- | --- |
-| `display` | 28 / 800 / -0.6 | The ONE page title per screen |
-| `heading` | 22 / 800 / -0.4 | Hero content: food name in result card, auth headings |
-| `subheading` | 18 / 700 / -0.2 | Sheet/modal titles, empty-state titles |
-| `title` | 15 / 700 | Row and card titles |
-| `body` | 14 / 500 / lh 20 | Default reading text |
-| `bodySmall` | 13 / 500 / lh 18 | Supporting copy |
-| `caption` | 12 / 500 | Metadata, timestamps, quiet hints |
-| `micro` | 11 / 600 | Badges, chips, tiny labels |
+| Token        | Size/Weight      | Use for                                               |
+| ------------ | ---------------- | ----------------------------------------------------- |
+| `display`    | 28 / 800 / -0.6  | The ONE page title per screen                         |
+| `heading`    | 22 / 800 / -0.4  | Hero content: food name in result card, auth headings |
+| `subheading` | 18 / 700 / -0.2  | Sheet/modal titles, empty-state titles                |
+| `title`      | 15 / 700         | Row and card titles                                   |
+| `body`       | 14 / 500 / lh 20 | Default reading text                                  |
+| `bodySmall`  | 13 / 500 / lh 18 | Supporting copy                                       |
+| `caption`    | 12 / 500         | Metadata, timestamps, quiet hints                     |
+| `micro`      | 11 / 600         | Badges, chips, tiny labels                            |
 
 Rules:
+
 - Every screen has exactly one `display` element; hierarchy steps down from it.
 - Section labels that group content use `sectionLabel` (12 / 700 / uppercase /
   +0.5 tracking / `slateLight`). Same treatment everywhere.
@@ -84,6 +85,7 @@ Rules:
 Heights snap to `controlHeight`: `sm` 40 / `md` 48 / `lg` 52.
 
 ### Buttons — use `AppButton`
+
 - **primary**: filled `primaryDark`, white label. Exactly one per view.
 - **secondary**: bordered neutral surface, `primaryDark` label. Quieter than
   primary; never competes visually.
@@ -94,6 +96,7 @@ Heights snap to `controlHeight`: `sm` 40 / `md` 48 / `lg` 52.
 - Icon buttons need a 44pt minimum touch target.
 
 ### Cards
+
 Cards group meaningful information — they are not decoration. No nested
 card-in-card, no shadows on static cards (borders separate), same radius for
 equivalent cards. Dense list rows show: identity → key value → essential
@@ -109,16 +112,16 @@ active tab state and confirmed/success moments.
 
 ## 7. Terminology (same action = same word = same style)
 
-| Concept | Label | Notes |
-| --- | --- | --- |
-| Analyze food by text | **Check Food** | primary CTA on Home |
-| Photo flow entry | **Scan Food** | tab title; "Open Camera" / "Upload Photo" inside |
-| Retry capture | **Retake** | scan preview |
-| Accept captured photo | **Use Photo** | scan preview |
-| Erase all saved checks | **Clear history** | destructive confirm required |
-| End session | **Log out** | destructive confirm required |
-| Dismiss form | **Cancel** | always left, secondary |
-| Confirm sheet | **Done** / **Save** | Done = selection sheets, Save = edits |
+| Concept                | Label               | Notes                                            |
+| ---------------------- | ------------------- | ------------------------------------------------ |
+| Analyze food by text   | **Check Food**      | primary CTA on Home                              |
+| Photo flow entry       | **Scan Food**       | tab title; "Open Camera" / "Upload Photo" inside |
+| Retry capture          | **Retake**          | scan preview                                     |
+| Accept captured photo  | **Use Photo**       | scan preview                                     |
+| Erase all saved checks | **Clear history**   | destructive confirm required                     |
+| End session            | **Log out**         | destructive confirm required                     |
+| Dismiss form           | **Cancel**          | always left, secondary                           |
+| Confirm sheet          | **Done** / **Save** | Done = selection sheets, Save = edits            |
 
 Never alternate synonyms (delete/remove/trash, log out/sign out) for the same
 action across screens.

@@ -1,21 +1,25 @@
 {
   "expo": {
-    "name": "NutriCheck",
-    "slug": "nutricheck",
+    "name": "NutriSafe",
+    "slug": "nutrisafe",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nutricheck",
+    "scheme": "nutrisafe",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.nutrisafe.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -35,11 +39,19 @@
           "photosPermission": "Allow access to photos to upload food images for analysis.",
           "cameraPermission": "Allow camera access to scan food for safety analysis."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b1ad82a3-e276-4db8-85ce-67ed97b14195"
+      }
+    },
+    "owner": "priyanshudotdev"
   }
 }

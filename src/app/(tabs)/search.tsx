@@ -44,9 +44,12 @@ export default function SearchHistoryScreen() {
   );
 
   useEffect(() => {
+    // Capture the ref value: by cleanup time the ref object may point at a
+    // different map instance, orphaning the pending undo timers.
+    const pending = pendingDeletes.current;
     return () => {
-      pendingDeletes.current.forEach((entry) => clearTimeout(entry.timer));
-      pendingDeletes.current.clear();
+      pending.forEach((entry) => clearTimeout(entry.timer));
+      pending.clear();
     };
   }, []);
 
@@ -94,9 +97,7 @@ export default function SearchHistoryScreen() {
     if (!q) return history;
     return history.filter((item) =>
       normalize(
-        [item.foodName, item.category, item.statusHeadline, item.summary]
-          .filter(Boolean)
-          .join(" ")
+        [item.foodName, item.category, item.statusHeadline, item.summary].filter(Boolean).join(" ")
       ).includes(q)
     );
   }, [history, searchQuery]);
@@ -194,7 +195,11 @@ export default function SearchHistoryScreen() {
               <Text style={styles.undoText} numberOfLines={1} ellipsizeMode="tail">
                 “{item.foodName}” deleted.
               </Text>
-              <Pressable onPress={() => handleUndoDelete(item.id)} accessibilityRole="button" accessibilityLabel={`Undo delete ${item.foodName}`}>
+              <Pressable
+                onPress={() => handleUndoDelete(item.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Undo delete ${item.foodName}`}
+              >
                 <Text style={styles.undoAction}>Undo</Text>
               </Pressable>
             </View>
@@ -203,7 +208,11 @@ export default function SearchHistoryScreen() {
       )}
 
       {isLoading ? (
-        <View style={styles.listContent} accessibilityRole="progressbar" accessibilityLabel="Loading your previous checks">
+        <View
+          style={styles.listContent}
+          accessibilityRole="progressbar"
+          accessibilityLabel="Loading your previous checks"
+        >
           {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
             <View key={`skeleton-${i}`} style={styles.skeletonRow}>
               <View style={styles.skeletonIcon} />
@@ -276,69 +285,105 @@ export default function SearchHistoryScreen() {
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  searchContainer: { paddingHorizontal: spacing.xl, marginBottom: spacing.sm },
-  searchBar: {
-    flexDirection: "row",
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    height: controlHeight.md,
-  },
-  searchInput: { flex: 1, marginLeft: spacing.sm, fontSize: typography.bodySmall.fontSize, color: colors.dark },
-  undoBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  undoText: { flex: 1, minWidth: 0, fontSize: typography.bodySmall.fontSize, color: colors.slateMedium, fontWeight: "500" },
-  undoAction: { fontSize: typography.bodySmall.fontSize, fontWeight: "700", color: colors.primaryText },
-  skeletonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  skeletonIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.bgSubtle },
-  skeletonTextWrap: { flex: 1, gap: 6 },
-  skeletonLineWide: { height: 12, borderRadius: 6, backgroundColor: colors.bgSubtle, width: "60%" },
-  skeletonLineNarrow: { height: 10, borderRadius: 5, backgroundColor: colors.bgSubtle, width: "40%" },
-  listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  bottomSpacer: { height: 100 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
-  modalContent: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: radius.xxl,
-    borderTopRightRadius: radius.xxl,
-    padding: spacing.xl,
-    paddingBottom: 40,
-    maxHeight: "90%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.lg,
-  },
-  modalTitle: { fontSize: typography.subheading.fontSize, fontWeight: "700", color: colors.dark, letterSpacing: -0.2 },
-  modalDisclaimer: { marginTop: spacing.lg },
-  modalDelete: { marginTop: spacing.md },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    searchContainer: { paddingHorizontal: spacing.xl, marginBottom: spacing.sm },
+    searchBar: {
+      flexDirection: "row",
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: 14,
+      alignItems: "center",
+      height: controlHeight.md,
+    },
+    searchInput: {
+      flex: 1,
+      marginLeft: spacing.sm,
+      fontSize: typography.bodySmall.fontSize,
+      color: colors.dark,
+    },
+    undoBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+      marginHorizontal: spacing.lg,
+      marginBottom: spacing.sm,
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    undoText: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: typography.bodySmall.fontSize,
+      color: colors.slateMedium,
+      fontWeight: "500",
+    },
+    undoAction: {
+      fontSize: typography.bodySmall.fontSize,
+      fontWeight: "700",
+      color: colors.primaryText,
+    },
+    skeletonRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    skeletonIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.md,
+      backgroundColor: colors.bgSubtle,
+    },
+    skeletonTextWrap: { flex: 1, gap: 6 },
+    skeletonLineWide: {
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: colors.bgSubtle,
+      width: "60%",
+    },
+    skeletonLineNarrow: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.bgSubtle,
+      width: "40%",
+    },
+    listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+    bottomSpacer: { height: 100 },
+    modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: radius.xxl,
+      borderTopRightRadius: radius.xxl,
+      padding: spacing.xl,
+      paddingBottom: 40,
+      maxHeight: "90%",
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: spacing.lg,
+    },
+    modalTitle: {
+      fontSize: typography.subheading.fontSize,
+      fontWeight: "700",
+      color: colors.dark,
+      letterSpacing: -0.2,
+    },
+    modalDisclaimer: { marginTop: spacing.lg },
+    modalDelete: { marginTop: spacing.md },
+  });

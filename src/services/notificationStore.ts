@@ -6,8 +6,8 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const NOTIF_KEY = "@nutricheck:notifications";
-const ENABLED_KEY = "@nutricheck:notifications_enabled";
+const NOTIF_KEY = "@nutrisafe:notifications";
+const ENABLED_KEY = "@nutrisafe:notifications_enabled";
 
 export interface AppNotification {
   id: string;

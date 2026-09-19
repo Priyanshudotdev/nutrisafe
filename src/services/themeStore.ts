@@ -5,7 +5,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const THEME_KEY = "@nutricheck:theme";
+const THEME_KEY = "@nutrisafe:theme";
 export type ThemeMode = "light" | "dark" | "system";
 
 type ThemeListener = () => void;
@@ -15,11 +15,15 @@ class ThemeStore {
   private initialized = false;
   private listeners: Set<ThemeListener> = new Set();
 
-  private notify() { this.listeners.forEach((l) => l()); }
+  private notify() {
+    this.listeners.forEach((l) => l());
+  }
 
   subscribe(listener: ThemeListener) {
     this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   async init(): Promise<void> {
@@ -30,15 +34,23 @@ class ThemeStore {
       if (stored === "light" || stored === "dark" || stored === "system") {
         this.mode = stored;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     this.notify();
   }
 
-  getMode(): ThemeMode { return this.mode; }
+  getMode(): ThemeMode {
+    return this.mode;
+  }
 
   async setMode(mode: ThemeMode): Promise<void> {
     this.mode = mode;
-    try { await AsyncStorage.setItem(THEME_KEY, mode); } catch { /* ignore */ }
+    try {
+      await AsyncStorage.setItem(THEME_KEY, mode);
+    } catch {
+      /* ignore */
+    }
     this.notify();
   }
 

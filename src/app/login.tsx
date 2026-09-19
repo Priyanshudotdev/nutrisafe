@@ -36,6 +36,10 @@ export default function LoginScreen() {
       setError("Email and password are required.");
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimEmail)) {
+      setError("Enter a valid email address.");
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -56,13 +60,16 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.flex}
+      >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.logoArea}>
             <View style={styles.logoCircle}>
               <Ionicons name="nutrition" size={32} color={colors.primaryText} />
             </View>
-            <Text style={styles.appName}>NutriCheck</Text>
+            <Text style={styles.appName}>NutriSafe</Text>
             <Text style={styles.tagline}>Food safety for your health profile</Text>
           </View>
 
@@ -113,7 +120,11 @@ export default function LoginScreen() {
                 accessibilityHint={showPassword ? "Hide password text" : "Show password text"}
                 hitSlop={12}
               >
-                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.slateLight} />
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color={colors.slateLight}
+                />
               </Pressable>
             </View>
           </View>
@@ -126,7 +137,12 @@ export default function LoginScreen() {
             style={styles.submitButton}
           />
 
-          <Pressable style={styles.linkButton} onPress={() => router.push("/signup")} accessibilityRole="link" accessibilityHint="Go to sign up">
+          <Pressable
+            style={styles.linkButton}
+            onPress={() => router.push("/signup")}
+            accessibilityRole="link"
+            accessibilityHint="Go to sign up"
+          >
             <Text style={styles.linkText}>
               Don&apos;t have an account? <Text style={styles.linkTextBold}>Create one</Text>
             </Text>
@@ -139,56 +155,66 @@ export default function LoginScreen() {
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxxl, paddingBottom: spacing.xxl },
-  logoArea: { alignItems: "center", marginBottom: spacing.xxxl },
-  logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  appName: { ...typography.heading, color: colors.dark },
-  tagline: { ...typography.bodySmall, color: colors.slateMuted, marginTop: spacing.xs },
-  heading: { ...typography.heading, color: colors.dark, marginBottom: spacing.lg },
-  errorWrap: { marginBottom: spacing.lg },
-  field: { marginBottom: spacing.lg },
-  label: {
-    ...typography.bodySmall,
-    fontWeight: "700",
-    color: colors.dark,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    paddingHorizontal: spacing.lg,
-    ...typography.body,
-    color: colors.dark,
-    height: controlHeight.md,
-  },
-  passwordRow: { position: "relative" },
-  passwordInput: { paddingRight: spacing.xxxl + spacing.xl },
-  showPasswordButton: {
-    position: "absolute",
-    right: 14,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    minWidth: 44,
-    minHeight: 44,
-  },
-  submitButton: { marginTop: spacing.sm },
-  linkButton: { alignItems: "center", marginTop: spacing.xl },
-  linkText: { ...typography.bodySmall, color: colors.slateMuted },
-  linkTextBold: { color: colors.primaryText, fontWeight: "700" },
-  devHint: { marginTop: spacing.xl, ...typography.micro, color: colors.slateMuted, textAlign: "center" },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+    content: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xxxl,
+      paddingBottom: spacing.xxl,
+    },
+    logoArea: { alignItems: "center", marginBottom: spacing.xxxl },
+    logoCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: radius.lg,
+      backgroundColor: colors.primaryMuted,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.md,
+    },
+    appName: { ...typography.heading, color: colors.dark },
+    tagline: { ...typography.bodySmall, color: colors.slateMuted, marginTop: spacing.xs },
+    heading: { ...typography.heading, color: colors.dark, marginBottom: spacing.lg },
+    errorWrap: { marginBottom: spacing.lg },
+    field: { marginBottom: spacing.lg },
+    label: {
+      ...typography.bodySmall,
+      fontWeight: "700",
+      color: colors.dark,
+      marginBottom: spacing.sm,
+    },
+    input: {
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: spacing.lg,
+      ...typography.body,
+      color: colors.dark,
+      height: controlHeight.md,
+    },
+    passwordRow: { position: "relative" },
+    passwordInput: { paddingRight: spacing.xxxl + spacing.xl },
+    showPasswordButton: {
+      position: "absolute",
+      right: 14,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+      minWidth: 44,
+      minHeight: 44,
+    },
+    submitButton: { marginTop: spacing.sm },
+    linkButton: { alignItems: "center", marginTop: spacing.xl },
+    linkText: { ...typography.bodySmall, color: colors.slateMuted },
+    linkTextBold: { color: colors.primaryText, fontWeight: "700" },
+    devHint: {
+      marginTop: spacing.xl,
+      ...typography.micro,
+      color: colors.slateMuted,
+      textAlign: "center",
+    },
+  });

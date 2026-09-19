@@ -35,13 +35,70 @@ async function parseErrorMessage(response: Response): Promise<string> {
 /** Default timeout for apiFetch when the caller provides no signal. */
 const API_REQUEST_TIMEOUT_MS = 30_000;
 
+/**
+ * Sliding sessions: proactively exchange the token for a fresh one when it
+ * expires within this window, so users aren't force-logged-out mid-use.
+ */
+const TOKEN_REFRESH_SKEW_MS = 48 * 60 * 60 * 1000;
+
+function getTokenExpiryMs(token: string): number | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))) as {
+      exp?: number;
+    };
+    return typeof json.exp === "number" ? json.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+/** Exchange the current token for a fresh one. Returns the new token or null. */
+async function refreshToken(baseUrl: string, token: string): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const response = await fetch(`${baseUrl}/auth/refresh`, {
+          method: "POST",
+          headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return null;
+        const data = (await response.json()) as { token?: string };
+        if (typeof data.token !== "string" || !data.token) return null;
+        await authStore.setToken(data.token);
+        return data.token;
+      } catch {
+        return null;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+  }
+  return refreshInFlight;
+}
+
 export function getApiBaseUrl(): string {
   return getApiBaseUrlCurrent();
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const baseUrl = getApiBaseUrlCurrent();
-  const token = authStore.getToken();
+  let token = authStore.getToken();
+
+  // Proactive refresh (skipped for auth endpoints themselves to avoid recursion).
+  if (token && !path.startsWith("/auth")) {
+    const expiry = getTokenExpiryMs(token);
+    if (expiry !== null && expiry - Date.now() < TOKEN_REFRESH_SKEW_MS) {
+      const fresh = await refreshToken(baseUrl, token);
+      if (fresh) token = fresh;
+      // On refresh failure we proceed with the old token; the server's
+      // 401 path below still handles genuinely dead sessions.
+    }
+  }
+
   const url = `${baseUrl}${path}`;
 
   const headers: Record<string, string> = {
@@ -69,17 +126,16 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   try {
     response = await fetch(url, { ...options, headers, signal });
   } catch (err) {
-    const isAbort =
-      signal?.aborted || (err instanceof Error && err.name === "AbortError");
+    const isAbort = signal?.aborted || (err instanceof Error && err.name === "AbortError");
     if (isAbort && !callerSignal) {
       throw new NetworkError(
         `Request timed out after ${API_REQUEST_TIMEOUT_MS / 1000}s. ` +
-          `The NutriCheck API at ${baseUrl} took too long to respond.`
+          `The NutriSafe API at ${baseUrl} took too long to respond.`
       );
     }
     const detail = err instanceof Error ? err.message : "Network request failed";
     throw new NetworkError(
-      `Cannot reach the NutriCheck API at ${baseUrl}. ${detail}. ` +
+      `Cannot reach the NutriSafe API at ${baseUrl}. ${detail}. ` +
         `Start the server with "pnpm api" and ensure your device can reach this host on your network.`
     );
   } finally {

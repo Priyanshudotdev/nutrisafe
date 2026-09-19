@@ -2,7 +2,7 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 
 /**
- * Resolve the NutriCheck API base URL for the current runtime.
+ * Resolve the NutriSafe API base URL for the current runtime.
  *
  * Expo Go on a physical device cannot reach `localhost` (that is the phone itself).
  * We derive the LAN host from Expo's Metro host when possible.
@@ -11,8 +11,8 @@ function hostFromExpo(): string | null {
   const hostUri =
     Constants.expoConfig?.hostUri ??
     // Legacy / Expo Go shapes
-    (Constants as { manifest2?: { extra?: { expoGo?: { debuggerHost?: string } } } }).manifest2?.extra
-      ?.expoGo?.debuggerHost ??
+    (Constants as { manifest2?: { extra?: { expoGo?: { debuggerHost?: string } } } }).manifest2
+      ?.extra?.expoGo?.debuggerHost ??
     (Constants as { manifest?: { debuggerHost?: string } }).manifest?.debuggerHost ??
     null;
 
@@ -75,12 +75,6 @@ export function getApiBaseUrlLazy(): string {
 export function getApiBaseUrlCurrent(): string {
   return resolveApiBaseUrl();
 }
-
-/**
- * Optional direct vision URL (bypasses NutriCheck proxy).
- * Prefer configuring FOOD_VISION_API_URL on the server instead.
- */
-export const FOOD_VISION_API_URL = process.env.EXPO_PUBLIC_FOOD_VISION_API_URL ?? "";
 
 /** Minimum confidence (0–1) required to auto-analyze a scanned food. */
 export const VISION_CONFIDENCE_THRESHOLD = 0.72;

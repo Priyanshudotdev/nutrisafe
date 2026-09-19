@@ -35,6 +35,10 @@ export default function SignupScreen() {
       setError("Name, email, and password are required.");
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Enter a valid email address.");
+      return;
+    }
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -59,7 +63,10 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.flex}
+      >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Pressable
             style={styles.back}
@@ -133,7 +140,11 @@ export default function SignupScreen() {
                 accessibilityHint={showPassword ? "Hide password text" : "Show password text"}
                 hitSlop={12}
               >
-                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.slateLight} />
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color={colors.slateLight}
+                />
               </Pressable>
             </View>
           </View>
@@ -146,52 +157,70 @@ export default function SignupScreen() {
             style={styles.submitButton}
           />
 
-          <Pressable style={styles.linkButton} onPress={() => router.push("/login")} accessibilityRole="link" accessibilityHint="Go to sign in">
+          <Pressable
+            style={styles.linkButton}
+            onPress={() => router.push("/login")}
+            accessibilityRole="link"
+            accessibilityHint="Go to sign in"
+          >
             <Text style={styles.linkText}>
               Already have an account? <Text style={styles.linkTextBold}>Sign in</Text>
             </Text>
           </Pressable>
 
-          {__DEV__ && (
-            <Text style={styles.devHint}>API: {getApiBaseUrl()}</Text>
-          )}
+          {__DEV__ && <Text style={styles.devHint}>API: {getApiBaseUrl()}</Text>}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xxl },
-  back: { marginBottom: spacing.lg, minWidth: 44, minHeight: 44, justifyContent: "center" },
-  heading: { ...typography.heading, color: colors.dark, marginBottom: spacing.sm },
-  subheading: { ...typography.body, color: colors.slateMuted, marginBottom: spacing.xl },
-  errorWrap: { marginBottom: spacing.lg },
-  field: { marginBottom: spacing.lg },
-  label: {
-    ...typography.bodySmall,
-    fontWeight: "700",
-    color: colors.dark,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    paddingHorizontal: spacing.lg,
-    ...typography.body,
-    color: colors.dark,
-    height: controlHeight.md,
-  },
-  passwordRow: { position: "relative" },
-  passwordInput: { paddingRight: spacing.xxxl + spacing.xl },
-  showPasswordButton: { position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center", alignItems: "center", minWidth: 44, minHeight: 44 },
-  submitButton: { marginTop: spacing.sm },
-  linkButton: { alignItems: "center", marginTop: spacing.xl },
-  linkText: { ...typography.bodySmall, color: colors.slateMuted },
-  linkTextBold: { color: colors.primaryText, fontWeight: "700" },
-  devHint: { marginTop: spacing.xl, ...typography.micro, color: colors.slateMuted, textAlign: "center" },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+    content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xxl },
+    back: { marginBottom: spacing.lg, minWidth: 44, minHeight: 44, justifyContent: "center" },
+    heading: { ...typography.heading, color: colors.dark, marginBottom: spacing.sm },
+    subheading: { ...typography.body, color: colors.slateMuted, marginBottom: spacing.xl },
+    errorWrap: { marginBottom: spacing.lg },
+    field: { marginBottom: spacing.lg },
+    label: {
+      ...typography.bodySmall,
+      fontWeight: "700",
+      color: colors.dark,
+      marginBottom: spacing.sm,
+    },
+    input: {
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: spacing.lg,
+      ...typography.body,
+      color: colors.dark,
+      height: controlHeight.md,
+    },
+    passwordRow: { position: "relative" },
+    passwordInput: { paddingRight: spacing.xxxl + spacing.xl },
+    showPasswordButton: {
+      position: "absolute",
+      right: 14,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+      minWidth: 44,
+      minHeight: 44,
+    },
+    submitButton: { marginTop: spacing.sm },
+    linkButton: { alignItems: "center", marginTop: spacing.xl },
+    linkText: { ...typography.bodySmall, color: colors.slateMuted },
+    linkTextBold: { color: colors.primaryText, fontWeight: "700" },
+    devHint: {
+      marginTop: spacing.xl,
+      ...typography.micro,
+      color: colors.slateMuted,
+      textAlign: "center",
+    },
+  });

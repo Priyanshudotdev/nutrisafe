@@ -1,11 +1,6 @@
 // ─── AI Food Safety Check Data Models & Clinical Rules Engine ────────────────
 
-export type PatientCondition =
-  | "diabetes"
-  | "ckd"
-  | "hypertension"
-  | "celiac"
-  | "allergy";
+export type PatientCondition = "diabetes" | "ckd" | "hypertension" | "celiac" | "allergy";
 
 export type SafetyStatus = "safe" | "moderation" | "not_recommended";
 
@@ -74,7 +69,9 @@ export interface PatientProfile {
 }
 
 /** Conditions for a profile — handles legacy profiles that only have primaryCondition. */
-export function getProfileConditions(profile: Pick<PatientProfile, "primaryCondition" | "conditions">): PatientCondition[] {
+export function getProfileConditions(
+  profile: Pick<PatientProfile, "primaryCondition" | "conditions">
+): PatientCondition[] {
   if (Array.isArray(profile.conditions) && profile.conditions.length > 0) {
     return profile.conditions;
   }
@@ -170,8 +167,16 @@ export const INITIAL_HISTORY: FoodSafetyAnalysis[] = [
     ],
     alternatives: [
       { name: "Apple", reason: "Low potassium (~195mg), high fiber", icon: "nutrition-outline" },
-      { name: "Blueberries", reason: "Rich in antioxidants, very low potassium", icon: "leaf-outline" },
-      { name: "Pear", reason: "Gentle on kidneys with low mineral load", icon: "nutrition-outline" },
+      {
+        name: "Blueberries",
+        reason: "Rich in antioxidants, very low potassium",
+        icon: "leaf-outline",
+      },
+      {
+        name: "Pear",
+        reason: "Gentle on kidneys with low mineral load",
+        icon: "nutrition-outline",
+      },
     ],
     portionGuidance: "Limit to half a medium banana (approx 60g) or enjoy lower-potassium berries.",
     timestamp: "Today, 6:42 PM",
@@ -193,10 +198,19 @@ export const INITIAL_HISTORY: FoodSafetyAnalysis[] = [
       { name: "Potassium", level: "Moderate", impact: "neutral", detail: "180mg" },
     ],
     alternatives: [
-      { name: "Cauliflower Crust Veggie Pizza", reason: "Significantly lower sodium with fresh herbs", icon: "pizza-outline" },
-      { name: "Grilled Chicken Flatbread", reason: "Lean protein with minimal sodium burden", icon: "restaurant-outline" },
+      {
+        name: "Cauliflower Crust Veggie Pizza",
+        reason: "Significantly lower sodium with fresh herbs",
+        icon: "pizza-outline",
+      },
+      {
+        name: "Grilled Chicken Flatbread",
+        reason: "Lean protein with minimal sodium burden",
+        icon: "restaurant-outline",
+      },
     ],
-    portionGuidance: "Avoid regular cured pepperoni pizza. Opt for unsalted homemade thin crust with fresh basil and tomatoes.",
+    portionGuidance:
+      "Avoid regular cured pepperoni pizza. Opt for unsalted homemade thin crust with fresh basil and tomatoes.",
     timestamp: "Today, 3:15 PM",
   },
   {
@@ -211,17 +225,31 @@ export const INITIAL_HISTORY: FoodSafetyAnalysis[] = [
     detailedWhy:
       "Refined white rice has had its fibrous bran and germ removed, leaving fast-digesting starches. Without sufficient fiber or fat to slow absorption, blood sugar levels rise quickly.",
     factors: [
-      { name: "Glycemic Index", level: "High", impact: "warning", detail: "GI ~73 (Rapid glucose spike)" },
+      {
+        name: "Glycemic Index",
+        level: "High",
+        impact: "warning",
+        detail: "GI ~73 (Rapid glucose spike)",
+      },
       { name: "Dietary Fiber", level: "Low", impact: "warning", detail: "0.4g per cup" },
       { name: "Total Carbs", level: "High", impact: "warning", detail: "45g per cup" },
       { name: "Sodium", level: "None", impact: "positive", detail: "0mg naturally" },
     ],
     alternatives: [
       { name: "Quinoa", reason: "Low GI, complete protein, high fiber", icon: "leaf-outline" },
-      { name: "Cauliflower Rice", reason: "Virtually zero glycemic impact (< 3g carbs)", icon: "nutrition-outline" },
-      { name: "Wild Brown Rice", reason: "Intact bran slows glucose breakdown", icon: "nutrition-outline" },
+      {
+        name: "Cauliflower Rice",
+        reason: "Virtually zero glycemic impact (< 3g carbs)",
+        icon: "nutrition-outline",
+      },
+      {
+        name: "Wild Brown Rice",
+        reason: "Intact bran slows glucose breakdown",
+        icon: "nutrition-outline",
+      },
     ],
-    portionGuidance: "Keep portions strictly under 1/2 cup cooked (approx 75g) and always pair with non-starchy greens.",
+    portionGuidance:
+      "Keep portions strictly under 1/2 cup cooked (approx 75g) and always pair with non-starchy greens.",
     timestamp: "Yesterday, 1:20 PM",
   },
   {
@@ -236,16 +264,40 @@ export const INITIAL_HISTORY: FoodSafetyAnalysis[] = [
     detailedWhy:
       "Wild and fresh salmon provides essential amino acids without synthetic additives or phosphate preservatives typically found in processed meats.",
     factors: [
-      { name: "Protein Quality", level: "High", impact: "positive", detail: "22g clean bioavailable protein" },
+      {
+        name: "Protein Quality",
+        level: "High",
+        impact: "positive",
+        detail: "22g clean bioavailable protein",
+      },
       { name: "Sodium", level: "Low", impact: "positive", detail: "55mg (when unseasoned)" },
-      { name: "Omega-3 Fats", level: "High", impact: "positive", detail: "Cardioprotective & anti-inflammatory" },
-      { name: "Phosphorus", level: "Moderate", impact: "neutral", detail: "200mg (organic source)" },
+      {
+        name: "Omega-3 Fats",
+        level: "High",
+        impact: "positive",
+        detail: "Cardioprotective & anti-inflammatory",
+      },
+      {
+        name: "Phosphorus",
+        level: "Moderate",
+        impact: "neutral",
+        detail: "200mg (organic source)",
+      },
     ],
     alternatives: [
-      { name: "Atlantic Cod", reason: "Even lower potassium and phosphorus profile", icon: "water-outline" },
-      { name: "Egg Whites", reason: "Pure protein with zero phosphorus burden", icon: "egg-outline" },
+      {
+        name: "Atlantic Cod",
+        reason: "Even lower potassium and phosphorus profile",
+        icon: "water-outline",
+      },
+      {
+        name: "Egg Whites",
+        reason: "Pure protein with zero phosphorus burden",
+        icon: "egg-outline",
+      },
     ],
-    portionGuidance: "Recommended portion is 3 to 4 oz (85g - 115g) cooked without added table salt.",
+    portionGuidance:
+      "Recommended portion is 3 to 4 oz (85g - 115g) cooked without added table salt.",
     timestamp: "May 12, 11:30 AM",
   },
 ];
@@ -290,7 +342,9 @@ export function evaluateFoodSafety(
   // query.includes() (e.g. "rice" matching "price", "egg" matching "eggplant").
   // Multi-word phrases (e.g. "canned soup", "soy sauce") match as a whole phrase.
   const hasTerm = (terms: string[]) =>
-    terms.some((t) => new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(query));
+    terms.some((t) =>
+      new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(query)
+    );
 
   const isIndianStaple = (terms: string[]) => hasTerm(terms);
 
@@ -334,14 +388,41 @@ export function evaluateFoodSafety(
         `${query.charAt(0).toUpperCase() + query.slice(1)} has a relatively high potassium content. Patients managing kidney function should carefully manage potassium intake.`,
         "In CKD, impaired renal clearance can cause potassium accumulation in the blood (hyperkalemia), potentially stressing heart rhythms. Eating small portions or choosing lower-potassium alternatives helps maintain electrolyte equilibrium.",
         [
-          { name: "Potassium", level: "High", impact: "warning", detail: "Elevated potassium load per standard serving" },
-          { name: "Sodium", level: "Low", impact: "positive", detail: "Naturally very low in sodium" },
-          { name: "Phosphorus", level: "Moderate", impact: "neutral", detail: "Organic plant phosphorus" },
+          {
+            name: "Potassium",
+            level: "High",
+            impact: "warning",
+            detail: "Elevated potassium load per standard serving",
+          },
+          {
+            name: "Sodium",
+            level: "Low",
+            impact: "positive",
+            detail: "Naturally very low in sodium",
+          },
+          {
+            name: "Phosphorus",
+            level: "Moderate",
+            impact: "neutral",
+            detail: "Organic plant phosphorus",
+          },
         ],
         [
-          { name: "Apples & Apple Sauce", reason: "Naturally low in potassium and gentle on kidneys", icon: "nutrition-outline" },
-          { name: "Blueberries & Strawberries", reason: "Rich in polyphenols with low mineral density", icon: "leaf-outline" },
-          { name: "Cabbage & Cauliflower", reason: "Crunchy, low-potassium vegetable alternatives", icon: "nutrition-outline" },
+          {
+            name: "Apples & Apple Sauce",
+            reason: "Naturally low in potassium and gentle on kidneys",
+            icon: "nutrition-outline",
+          },
+          {
+            name: "Blueberries & Strawberries",
+            reason: "Rich in polyphenols with low mineral density",
+            icon: "leaf-outline",
+          },
+          {
+            name: "Cabbage & Cauliflower",
+            reason: "Crunchy, low-potassium vegetable alternatives",
+            icon: "nutrition-outline",
+          },
         ],
         "Limit intake to a small portion (e.g. 50g-75g) and avoid consuming alongside other high-potassium foods."
       );
@@ -356,13 +437,36 @@ export function evaluateFoodSafety(
         `Processed items like ${query} contain inorganic sodium and chemical phosphate additives that place acute strain on compromised kidneys.`,
         "Inorganic phosphates added as preservatives in processed foods are absorbed nearly 100% by the gastrointestinal tract, causing rapid vascular calcification and fluid retention in kidney disease patients.",
         [
-          { name: "Sodium", level: "High", impact: "danger", detail: "Exceeds single-meal renal thresholds (> 600mg)" },
-          { name: "Inorganic Phosphorus", level: "High", impact: "danger", detail: "Highly bioavailable preservative phosphate" },
-          { name: "Saturated Fat", level: "High", impact: "danger", detail: "Elevates vascular inflammation" },
+          {
+            name: "Sodium",
+            level: "High",
+            impact: "danger",
+            detail: "Exceeds single-meal renal thresholds (> 600mg)",
+          },
+          {
+            name: "Inorganic Phosphorus",
+            level: "High",
+            impact: "danger",
+            detail: "Highly bioavailable preservative phosphate",
+          },
+          {
+            name: "Saturated Fat",
+            level: "High",
+            impact: "danger",
+            detail: "Elevates vascular inflammation",
+          },
         ],
         [
-          { name: "Fresh Grilled Chicken Breast", reason: "Unprocessed lean protein with no added phosphates", icon: "restaurant-outline" },
-          { name: "Homemade Veggie Stir-fry", reason: "Cooked with fresh garlic, herbs and zero salt", icon: "leaf-outline" },
+          {
+            name: "Fresh Grilled Chicken Breast",
+            reason: "Unprocessed lean protein with no added phosphates",
+            icon: "restaurant-outline",
+          },
+          {
+            name: "Homemade Veggie Stir-fry",
+            reason: "Cooked with fresh garlic, herbs and zero salt",
+            icon: "leaf-outline",
+          },
         ],
         "Strictly avoid processed cured items. Prefer whole, scratch-cooked meals."
       );
@@ -377,13 +481,36 @@ export function evaluateFoodSafety(
       `${query.charAt(0).toUpperCase() + query.slice(1)} aligns well with renal dietary guidelines with manageable potassium, phosphorus, and sodium levels.`,
       "This food does not contain excessive minerals that strain renal filtration. It provides healthy nutrition without triggering hyperkalemia or fluid retention when prepared without added table salt.",
       [
-        { name: "Potassium", level: "Low", impact: "positive", detail: "Within safe kidney consumption thresholds" },
-        { name: "Sodium", level: "Low", impact: "positive", detail: "Low sodium burden on blood pressure" },
-        { name: "Phosphorus", level: "Low", impact: "positive", detail: "Minimal phosphate retention risk" },
+        {
+          name: "Potassium",
+          level: "Low",
+          impact: "positive",
+          detail: "Within safe kidney consumption thresholds",
+        },
+        {
+          name: "Sodium",
+          level: "Low",
+          impact: "positive",
+          detail: "Low sodium burden on blood pressure",
+        },
+        {
+          name: "Phosphorus",
+          level: "Low",
+          impact: "positive",
+          detail: "Minimal phosphate retention risk",
+        },
       ],
       [
-        { name: "Fresh Steamed Greens", reason: "Nutritious and light on renal filtration", icon: "leaf-outline" },
-        { name: "White Rice or Pasta", reason: "Low potassium carbohydrate staple", icon: "restaurant-outline" },
+        {
+          name: "Fresh Steamed Greens",
+          reason: "Nutritious and light on renal filtration",
+          icon: "leaf-outline",
+        },
+        {
+          name: "White Rice or Pasta",
+          reason: "Low potassium carbohydrate staple",
+          icon: "restaurant-outline",
+        },
       ],
       "Standard serving size (1 cup or 100g) prepared with fresh herbs rather than salt."
     );
@@ -400,20 +527,56 @@ export function evaluateFoodSafety(
         `High concentration of refined simple sugars causes rapid, dangerous spikes in blood glucose levels.`,
         "Refined sugars enter the bloodstream almost immediately, requiring huge surges of insulin. In diabetic patients, this leads to prolonged hyperglycemia, insulin resistance, and vascular stress.",
         [
-          { name: "Glycemic Index", level: "High", impact: "danger", detail: "GI > 80 (Severe spike potential)" },
-          { name: "Added Sugars", level: "High", impact: "danger", detail: "> 25g simple fast sugars" },
-          { name: "Dietary Fiber", level: "None", impact: "warning", detail: "0g fiber to buffer glucose absorption" },
+          {
+            name: "Glycemic Index",
+            level: "High",
+            impact: "danger",
+            detail: "GI > 80 (Severe spike potential)",
+          },
+          {
+            name: "Added Sugars",
+            level: "High",
+            impact: "danger",
+            detail: "> 25g simple fast sugars",
+          },
+          {
+            name: "Dietary Fiber",
+            level: "None",
+            impact: "warning",
+            detail: "0g fiber to buffer glucose absorption",
+          },
         ],
         [
-          { name: "Sparkling Water with Lime", reason: "Zero calories, zero blood sugar impact", icon: "water-outline" },
-          { name: "Fresh Berries with Greek Yogurt", reason: "Low GI fruit with protein buffer", icon: "nutrition-outline" },
+          {
+            name: "Sparkling Water with Lime",
+            reason: "Zero calories, zero blood sugar impact",
+            icon: "water-outline",
+          },
+          {
+            name: "Fresh Berries with Greek Yogurt",
+            reason: "Low GI fruit with protein buffer",
+            icon: "nutrition-outline",
+          },
         ],
         "Avoid sugary drinks and refined confections completely."
       );
     }
 
     if (
-      hasTerm(["idli", "dosa", "poha", "upma", "paratha", "chapati", "rice", "bread", "potato", "pasta", "banana", "mango"])
+      hasTerm([
+        "idli",
+        "dosa",
+        "poha",
+        "upma",
+        "paratha",
+        "chapati",
+        "rice",
+        "bread",
+        "potato",
+        "pasta",
+        "banana",
+        "mango",
+      ])
     ) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
@@ -423,14 +586,41 @@ export function evaluateFoodSafety(
         `${query.charAt(0).toUpperCase() + query.slice(1)} contains moderate-to-high carbohydrates that can elevate blood glucose unless paired with dietary fiber or lean protein.`,
         "Digestible carbohydrates break down into glucose. When eating moderate-GI carbohydrates, pairing with healthy fats or proteins slows gastric emptying and flattens the glycemic curve.",
         [
-          { name: "Carbohydrates", level: "Moderate", impact: "warning", detail: "30g-45g total carbs per cup" },
-          { name: "Glycemic Load", level: "Moderate", impact: "warning", detail: "Medium post-meal glycemic response" },
-          { name: "Fiber", level: "Moderate", impact: "positive", detail: "Helps modulate glucose entry" },
+          {
+            name: "Carbohydrates",
+            level: "Moderate",
+            impact: "warning",
+            detail: "30g-45g total carbs per cup",
+          },
+          {
+            name: "Glycemic Load",
+            level: "Moderate",
+            impact: "warning",
+            detail: "Medium post-meal glycemic response",
+          },
+          {
+            name: "Fiber",
+            level: "Moderate",
+            impact: "positive",
+            detail: "Helps modulate glucose entry",
+          },
         ],
         [
-          { name: "Moong Dal Khichdi", reason: "Protein-fiber balance with moderate glycemic load", icon: "leaf-outline" },
-          { name: "Vegetable Upma (semolina)", reason: "Smaller portions with added vegetables and fiber", icon: "nutrition-outline" },
-          { name: "Ragi / Millet Dosa", reason: "Lower GI millet alternative to white rice dosa", icon: "restaurant-outline" },
+          {
+            name: "Moong Dal Khichdi",
+            reason: "Protein-fiber balance with moderate glycemic load",
+            icon: "leaf-outline",
+          },
+          {
+            name: "Vegetable Upma (semolina)",
+            reason: "Smaller portions with added vegetables and fiber",
+            icon: "nutrition-outline",
+          },
+          {
+            name: "Ragi / Millet Dosa",
+            reason: "Lower GI millet alternative to white rice dosa",
+            icon: "restaurant-outline",
+          },
         ],
         "Limit to 1/2 cup portion and always consume with protein (dal, eggs, paneer) and non-starchy vegetables."
       );
@@ -445,13 +635,36 @@ export function evaluateFoodSafety(
         `${query.charAt(0).toUpperCase() + query.slice(1)} is a protein-rich Indian staple with moderate carbohydrates and helpful fiber when prepared without excess oil or sugar.`,
         "Lentils and fermented dairy provide steady energy with protein that helps buffer glucose absorption — a common pattern in Indian meals.",
         [
-          { name: "Glycemic Index", level: "Low", impact: "positive", detail: "Moderate GI when paired with vegetables" },
-          { name: "Protein", level: "Moderate", impact: "positive", detail: "Dal provides plant protein" },
-          { name: "Added Sugars", level: "Low", impact: "positive", detail: "Naturally low when unsweetened" },
+          {
+            name: "Glycemic Index",
+            level: "Low",
+            impact: "positive",
+            detail: "Moderate GI when paired with vegetables",
+          },
+          {
+            name: "Protein",
+            level: "Moderate",
+            impact: "positive",
+            detail: "Dal provides plant protein",
+          },
+          {
+            name: "Added Sugars",
+            level: "Low",
+            impact: "positive",
+            detail: "Naturally low when unsweetened",
+          },
         ],
         [
-          { name: "Mixed Vegetable Dal", reason: "Extra fiber from seasonal vegetables", icon: "leaf-outline" },
-          { name: "Plain Curd", reason: "Protein-rich, low GI accompaniment", icon: "nutrition-outline" },
+          {
+            name: "Mixed Vegetable Dal",
+            reason: "Extra fiber from seasonal vegetables",
+            icon: "leaf-outline",
+          },
+          {
+            name: "Plain Curd",
+            reason: "Protein-rich, low GI accompaniment",
+            icon: "nutrition-outline",
+          },
         ],
         "Standard katori (small bowl) with salad or sabzi on the side."
       );
@@ -466,13 +679,36 @@ export function evaluateFoodSafety(
       `${query.charAt(0).toUpperCase() + query.slice(1)} has a low glycemic footprint, minimal simple sugars, and supports stable blood sugar balance.`,
       "Foods with high fiber, lean proteins, or healthy unsaturated fats have minimal impact on blood glucose spikes, making them safe for daily diabetes management.",
       [
-        { name: "Glycemic Index", level: "Low", impact: "positive", detail: "GI < 40 (Negligible glucose spike)" },
-        { name: "Total Sugars", level: "Low", impact: "positive", detail: "< 3g sugar per serving" },
-        { name: "Dietary Fiber", level: "High", impact: "positive", detail: "Stabilizes insulin response" },
+        {
+          name: "Glycemic Index",
+          level: "Low",
+          impact: "positive",
+          detail: "GI < 40 (Negligible glucose spike)",
+        },
+        {
+          name: "Total Sugars",
+          level: "Low",
+          impact: "positive",
+          detail: "< 3g sugar per serving",
+        },
+        {
+          name: "Dietary Fiber",
+          level: "High",
+          impact: "positive",
+          detail: "Stabilizes insulin response",
+        },
       ],
       [
-        { name: "Avocado & Olive Oil", reason: "Heart-healthy fats that enhance insulin sensitivity", icon: "leaf-outline" },
-        { name: "Leafy Greens (Kale/Spinach)", reason: "Abundant micronutrients with zero glucose impact", icon: "nutrition-outline" },
+        {
+          name: "Avocado & Olive Oil",
+          reason: "Heart-healthy fats that enhance insulin sensitivity",
+          icon: "leaf-outline",
+        },
+        {
+          name: "Leafy Greens (Kale/Spinach)",
+          reason: "Abundant micronutrients with zero glucose impact",
+          icon: "nutrition-outline",
+        },
       ],
       "Safe for regular consumption as part of balanced meal planning."
     );
@@ -481,7 +717,20 @@ export function evaluateFoodSafety(
   // ─── 3. HEART DISEASE & HYPERTENSION ──────────────────────────────
   if (condition === "hypertension") {
     if (
-      hasTerm(["biryani", "pickle", "papad", "namkeen", "pizza", "canned soup", "chips", "hot dog", "sausage", "soy sauce", "ramen", "bacon"])
+      hasTerm([
+        "biryani",
+        "pickle",
+        "papad",
+        "namkeen",
+        "pizza",
+        "canned soup",
+        "chips",
+        "hot dog",
+        "sausage",
+        "soy sauce",
+        "ramen",
+        "bacon",
+      ])
     ) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
@@ -491,20 +740,54 @@ export function evaluateFoodSafety(
         `Contains dangerous levels of sodium (> 600mg per serving) that immediately increase intravascular volume and blood pressure.`,
         "Excess sodium intake causes fluid retention and arterial constriction. For patients with hypertension or heart disease, heavy sodium meals can trigger acute BP elevations and cardiac strain.",
         [
-          { name: "Sodium", level: "High", impact: "danger", detail: "High sodium concentration per serving" },
-          { name: "Saturated Fat", level: "High", impact: "danger", detail: "Promotes endothelial inflammation" },
-          { name: "Cholesterol", level: "Moderate", impact: "warning", detail: "Atherosclerotic risk factor" },
+          {
+            name: "Sodium",
+            level: "High",
+            impact: "danger",
+            detail: "High sodium concentration per serving",
+          },
+          {
+            name: "Saturated Fat",
+            level: "High",
+            impact: "danger",
+            detail: "Promotes endothelial inflammation",
+          },
+          {
+            name: "Cholesterol",
+            level: "Moderate",
+            impact: "warning",
+            detail: "Atherosclerotic risk factor",
+          },
         ],
         [
-          { name: "Plain Steamed Rice with Dal", reason: "Home-cooked, unsalted staple common across India", icon: "water-outline" },
-          { name: "Phulkas with Low-Salt Sabzi", reason: "Whole wheat roti with fresh vegetable curry, minimal salt", icon: "restaurant-outline" },
+          {
+            name: "Plain Steamed Rice with Dal",
+            reason: "Home-cooked, unsalted staple common across India",
+            icon: "water-outline",
+          },
+          {
+            name: "Phulkas with Low-Salt Sabzi",
+            reason: "Whole wheat roti with fresh vegetable curry, minimal salt",
+            icon: "restaurant-outline",
+          },
         ],
         "Avoid restaurant biryani and packaged namkeen. Home-cooked meals with minimal added salt are safer."
       );
     }
 
     if (
-      hasTerm(["paneer", "butter chicken", "malai", "ghee", "cheese", "butter", "steak", "beef", "pork", "burger"])
+      hasTerm([
+        "paneer",
+        "butter chicken",
+        "malai",
+        "ghee",
+        "cheese",
+        "butter",
+        "steak",
+        "beef",
+        "pork",
+        "burger",
+      ])
     ) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
@@ -514,13 +797,31 @@ export function evaluateFoodSafety(
         `Contains saturated fats and moderate sodium that should be limited to prevent long-term arterial plaque accumulation.`,
         "Dietary saturated fats raise LDL cholesterol. Moderate consumption balanced with high-potassium greens and omega-3s helps safeguard coronary artery health.",
         [
-          { name: "Saturated Fat", level: "Moderate", impact: "warning", detail: "3g-6g per serving" },
+          {
+            name: "Saturated Fat",
+            level: "Moderate",
+            impact: "warning",
+            detail: "3g-6g per serving",
+          },
           { name: "Sodium", level: "Moderate", impact: "warning", detail: "250mg-400mg" },
-          { name: "Potassium", level: "Moderate", impact: "positive", detail: "Helps buffer vascular tension" },
+          {
+            name: "Potassium",
+            level: "Moderate",
+            impact: "positive",
+            detail: "Helps buffer vascular tension",
+          },
         ],
         [
-          { name: "Wild Salmon / Tuna", reason: "Rich in cardioprotective EPA and DHA fatty acids", icon: "water-outline" },
-          { name: "Extra Virgin Olive Oil", reason: "Monounsaturated fat that supports HDL levels", icon: "leaf-outline" },
+          {
+            name: "Wild Salmon / Tuna",
+            reason: "Rich in cardioprotective EPA and DHA fatty acids",
+            icon: "water-outline",
+          },
+          {
+            name: "Extra Virgin Olive Oil",
+            reason: "Monounsaturated fat that supports HDL levels",
+            icon: "leaf-outline",
+          },
         ],
         "Limit to 3 oz lean cuts no more than 1-2 times per week."
       );
@@ -535,13 +836,31 @@ export function evaluateFoodSafety(
       `${query.charAt(0).toUpperCase() + query.slice(1)} is naturally low in sodium and supports healthy vascular elasticity.`,
       "Rich in natural minerals like potassium and magnesium, this food aids vasodilation and helps counter the hypertensive effects of dietary sodium.",
       [
-        { name: "Sodium", level: "Low", impact: "positive", detail: "< 50mg (DASH diet compliant)" },
-        { name: "Potassium", level: "High", impact: "positive", detail: "Promotes natural vasodilation" },
+        {
+          name: "Sodium",
+          level: "Low",
+          impact: "positive",
+          detail: "< 50mg (DASH diet compliant)",
+        },
+        {
+          name: "Potassium",
+          level: "High",
+          impact: "positive",
+          detail: "Promotes natural vasodilation",
+        },
         { name: "Saturated Fat", level: "None", impact: "positive", detail: "0g saturated fat" },
       ],
       [
-        { name: "Steamed Broccoli", reason: "Potassium and antioxidant powerhouse", icon: "leaf-outline" },
-        { name: "Raw Walnuts", reason: "Plant Omega-3 ALA for arterial health", icon: "nutrition-outline" },
+        {
+          name: "Steamed Broccoli",
+          reason: "Potassium and antioxidant powerhouse",
+          icon: "leaf-outline",
+        },
+        {
+          name: "Raw Walnuts",
+          reason: "Plant Omega-3 ALA for arterial health",
+          icon: "nutrition-outline",
+        },
       ],
       "Safe for unrestricted daily portioning in DASH and Mediterranean eating plans."
     );
@@ -550,7 +869,23 @@ export function evaluateFoodSafety(
   // ─── 4. CELIAC DISEASE ────────────────────────────────────────────
   if (condition === "celiac") {
     if (
-      hasTerm(["roti", "chapati", "naan", "paratha", "puri", "bhatura", "wheat", "bread", "pasta", "pizza", "beer", "barley", "rye", "cookie", "flour"])
+      hasTerm([
+        "roti",
+        "chapati",
+        "naan",
+        "paratha",
+        "puri",
+        "bhatura",
+        "wheat",
+        "bread",
+        "pasta",
+        "pizza",
+        "beer",
+        "barley",
+        "rye",
+        "cookie",
+        "flour",
+      ])
     ) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
@@ -560,13 +895,35 @@ export function evaluateFoodSafety(
         `Contains gluten proteins (gliadin/glutenin) that trigger autoimmune intestinal villi destruction in Celiac patients.`,
         "Even microscopic trace amounts of gluten provoke an autoimmune T-cell response in celiac disease, causing blunting of intestinal villi, chronic malabsorption, and systemic inflammation.",
         [
-          { name: "Gluten Content", level: "Contains", impact: "danger", detail: "Wheat/Rye/Barley proteins present" },
-          { name: "Autoimmune Trigger", level: "High", impact: "danger", detail: "Causes intestinal mucosal damage" },
+          {
+            name: "Gluten Content",
+            level: "Contains",
+            impact: "danger",
+            detail: "Wheat/Rye/Barley proteins present",
+          },
+          {
+            name: "Autoimmune Trigger",
+            level: "High",
+            impact: "danger",
+            detail: "Causes intestinal mucosal damage",
+          },
         ],
         [
-          { name: "Rice Roti / Akki Roti", reason: "South Indian rice-flour flatbread, naturally gluten-free", icon: "leaf-outline" },
-          { name: "Idli / Dosa (rice-based)", reason: "Fermented rice and lentil staples without wheat", icon: "restaurant-outline" },
-          { name: "Buckwheat / Rajgira Roti", reason: "Traditional gluten-free grain used across India", icon: "nutrition-outline" },
+          {
+            name: "Rice Roti / Akki Roti",
+            reason: "South Indian rice-flour flatbread, naturally gluten-free",
+            icon: "leaf-outline",
+          },
+          {
+            name: "Idli / Dosa (rice-based)",
+            reason: "Fermented rice and lentil staples without wheat",
+            icon: "restaurant-outline",
+          },
+          {
+            name: "Buckwheat / Rajgira Roti",
+            reason: "Traditional gluten-free grain used across India",
+            icon: "nutrition-outline",
+          },
         ],
         "Strict 0% gluten tolerance. Look strictly for Certified Gluten-Free labeling."
       );
@@ -581,12 +938,30 @@ export function evaluateFoodSafety(
         `Naturally gluten-free grain or condiment that frequently suffers from industrial wheat cross-contamination.`,
         "Oats and pre-packaged sauces are often processed on shared mill lines with wheat. Unless explicitly labeled 'Certified Gluten-Free', trace cross-contamination can occur.",
         [
-          { name: "Cross-Contact Risk", level: "Moderate", impact: "warning", detail: "Shared harvesting or manufacturing equipment" },
-          { name: "Gluten Level", level: "Low", impact: "neutral", detail: "Check specific packaging for certification" },
+          {
+            name: "Cross-Contact Risk",
+            level: "Moderate",
+            impact: "warning",
+            detail: "Shared harvesting or manufacturing equipment",
+          },
+          {
+            name: "Gluten Level",
+            level: "Low",
+            impact: "neutral",
+            detail: "Check specific packaging for certification",
+          },
         ],
         [
-          { name: "Tamari (Gluten-Free Soy Sauce)", reason: "Fermented without wheat filler", icon: "water-outline" },
-          { name: "Certified GF Rolled Oats", reason: "Batch-tested < 20 ppm gluten", icon: "leaf-outline" },
+          {
+            name: "Tamari (Gluten-Free Soy Sauce)",
+            reason: "Fermented without wheat filler",
+            icon: "water-outline",
+          },
+          {
+            name: "Certified GF Rolled Oats",
+            reason: "Batch-tested < 20 ppm gluten",
+            icon: "leaf-outline",
+          },
         ],
         "Verify certified gluten-free seal on the package prior to consumption."
       );
@@ -601,12 +976,30 @@ export function evaluateFoodSafety(
       `${query.charAt(0).toUpperCase() + query.slice(1)} is naturally 100% free of wheat, barley, and rye gluten proteins.`,
       "Whole unprocessed fresh meats, produce, eggs, and naturally gluten-free grains do not contain the amino acid sequences that trigger celiac autoimmune reactions.",
       [
-        { name: "Gluten Content", level: "None", impact: "positive", detail: "0 ppm gluten peptides" },
-        { name: "Intestinal Safety", level: "High", impact: "positive", detail: "Safe for mucosal recovery" },
+        {
+          name: "Gluten Content",
+          level: "None",
+          impact: "positive",
+          detail: "0 ppm gluten peptides",
+        },
+        {
+          name: "Intestinal Safety",
+          level: "High",
+          impact: "positive",
+          detail: "Safe for mucosal recovery",
+        },
       ],
       [
-        { name: "Fresh Fruits & Veggies", reason: "Naturally non-immunogenic produce", icon: "nutrition-outline" },
-        { name: "Quinoa, Buckwheat, Rice", reason: "Complete gluten-free complex carbohydrate bases", icon: "leaf-outline" },
+        {
+          name: "Fresh Fruits & Veggies",
+          reason: "Naturally non-immunogenic produce",
+          icon: "nutrition-outline",
+        },
+        {
+          name: "Quinoa, Buckwheat, Rice",
+          reason: "Complete gluten-free complex carbohydrate bases",
+          icon: "leaf-outline",
+        },
       ],
       "Safe for consumption. Ensure food preparation surfaces are free of wheat crumbs."
     );
@@ -614,7 +1007,9 @@ export function evaluateFoodSafety(
 
   // ─── 5. FOOD ALLERGY ──────────────────────────────────────────────
   if (condition === "allergy") {
-    if (hasTerm(["peanut", "shellfish", "shrimp", "crab", "lobster", "walnut", "almond", "cashew"])) {
+    if (
+      hasTerm(["peanut", "shellfish", "shrimp", "crab", "lobster", "walnut", "almond", "cashew"])
+    ) {
       return createResult(
         query.charAt(0).toUpperCase() + query.slice(1),
         "Major Allergen",
@@ -623,13 +1018,35 @@ export function evaluateFoodSafety(
         `Contains major IgE-mediated allergens listed on patient profile (Peanuts / Tree Nuts / Shellfish).`,
         "Exposure can trigger immediate hypersensitivity reactions ranging from localized urticaria to severe bronchospasm and anaphylaxis. Strict avoidance is medically mandatory.",
         [
-          { name: "Allergen Match", level: "Contains", impact: "danger", detail: "Matches patient profile allergen alert" },
-          { name: "Anaphylaxis Risk", level: "High", impact: "danger", detail: "IgE immune reaction risk" },
+          {
+            name: "Allergen Match",
+            level: "Contains",
+            impact: "danger",
+            detail: "Matches patient profile allergen alert",
+          },
+          {
+            name: "Anaphylaxis Risk",
+            level: "High",
+            impact: "danger",
+            detail: "IgE immune reaction risk",
+          },
         ],
         [
-          { name: "Sunflower Seed Butter", reason: "Nut-free spread with identical creamy texture", icon: "leaf-outline" },
-          { name: "Wild Alaskan Cod", reason: "White fish safe if non-allergic to finfish", icon: "water-outline" },
-          { name: "Pumpkin Seeds", reason: "Nutrient-dense nut-free crunch alternative", icon: "nutrition-outline" },
+          {
+            name: "Sunflower Seed Butter",
+            reason: "Nut-free spread with identical creamy texture",
+            icon: "leaf-outline",
+          },
+          {
+            name: "Wild Alaskan Cod",
+            reason: "White fish safe if non-allergic to finfish",
+            icon: "water-outline",
+          },
+          {
+            name: "Pumpkin Seeds",
+            reason: "Nutrient-dense nut-free crunch alternative",
+            icon: "nutrition-outline",
+          },
         ],
         "DO NOT CONSUME. Ensure Epinephrine auto-injector is accessible."
       );
@@ -644,12 +1061,30 @@ export function evaluateFoodSafety(
         `Belongs to the Top 9 common food allergen groups. Review patient-specific allergy panels before ingestion.`,
         "Secondary allergens like dairy or soy can trigger digestive discomfort or atopic flares. If no clinical IgE diagnosis exists, small test portions are suggested.",
         [
-          { name: "Allergen Family", level: "Moderate", impact: "warning", detail: "Common food allergen group" },
-          { name: "Tolerance Check", level: "Moderate", impact: "neutral", detail: "Subject to individual patient sensitivity" },
+          {
+            name: "Allergen Family",
+            level: "Moderate",
+            impact: "warning",
+            detail: "Common food allergen group",
+          },
+          {
+            name: "Tolerance Check",
+            level: "Moderate",
+            impact: "neutral",
+            detail: "Subject to individual patient sensitivity",
+          },
         ],
         [
-          { name: "Oat Milk (Unsweetened)", reason: "Dairy-free, soy-free hypoallergenic milk", icon: "water-outline" },
-          { name: "Coconut Amino Sauce", reason: "Soy-free seasoning substitute", icon: "leaf-outline" },
+          {
+            name: "Oat Milk (Unsweetened)",
+            reason: "Dairy-free, soy-free hypoallergenic milk",
+            icon: "water-outline",
+          },
+          {
+            name: "Coconut Amino Sauce",
+            reason: "Soy-free seasoning substitute",
+            icon: "leaf-outline",
+          },
         ],
         "Verify your personal allergy panel before introducing this item."
       );
@@ -664,12 +1099,30 @@ export function evaluateFoodSafety(
       `${query.charAt(0).toUpperCase() + query.slice(1)} does not contain any of the patient's flagged allergens and has a low historical sensitization rate.`,
       "This item is free of common trigger proteins that stimulate IgE or histamine reactions, making it safe for patient dietary inclusion.",
       [
-        { name: "Allergen Presence", level: "None", impact: "positive", detail: "No peanut, nut, or shellfish traces" },
-        { name: "Histamine Load", level: "Low", impact: "positive", detail: "Minimal mast cell activation" },
+        {
+          name: "Allergen Presence",
+          level: "None",
+          impact: "positive",
+          detail: "No peanut, nut, or shellfish traces",
+        },
+        {
+          name: "Histamine Load",
+          level: "Low",
+          impact: "positive",
+          detail: "Minimal mast cell activation",
+        },
       ],
       [
-        { name: "Organic Steamed Rice", reason: "Gold-standard hypoallergenic staple", icon: "restaurant-outline" },
-        { name: "Steamed Zucchini", reason: "Gentle on gastrointestinal barrier", icon: "leaf-outline" },
+        {
+          name: "Organic Steamed Rice",
+          reason: "Gold-standard hypoallergenic staple",
+          icon: "restaurant-outline",
+        },
+        {
+          name: "Steamed Zucchini",
+          reason: "Gentle on gastrointestinal barrier",
+          icon: "leaf-outline",
+        },
       ],
       "Safe for consumption. Wash fresh produce thoroughly to eliminate environmental pollen."
     );
@@ -683,7 +1136,14 @@ export function evaluateFoodSafety(
     "Safe to Consume",
     `Analysis indicates ${query} is safe for consumption under standard dietary guidelines.`,
     "No acute clinical risks identified for the current patient category.",
-    [{ name: "Overall Profile", level: "Low", impact: "positive", detail: "Within safe health parameters" }],
+    [
+      {
+        name: "Overall Profile",
+        level: "Low",
+        impact: "positive",
+        detail: "Within safe health parameters",
+      },
+    ],
     [{ name: "Fresh Vegetables", reason: "Healthy staple", icon: "leaf-outline" }],
     "Enjoy as part of a balanced diet."
   );
@@ -725,7 +1185,9 @@ export function evaluateFoodSafetyMulti(
   if (results.length === 1) return { ...results[0], conditions: unique };
 
   // Worst status wins.
-  const worst = results.reduce((a, b) => (STATUS_PRIORITY[b.status] > STATUS_PRIORITY[a.status] ? b : a));
+  const worst = results.reduce((a, b) =>
+    STATUS_PRIORITY[b.status] > STATUS_PRIORITY[a.status] ? b : a
+  );
 
   const seenFactors = new Set<string>();
   const factors: NutrientFactor[] = [];
@@ -750,9 +1212,7 @@ export function evaluateFoodSafetyMulti(
     }
   }
 
-  const summaryParts = results.map(
-    (r) => `${CONDITION_SHORT[r.condition]}: ${r.summary}`
-  );
+  const summaryParts = results.map((r) => `${CONDITION_SHORT[r.condition]}: ${r.summary}`);
 
   return {
     id: `check-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -763,11 +1223,15 @@ export function evaluateFoodSafetyMulti(
     status: worst.status,
     statusHeadline: HEADLINE_FOR_STATUS[worst.status],
     summary: summaryParts.join(" "),
-    detailedWhy: results.map((r) => `[${CONDITION_SHORT[r.condition]}] ${r.detailedWhy}`).join("\n\n"),
+    detailedWhy: results
+      .map((r) => `[${CONDITION_SHORT[r.condition]}] ${r.detailedWhy}`)
+      .join("\n\n"),
     factors: factors.slice(0, 6),
     alternatives: alternatives.slice(0, 4),
     portionGuidance: results
-      .map((r) => (r.portionGuidance ? `${CONDITION_SHORT[r.condition]}: ${r.portionGuidance}` : ""))
+      .map((r) =>
+        r.portionGuidance ? `${CONDITION_SHORT[r.condition]}: ${r.portionGuidance}` : ""
+      )
       .filter(Boolean)
       .join(" "),
     timestamp: `Today, ${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,

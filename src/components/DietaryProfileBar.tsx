@@ -2,10 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { JSX } from "react";
 import React, { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import {
-  PATIENT_CONDITIONS,
-  type PatientCondition,
-} from "../data/foodSafety";
+import { PATIENT_CONDITIONS, type PatientCondition } from "../data/foodSafety";
 import { getConditionColor, radius, spacing, type ThemeColors } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 import { ConditionSelector } from "./ConditionSelector";
@@ -17,7 +14,10 @@ interface DietaryProfileBarProps {
 }
 
 /** Compact bar showing all active conditions; opens a multi-select sheet. */
-export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryProfileBarProps): JSX.Element {
+export function DietaryProfileBar({
+  conditions,
+  onConditionsChange,
+}: DietaryProfileBarProps): JSX.Element {
   const { colors, isDark } = useThemeColors();
   const styles = makeStyles(colors);
   const [showPicker, setShowPicker] = useState(false);
@@ -31,9 +31,7 @@ export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryPro
   };
 
   const toggle = (c: PatientCondition) => {
-    setDraft((prev) =>
-      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
-    );
+    setDraft((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
   };
 
   const apply = () => {
@@ -64,12 +62,12 @@ export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryPro
             })}
             {conditions.length > 3 && (
               <View style={[styles.chip, { backgroundColor: colors.gray1 }]}>
-                <Text style={[styles.chipText, { color: colors.slateMedium }]}>+{conditions.length - 3}</Text>
+                <Text style={[styles.chipText, { color: colors.slateMedium }]}>
+                  +{conditions.length - 3}
+                </Text>
               </View>
             )}
-            {conditions.length === 0 && (
-              <Text style={styles.noneText}>None selected</Text>
-            )}
+            {conditions.length === 0 && <Text style={styles.noneText}>None selected</Text>}
           </View>
         </View>
         <Pressable
@@ -82,7 +80,12 @@ export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryPro
         </Pressable>
       </View>
 
-      <Modal visible={showPicker} transparent animationType="slide" onRequestClose={() => setShowPicker(false)}>
+      <Modal
+        visible={showPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPicker(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
@@ -109,90 +112,91 @@ export function DietaryProfileBar({ conditions, onConditionsChange }: DietaryPro
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  bar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primaryMuted,
-  },
-  textWrap: {
-    flex: 1,
-    gap: 4,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.slateMuted,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-  },
-  chip: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  chipText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  noneText: {
-    fontSize: 12,
-    color: colors.slateMuted,
-  },
-  changeButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.bgSubtle,
-  },
-  changeText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.primaryText,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: radius.xxl,
-    borderTopRightRadius: radius.xxl,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
-    gap: spacing.md,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.dark,
-  },
-  modalHint: {
-    fontSize: 13,
-    color: colors.slateMuted,
-    lineHeight: 18,
-  },
-  doneButton: { marginTop: spacing.xs },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    bar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      padding: spacing.md,
+      gap: spacing.md,
+    },
+    iconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primaryMuted,
+    },
+    textWrap: {
+      flex: 1,
+      gap: 4,
+    },
+    label: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: colors.slateMuted,
+    },
+    chipRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 4,
+    },
+    chip: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    chipText: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    noneText: {
+      fontSize: 12,
+      color: colors.slateMuted,
+    },
+    changeButton: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.sm,
+      backgroundColor: colors.bgSubtle,
+    },
+    changeText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.primaryText,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.35)",
+      justifyContent: "flex-end",
+    },
+    modalSheet: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: radius.xxl,
+      borderTopRightRadius: radius.xxl,
+      padding: spacing.xl,
+      paddingBottom: spacing.xxxl,
+      gap: spacing.md,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.dark,
+    },
+    modalHint: {
+      fontSize: 13,
+      color: colors.slateMuted,
+      lineHeight: 18,
+    },
+    doneButton: { marginTop: spacing.xs },
+  });

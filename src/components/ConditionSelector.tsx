@@ -3,7 +3,14 @@ import type { JSX } from "react";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { PATIENT_CONDITIONS, type PatientCondition } from "../data/foodSafety";
-import { radius, spacing, typography, sectionLabel as sectionLabelToken, getConditionColor, type ThemeColors } from "../theme/tokens";
+import {
+  radius,
+  spacing,
+  typography,
+  sectionLabel as sectionLabelToken,
+  getConditionColor,
+  type ThemeColors,
+} from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 
 interface ConditionSelectorProps {
@@ -43,7 +50,9 @@ export function ConditionSelector({
         {PATIENT_CONDITIONS.map((cond) => {
           const isSelected = selectedConditions.includes(cond.id);
           const cc = getConditionColor(cond.id, isDark);
-          const iconName = (cond.iconName in Ionicons.glyphMap ? cond.iconName : FALLBACK_ICON) as keyof typeof Ionicons.glyphMap;
+          const iconName = (
+            cond.iconName in Ionicons.glyphMap ? cond.iconName : FALLBACK_ICON
+          ) as keyof typeof Ionicons.glyphMap;
           return (
             <Pressable
               key={cond.id}
@@ -102,68 +111,69 @@ export function ConditionSelector({
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: spacing.lg,
-  },
-  headerRow: {
-    marginBottom: spacing.md,
-    gap: spacing.xs,
-  },
-  sectionLabel: {
-    ...sectionLabelToken,
-  },
-  selectedTitle: {
-    ...typography.subheading,
-    color: colors.dark,
-  },
-  scrollList: {
-    gap: spacing.sm,
-    paddingRight: spacing.sm,
-  },
-  pillButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.background,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  pillButtonActive: {
-    backgroundColor: colors.cardBg,
-  },
-  iconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pillTextWrap: {
-    maxWidth: 120,
-  },
-  pillText: {
-    ...typography.caption,
-    fontWeight: "600",
-    color: colors.slateMedium,
-  },
-  pillTextActive: {
-    fontWeight: "700",
-  },
-  checkCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.gray3,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      padding: spacing.lg,
+    },
+    headerRow: {
+      marginBottom: spacing.md,
+      gap: spacing.xs,
+    },
+    sectionLabel: {
+      ...sectionLabelToken,
+    },
+    selectedTitle: {
+      ...typography.subheading,
+      color: colors.dark,
+    },
+    scrollList: {
+      gap: spacing.sm,
+      paddingRight: spacing.sm,
+    },
+    pillButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.background,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      gap: spacing.sm,
+    },
+    pillButtonActive: {
+      backgroundColor: colors.cardBg,
+    },
+    iconWrap: {
+      width: 28,
+      height: 28,
+      borderRadius: radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pillTextWrap: {
+      maxWidth: 120,
+    },
+    pillText: {
+      ...typography.caption,
+      fontWeight: "600",
+      color: colors.slateMedium,
+    },
+    pillTextActive: {
+      fontWeight: "700",
+    },
+    checkCircle: {
+      width: 16,
+      height: 16,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: colors.gray3,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });

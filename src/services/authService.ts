@@ -42,17 +42,21 @@ export async function logout(): Promise<void> {
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  await apiFetch("/auth/change-password", {
+  // The server revokes all sessions on password change and returns a fresh
+  // token for this session — store it so the user stays signed in.
+  const data = await apiFetch<{ token?: string }>("/auth/change-password", {
     method: "POST",
     body: JSON.stringify({ currentPassword, newPassword }),
   });
+  if (data.token) await authStore.setToken(data.token);
 }
 
 export async function changeEmail(newEmail: string, password: string): Promise<PatientProfile> {
-  const data = await apiFetch<{ profile: PatientProfile }>("/auth/change-email", {
+  const data = await apiFetch<{ profile: PatientProfile; token?: string }>("/auth/change-email", {
     method: "POST",
     body: JSON.stringify({ newEmail, password }),
   });
+  if (data.token) await authStore.setToken(data.token);
   await authStore.updateProfile(data.profile);
   return data.profile;
 }

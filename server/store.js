@@ -1,7 +1,7 @@
-/* NutriCheck — SQLite persistence (zero external deps)
+/* NutriSafe — SQLite persistence (zero external deps)
  *
  * Uses Node's built-in `node:sqlite` (Node 22.5+). Data lives in
- * server/data/nutricheck.db (gitignored). If `node:sqlite` is unavailable
+ * server/data/nutrisafe.db (gitignored). If `node:sqlite` is unavailable
  * (older Node), it falls back to the legacy JSON file (db.json).
  *
  * Tables:
@@ -13,14 +13,14 @@
  *   save() → persists the live object (transactional)
  *
  * First run migrates legacy server/data/db.json automatically.
- * Set NUTRICHECK_DB_FILE to override the database path.
+ * Set NUTRISAFE_DB_FILE to override the database path.
  */
 
 const fs = require("fs");
 const path = require("path");
 
 const DATA_DIR = path.join(__dirname, "data");
-const DB_FILE = process.env.NUTRICHECK_DB_FILE || path.join(DATA_DIR, "nutricheck.db");
+const DB_FILE = process.env.NUTRISAFE_DB_FILE || path.join(DATA_DIR, "nutrisafe.db");
 const LEGACY_JSON = path.join(DATA_DIR, "db.json");
 
 let sqlite = null;
@@ -205,7 +205,7 @@ function migrateLegacyIfEmpty() {
   try {
     saveToSqlite();
     fs.renameSync(LEGACY_JSON, `${LEGACY_JSON}.migrated`);
-    console.log("[store] Migrated legacy db.json → nutricheck.db");
+    console.log("[store] Migrated legacy db.json → nutrisafe.db");
   } catch (err) {
     console.error("[store] Legacy migration failed:", err.message);
   }
@@ -257,7 +257,9 @@ function save() {
     const msg = (err && err.message) || "";
     const code = err && (err.code || err.errno);
     if (code === "SQLITE_BUSY" || /SQLITE_BUSY|database is locked/i.test(msg)) {
-      console.warn("[store] SQLite busy (SQLITE_BUSY) — keeping in-memory state, next save() will retry.");
+      console.warn(
+        "[store] SQLite busy (SQLITE_BUSY) — keeping in-memory state, next save() will retry."
+      );
       return;
     }
     console.error("[store] SQLite save failed:", msg || err);

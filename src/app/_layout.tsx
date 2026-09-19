@@ -3,7 +3,6 @@ import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { ActivityIndicator, View, useColorScheme } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { HeroUINativeProvider } from "heroui-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { authStore } from "../services/authStore";
@@ -98,7 +97,14 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
   if (!initialized) {
     const isDark = themeStore.resolve(systemScheme) === "dark";
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: isDark ? darkColors.background : colors.background }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: isDark ? darkColors.background : colors.background,
+        }}
+      >
         <ActivityIndicator color={colors.primaryText} />
       </View>
     );
@@ -114,17 +120,15 @@ export default function RootLayout(): JSX.Element {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <HeroUINativeProvider>
-        <AuthGate>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="login" />
-            <Stack.Screen name="signup" />
-            <Stack.Screen name="onboarding" />
-          </Stack>
-        </AuthGate>
-        <StatusBar style={effectiveScheme === "dark" ? "light" : "dark"} />
-      </HeroUINativeProvider>
+      <AuthGate>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="signup" />
+          <Stack.Screen name="onboarding" />
+        </Stack>
+      </AuthGate>
+      <StatusBar style={effectiveScheme === "dark" ? "light" : "dark"} />
     </GestureHandlerRootView>
   );
 }

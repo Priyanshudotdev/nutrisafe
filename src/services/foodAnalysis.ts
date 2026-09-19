@@ -10,11 +10,7 @@ import { identifyFoodFromImage, type FoodIdentificationResult } from "./foodVisi
 import { apiFetch } from "./apiClient";
 import { authStore } from "./authStore";
 
-export type AnalysisStep =
-  | "identifying"
-  | "nutrition"
-  | "guidelines"
-  | "recommendation";
+export type AnalysisStep = "identifying" | "nutrition" | "guidelines" | "recommendation";
 
 export const TEXT_ANALYSIS_STEPS: { id: AnalysisStep; label: string }[] = [
   { id: "nutrition", label: "Checking nutritional information…" },
@@ -66,23 +62,24 @@ interface ServerNutritionResponse {
 
 /**
  * Ask the server's AI layer for a full analysis across ALL selected conditions.
- * Returns null when the server has no AI configured, errors out, or the user
- * is offline/unauthenticated — the caller then uses the local rules engine.
- * Null is kept as the fallback signal (signature compatible); failures are
- * logged instead of failing silently.
+ * Returns `{ status: "ok", analysis }` on success, otherwise
+ * `{ status: "fallback", reason }` so callers can distinguish an
+ * unauthenticated user from a missing AI provider from a real error —
+ * all three still fall back to the local rules engine.
  */
-export type ServerFallbackReason =
-  | "unauthenticated"
-  | "no-ai"
-  | "error";
+export type ServerFallbackReason = "unauthenticated" | "no-ai" | "error";
+
+export type ServerAnalysisOutcome =
+  | { status: "ok"; analysis: Partial<FoodSafetyAnalysis> }
+  | { status: "fallback"; reason: ServerFallbackReason };
 
 async function requestServerAnalysis(
   foodName: string,
   conditions: PatientCondition[]
-): Promise<Partial<FoodSafetyAnalysis> | null> {
+): Promise<ServerAnalysisOutcome> {
   if (!authStore.isAuthenticated()) {
     console.warn("requestServerAnalysis: unauthenticated, using local engine");
-    return null;
+    return { status: "fallback", reason: "unauthenticated" };
   }
 
   const controller = new AbortController();
@@ -100,16 +97,23 @@ async function requestServerAnalysis(
     });
 
     if (data.source === "ai" && data.analysis && data.analysis.status) {
-      return data.analysis;
+      return { status: "ok", analysis: data.analysis };
     }
     console.warn("requestServerAnalysis: no AI result, using local engine");
-    return null;
+    return { status: "fallback", reason: "no-ai" };
   } catch (e) {
     console.warn("requestServerAnalysis failed, using local engine", e);
-    return null;
+    return { status: "fallback", reason: "error" };
   } finally {
     clearTimeout(timer);
   }
+}
+
+let analysisCounter = 0;
+
+function newAnalysisId(): string {
+  analysisCounter = (analysisCounter + 1) % Number.MAX_SAFE_INTEGER;
+  return `check-${Date.now()}-${analysisCounter}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function finalizeAnalysis(
@@ -120,7 +124,7 @@ function finalizeAnalysis(
   const conditionList = conditions.length > 0 ? conditions : (base.conditions ?? ["ckd"]);
   const trimmedQuery = foodQuery.trim();
   return {
-    id: `check-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: newAnalysisId(),
     foodName: base.foodName?.trim() ? base.foodName.trim() : trimmedQuery,
     category: base.category ?? "General Food",
     condition: conditionList[0],
@@ -132,7 +136,7 @@ function finalizeAnalysis(
     factors: base.factors ?? [],
     alternatives: base.alternatives ?? [],
     portionGuidance: base.portionGuidance,
-    timestamp: `Today, ${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,
+    timestamp: `${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,
   };
 }
 
@@ -148,7 +152,8 @@ export async function analyzeFoodByText(
 ): Promise<FoodSafetyAnalysis> {
   onStep?.("nutrition");
 
-  const serverBase = await requestServerAnalysis(foodQuery, conditions);
+  const serverOutcome = await requestServerAnalysis(foodQuery, conditions);
+  const serverBase = serverOutcome.status === "ok" ? serverOutcome.analysis : null;
 
   if (!serverBase) {
     // Local rules-engine path keeps the step UX while computing instantly.
@@ -164,8 +169,7 @@ export async function analyzeFoodByText(
     await delay(200);
   }
 
-  const base =
-    serverBase ?? evaluateFoodSafetyMulti(foodQuery, conditions);
+  const base = serverBase ?? evaluateFoodSafetyMulti(foodQuery, conditions);
   return persistAnalysis(applyLocationContext(finalizeAnalysis(base, foodQuery, conditions)));
 }
 
@@ -187,7 +191,8 @@ export async function analyzeFoodFromImage(
   }
 
   onStep?.("nutrition");
-  const serverBase = await requestServerAnalysis(identification.foodName, conditions);
+  const serverOutcome = await requestServerAnalysis(identification.foodName, conditions);
+  const serverBase = serverOutcome.status === "ok" ? serverOutcome.analysis : null;
 
   if (!serverBase) {
     await delay(400);
@@ -202,8 +207,7 @@ export async function analyzeFoodFromImage(
     await delay(200);
   }
 
-  const base =
-    serverBase ?? evaluateFoodSafetyMulti(identification.foodName, conditions);
+  const base = serverBase ?? evaluateFoodSafetyMulti(identification.foodName, conditions);
   const analysis = await persistAnalysis({
     ...applyLocationContext(finalizeAnalysis(base, identification.foodName, conditions)),
     source: "scan",
@@ -219,7 +223,8 @@ export async function analyzeConfirmedFood(
   onStep?: (step: AnalysisStep) => void
 ): Promise<FoodSafetyAnalysis> {
   onStep?.("nutrition");
-  const serverBase = await requestServerAnalysis(foodName, conditions);
+  const serverOutcome = await requestServerAnalysis(foodName, conditions);
+  const serverBase = serverOutcome.status === "ok" ? serverOutcome.analysis : null;
 
   if (!serverBase) {
     await delay(350);
@@ -234,8 +239,7 @@ export async function analyzeConfirmedFood(
     await delay(200);
   }
 
-  const base =
-    serverBase ?? evaluateFoodSafetyMulti(foodName, conditions);
+  const base = serverBase ?? evaluateFoodSafetyMulti(foodName, conditions);
   return persistAnalysis({
     ...applyLocationContext(finalizeAnalysis(base, foodName, conditions)),
     source: "scan",

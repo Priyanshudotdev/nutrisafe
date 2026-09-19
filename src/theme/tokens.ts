@@ -140,7 +140,12 @@ export const controlHeight = {
 // static cards (they are separated by borders, not shadows).
 export const shadow = {
   subtle: Platform.select({
-    ios: { shadowColor: "#0F172A", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
+    ios: {
+      shadowColor: "#0F172A",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+    },
     android: { elevation: 1 },
     default: {},
   }),
@@ -163,15 +168,33 @@ export function getStatusColors(status: "safe" | "moderation" | "not_recommended
   }
   switch (status) {
     case "safe":
-      return { text: colors.safeText, bg: colors.safeBg, border: colors.safeBorder, icon: colors.safeIcon };
+      return {
+        text: colors.safeText,
+        bg: colors.safeBg,
+        border: colors.safeBorder,
+        icon: colors.safeIcon,
+      };
     case "moderation":
-      return { text: colors.moderationText, bg: colors.moderationBg, border: colors.moderationBorder, icon: colors.moderationIcon };
+      return {
+        text: colors.moderationText,
+        bg: colors.moderationBg,
+        border: colors.moderationBorder,
+        icon: colors.moderationIcon,
+      };
     case "not_recommended":
-      return { text: colors.dangerText, bg: colors.dangerBg, border: colors.dangerBorder, icon: colors.dangerIcon };
+      return {
+        text: colors.dangerText,
+        bg: colors.dangerBg,
+        border: colors.dangerBorder,
+        icon: colors.dangerIcon,
+      };
   }
 }
 
-export function getConditionColor(conditionId: string, dark = false): { accent: string; bg: string } {
+export function getConditionColor(
+  conditionId: string,
+  dark = false
+): { accent: string; bg: string } {
   if (dark) {
     switch (conditionId) {
       case "diabetes":

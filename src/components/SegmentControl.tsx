@@ -31,7 +31,9 @@ export function SegmentControl<T extends string>({
             accessibilityLabel={seg.label}
             accessibilityHint={`Select ${seg.label}`}
           >
-            <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>{seg.label}</Text>
+            <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
+              {seg.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -39,31 +41,32 @@ export function SegmentControl<T extends string>({
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    backgroundColor: colors.bgSubtle,
-    borderRadius: radius.lg,
-    padding: spacing.xs,
-    gap: spacing.xs,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    alignItems: "center",
-  },
-  segmentActive: {
-    backgroundColor: colors.cardBg,
-    ...shadow.subtle,
-  },
-  segmentText: {
-    ...typography.bodySmall,
-    fontWeight: "600",
-    color: colors.slateMuted,
-  },
-  segmentTextActive: {
-    color: colors.dark,
-    fontWeight: "700",
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      backgroundColor: colors.bgSubtle,
+      borderRadius: radius.lg,
+      padding: spacing.xs,
+      gap: spacing.xs,
+    },
+    segment: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.md,
+      alignItems: "center",
+    },
+    segmentActive: {
+      backgroundColor: colors.cardBg,
+      ...shadow.subtle,
+    },
+    segmentText: {
+      ...typography.bodySmall,
+      fontWeight: "600",
+      color: colors.slateMuted,
+    },
+    segmentTextActive: {
+      color: colors.dark,
+      fontWeight: "700",
+    },
+  });

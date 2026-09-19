@@ -22,7 +22,15 @@ import {
   type PatientCondition,
   type PatientProfile,
 } from "../../data/foodSafety";
-import { controlHeight, getConditionColor, radius, sectionLabel, spacing, typography, type ThemeColors } from "../../theme/tokens";
+import {
+  controlHeight,
+  getConditionColor,
+  radius,
+  sectionLabel,
+  spacing,
+  typography,
+  type ThemeColors,
+} from "../../theme/tokens";
 import { useThemeColors } from "../../hooks/useThemeColors";
 import { SegmentControl } from "../../components/SegmentControl";
 import { AppButton } from "../../components/AppButton";
@@ -65,13 +73,28 @@ function SettingsRow({ icon, label, subtitle, onPress, trailing, destructive }: 
       accessibilityRole={onPress ? "button" : undefined}
     >
       <View style={[styles.settingsIcon, destructive && styles.settingsIconDestructive]}>
-        <Ionicons name={icon} size={18} color={destructive ? colors.dangerIcon : colors.primaryText} />
+        <Ionicons
+          name={icon}
+          size={18}
+          color={destructive ? colors.dangerIcon : colors.primaryText}
+        />
       </View>
       <View style={styles.settingsText}>
-        <Text style={[styles.settingsLabel, destructive && styles.settingsLabelDestructive]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
-        {subtitle ? <Text style={styles.settingsSubtitle} numberOfLines={1} ellipsizeMode="tail">{subtitle}</Text> : null}
+        <Text
+          style={[styles.settingsLabel, destructive && styles.settingsLabelDestructive]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {label}
+        </Text>
+        {subtitle ? (
+          <Text style={styles.settingsSubtitle} numberOfLines={1} ellipsizeMode="tail">
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
-      {trailing ?? (onPress ? <Ionicons name="chevron-forward" size={18} color={colors.gray3} /> : null)}
+      {trailing ??
+        (onPress ? <Ionicons name="chevron-forward" size={18} color={colors.gray3} /> : null)}
     </Pressable>
   );
 }
@@ -156,7 +179,8 @@ export default function AccountScreen() {
         foodSafetyStore.hydratePatient(profile);
       } else if (editField === "age") {
         const age = Number(editValue.trim());
-        if (!Number.isInteger(age) || age < 1 || age > 120) throw new Error("Enter a valid age (1–120).");
+        if (!Number.isInteger(age) || age < 1 || age > 120)
+          throw new Error("Enter a valid age (1–120).");
         const profile = await updateProfile({ age });
         foodSafetyStore.hydratePatient(profile);
       } else if (editField === "gender") {
@@ -170,7 +194,8 @@ export default function AccountScreen() {
         const profile = await updateProfile({ notes: editValue });
         foodSafetyStore.hydratePatient(profile);
       } else if (editField === "email") {
-        if (!editValue.trim() || !editValue2) throw new Error("New email and current password are required.");
+        if (!editValue.trim() || !editValue2)
+          throw new Error("New email and current password are required.");
         const profile = await changeEmail(editValue.trim().toLowerCase(), editValue2);
         foodSafetyStore.hydratePatient(profile);
       } else if (editField === "password") {
@@ -178,14 +203,20 @@ export default function AccountScreen() {
         if (editValue2.length < 8) throw new Error("New password must be at least 8 characters.");
         await changePassword(editValue, editValue2);
         try {
-          await notificationStore.push("Password updated", "Your password was changed successfully.", { force: true });
+          await notificationStore.push(
+            "Password updated",
+            "Your password was changed successfully.",
+            { force: true }
+          );
         } catch {
           Alert.alert("Password updated", "Your password was changed successfully.");
         }
       }
       setEditField(null);
     } catch (e) {
-      setEditError(e instanceof ApiError || e instanceof Error ? e.message : "Could not save changes.");
+      setEditError(
+        e instanceof ApiError || e instanceof Error ? e.message : "Could not save changes."
+      );
     } finally {
       setSaving(false);
     }
@@ -198,14 +229,18 @@ export default function AccountScreen() {
       foodSafetyStore.hydratePatient(profile);
       foodSafetyStore.setSelectedConditions(newConditions);
     } catch (e) {
-      Alert.alert("Update failed", e instanceof ApiError ? e.message : "Could not update conditions.");
+      Alert.alert(
+        "Update failed",
+        e instanceof ApiError ? e.message : "Could not update conditions."
+      );
     }
   };
 
   const toggleCondition = (c: PatientCondition) => {
-    const current = Array.isArray(patient.conditions) && patient.conditions.length > 0
-      ? patient.conditions
-      : [patient.primaryCondition];
+    const current =
+      Array.isArray(patient.conditions) && patient.conditions.length > 0
+        ? patient.conditions
+        : [patient.primaryCondition];
     const next = current.includes(c) ? current.filter((x) => x !== c) : [...current, c];
     if (next.length === 0) return;
     handleConditionsChange(next);
@@ -264,17 +299,21 @@ export default function AccountScreen() {
                 ...(extraction.doctorName ? { doctorName: extraction.doctorName } : {}),
               });
               foodSafetyStore.hydratePatient(profile);
-              await notificationStore.push("Profile updated", "Prescription details applied to your health profile.");
+              await notificationStore.push(
+                "Profile updated",
+                "Prescription details applied to your health profile."
+              );
             } catch (e) {
-              Alert.alert("Update failed", e instanceof ApiError ? e.message : "Could not apply prescription.");
+              Alert.alert(
+                "Update failed",
+                e instanceof ApiError ? e.message : "Could not apply prescription."
+              );
             }
           },
         },
       ]
     );
   };
-
-
 
   const handleClearHistory = () => {
     if (clearingHistory) return;
@@ -299,12 +338,18 @@ export default function AccountScreen() {
               await clearServerHistory();
             } catch {
               foodSafetyStore.setHistory(snapshot);
-              Alert.alert("Couldn't clear history", "Your history could not be cleared. Please try again.");
+              Alert.alert(
+                "Couldn't clear history",
+                "Your history could not be cleared. Please try again."
+              );
               setClearingHistory(false);
               return;
             }
             setClearingHistory(false);
-            await notificationStore.push("History cleared", `${count} saved check${count === 1 ? "" : "s"} removed.`);
+            await notificationStore.push(
+              "History cleared",
+              `${count} saved check${count === 1 ? "" : "s"} removed.`
+            );
           },
         },
       ]
@@ -312,16 +357,26 @@ export default function AccountScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert("Log out of NutriCheck?", "Your profile and history stay synced to your account.", [
+    Alert.alert("Log out of NutriSafe?", "Your profile and history stay synced to your account.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Log out",
         style: "destructive",
         onPress: async () => {
-          await logout();
-          foodSafetyStore.resetSession();
-          await notificationStore.clear();
-          router.replace("/login");
+          try {
+            await logout();
+          } catch {
+            // authService.logout() clears local state in a finally block, so
+            // a throw here is unexpected — still finish signing out locally.
+          } finally {
+            foodSafetyStore.resetSession();
+            try {
+              await notificationStore.clear();
+            } catch {
+              /* notifications are non-critical on logout */
+            }
+            router.replace("/login");
+          }
         },
       },
     ]);
@@ -331,7 +386,8 @@ export default function AccountScreen() {
     await notificationStore.setEnabled(v);
   };
 
-  const themeLabel = (m: ThemeMode) => (m === "system" ? "System" : m === "dark" ? "Dark" : "Light");
+  const themeLabel = (m: ThemeMode) =>
+    m === "system" ? "System" : m === "dark" ? "Dark" : "Light";
 
   const cycleTheme = () => {
     const next: ThemeMode = mode === "light" ? "dark" : mode === "dark" ? "system" : "light";
@@ -361,10 +417,14 @@ export default function AccountScreen() {
           <>
             <View style={styles.avatarSection}>
               <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>{(patient.name || "U").substring(0, 2).toUpperCase()}</Text>
+                <Text style={styles.avatarText}>
+                  {(patient.name || "U").substring(0, 2).toUpperCase()}
+                </Text>
               </View>
               <View style={styles.avatarTextWrap}>
-                <Text style={styles.avatarName} numberOfLines={1} ellipsizeMode="tail">{patient.name}</Text>
+                <Text style={styles.avatarName} numberOfLines={1} ellipsizeMode="tail">
+                  {patient.name}
+                </Text>
                 <Text style={styles.avatarSubtitle} numberOfLines={1} ellipsizeMode="tail">
                   {patient.age != null ? `${patient.age} yrs` : "Age not set"}
                   {" · "}
@@ -403,21 +463,38 @@ export default function AccountScreen() {
               />
             </View>
 
-            <View style={[styles.conditionCard, { backgroundColor: colors.primaryMuted, borderColor: colors.primaryLight }]}>
+            <View
+              style={[
+                styles.conditionCard,
+                { backgroundColor: colors.primaryMuted, borderColor: colors.primaryLight },
+              ]}
+            >
               <Text style={styles.conditionLabel}>
                 Medical conditions · {activeConditions.length} selected
               </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.conditionPills}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.conditionPills}
+              >
                 {PATIENT_CONDITIONS.map((cond) => {
                   const selected = activeConditions.includes(cond.id);
                   const cc = getConditionColor(cond.id, isDark);
                   return (
                     <Pressable
                       key={cond.id}
-                      style={[styles.conditionPill, selected && { borderColor: cc.accent, backgroundColor: colors.cardBg }]}
+                      style={[
+                        styles.conditionPill,
+                        selected && { borderColor: cc.accent, backgroundColor: colors.cardBg },
+                      ]}
                       onPress={() => toggleCondition(cond.id)}
                     >
-                      <Text style={[styles.conditionPillText, selected && { color: cc.accent }]} numberOfLines={1}>{cond.shortName}</Text>
+                      <Text
+                        style={[styles.conditionPillText, selected && { color: cc.accent }]}
+                        numberOfLines={1}
+                      >
+                        {cond.shortName}
+                      </Text>
                       {selected && <Ionicons name="checkmark" size={12} color={cc.accent} />}
                     </Pressable>
                   );
@@ -425,7 +502,12 @@ export default function AccountScreen() {
               </ScrollView>
               <View style={styles.rxScanRow}>
                 {rxScanning ? (
-                  <AppButton label="Reading prescription…" size="sm" loading style={styles.rxButton} />
+                  <AppButton
+                    label="Reading prescription…"
+                    size="sm"
+                    loading
+                    style={styles.rxButton}
+                  />
                 ) : (
                   <>
                     <AppButton
@@ -498,8 +580,16 @@ export default function AccountScreen() {
                 </View>
                 {notifications.slice(0, 5).map((n) => (
                   <View key={n.id} style={styles.notifItem}>
-                    <Text style={[styles.notifTitle, !n.read && styles.notifUnread]} numberOfLines={1} ellipsizeMode="tail">{n.title}</Text>
-                    <Text style={styles.notifBody} numberOfLines={2} ellipsizeMode="tail">{n.body}</Text>
+                    <Text
+                      style={[styles.notifTitle, !n.read && styles.notifUnread]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {n.title}
+                    </Text>
+                    <Text style={styles.notifBody} numberOfLines={2} ellipsizeMode="tail">
+                      {n.body}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -524,7 +614,12 @@ export default function AccountScreen() {
                 onPress={() => openEdit("password")}
               />
               <View style={styles.divider} />
-              <SettingsRow icon="log-out-outline" label="Log out" destructive onPress={handleLogout} />
+              <SettingsRow
+                icon="log-out-outline"
+                label="Log out"
+                destructive
+                onPress={handleLogout}
+              />
             </View>
 
             <Text style={styles.sectionLabel}>Privacy & data</Text>
@@ -532,11 +627,11 @@ export default function AccountScreen() {
               <SettingsRow
                 icon="shield-outline"
                 label="Data handling"
-                subtitle="Profile & history sync to your NutriCheck account"
+                subtitle="Profile & history sync to your NutriSafe account"
                 onPress={() =>
                   Alert.alert(
                     "Data handling",
-                    "Your profile and food-check history are stored in the app's local SQLite database on the NutriCheck API server. Vision API keys stay on the server."
+                    "Your profile and food-check history are stored in the app's local SQLite database on the NutriSafe API server. Vision API keys stay on the server."
                   )
                 }
               />
@@ -544,7 +639,11 @@ export default function AccountScreen() {
               <SettingsRow
                 icon="time-outline"
                 label="Search history"
-                subtitle={clearingHistory ? "Clearing…" : `${historyCount} saved check${historyCount === 1 ? "" : "s"}`}
+                subtitle={
+                  clearingHistory
+                    ? "Clearing…"
+                    : `${historyCount} saved check${historyCount === 1 ? "" : "s"}`
+                }
                 onPress={clearingHistory ? undefined : handleClearHistory}
               />
             </View>
@@ -552,11 +651,16 @@ export default function AccountScreen() {
         )}
 
         <MedicalDisclaimer />
-        <Text style={styles.appInfo}>NutriCheck · v1.0.0</Text>
+        <Text style={styles.appInfo}>NutriSafe · v1.0.0</Text>
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      <Modal visible={editField !== null} transparent animationType="slide" onRequestClose={() => setEditField(null)}>
+      <Modal
+        visible={editField !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditField(null)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>
@@ -568,7 +672,9 @@ export default function AccountScreen() {
                     ? "Select Gender"
                     : editField === "city"
                       ? "Edit Location / City"
-                      : editField ? `Edit ${editField.charAt(0).toUpperCase() + editField.slice(1)}` : ""}
+                      : editField
+                        ? `Edit ${editField.charAt(0).toUpperCase() + editField.slice(1)}`
+                        : ""}
             </Text>
 
             {editError && <Text style={styles.modalError}>{editError}</Text>}
@@ -622,8 +728,14 @@ export default function AccountScreen() {
                       style={[styles.genderModalPill, selected && styles.genderModalPillActive]}
                       onPress={() => setEditValue(g)}
                     >
-                      <Text style={[styles.genderModalText, selected && styles.genderModalTextActive]}>{g}</Text>
-                      {selected && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
+                      <Text
+                        style={[styles.genderModalText, selected && styles.genderModalTextActive]}
+                      >
+                        {g}
+                      </Text>
+                      {selected && (
+                        <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                      )}
                     </Pressable>
                   );
                 })}
@@ -648,7 +760,13 @@ export default function AccountScreen() {
             )}
 
             <View style={styles.modalActions}>
-              <AppButton label="Cancel" onPress={() => setEditField(null)} variant="secondary" size="md" style={styles.flex} />
+              <AppButton
+                label="Cancel"
+                onPress={() => setEditField(null)}
+                variant="secondary"
+                size="md"
+                style={styles.flex}
+              />
               <AppButton
                 label="Save"
                 onPress={saveEdit}
@@ -664,120 +782,157 @@ export default function AccountScreen() {
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  segmentWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
-  scrollContent: { paddingHorizontal: spacing.lg, gap: spacing.lg },
-  avatarSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.lg,
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: spacing.lg,
-  },
-  avatarCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { fontSize: 20, fontWeight: "800", color: colors.primaryText },
-  avatarTextWrap: { flex: 1, minWidth: 0 },
-  avatarName: { ...typography.subheading, color: colors.dark },
-  avatarSubtitle: { fontSize: typography.caption.fontSize, color: colors.slateMuted, marginTop: 2 },
-  card: {
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    overflow: "hidden",
-    padding: spacing.lg,
-  },
-  cardTitle: { ...typography.title, color: colors.dark },
-  conditionCard: { borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1.5, gap: spacing.sm },
-  conditionLabel: { fontSize: 12, fontWeight: "600", color: colors.slateLight },
-  conditionPills: { gap: spacing.sm, paddingTop: spacing.sm, alignItems: "center" },
-  conditionPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    marginRight: spacing.sm,
-    backgroundColor: "transparent",
-  },
-  conditionPillText: { fontSize: 12, fontWeight: "600", color: colors.slateMedium },
-  rxScanRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
-  rxButton: { flex: 1 },
-  sectionLabel: { ...sectionLabel, marginTop: spacing.sm },
-  settingsRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm },
-  settingsIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  settingsIconDestructive: { backgroundColor: colors.dangerBg },
-  settingsText: { flex: 1, gap: 2 },
-  settingsLabel: { ...typography.title, color: colors.dark },
-  settingsLabelDestructive: { color: colors.dangerText },
-  settingsSubtitle: { fontSize: typography.caption.fontSize, color: colors.slateMuted },
-  divider: { height: 1, backgroundColor: colors.cardBorder, marginVertical: spacing.sm },
-  notifHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
-  linkSmall: { fontSize: typography.caption.fontSize, fontWeight: "600", color: colors.primaryText },
-  notifItem: { paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.cardBorder },
-  notifTitle: { fontSize: typography.bodySmall.fontSize, fontWeight: "600", color: colors.slateMedium },
-  notifUnread: { color: colors.dark, fontWeight: "700" },
-  notifBody: { fontSize: typography.caption.fontSize, color: colors.slateMuted, marginTop: 2 },
-  appInfo: { fontSize: typography.micro.fontSize, color: colors.slateMuted, textAlign: "center" },
-  bottomSpacer: { height: 100 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  modalSheet: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: radius.xxl,
-    borderTopRightRadius: radius.xxl,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
-    gap: spacing.md,
-  },
-  modalTitle: { fontSize: typography.subheading.fontSize, fontWeight: "700", color: colors.dark },
-  modalError: { fontSize: typography.bodySmall.fontSize, color: colors.dangerText },
-  modalInput: {
-    backgroundColor: colors.cardBg,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.lg,
-    fontSize: typography.body.fontSize + 1,
-    color: colors.dark,
-    height: controlHeight.md,
-  },
-  modalInputTall: { height: undefined, minHeight: 100, textAlignVertical: "top", paddingVertical: spacing.md },
-  modalActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
-  genderModalOptions: { gap: spacing.sm },
-  genderModalPill: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.cardBg,
-  },
-  genderModalPillActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  genderModalText: { fontSize: typography.body.fontSize, fontWeight: "600", color: colors.dark },
-  genderModalTextActive: { color: colors.primaryText, fontWeight: "700" },
-  flex: { flex: 1 },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    segmentWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
+    scrollContent: { paddingHorizontal: spacing.lg, gap: spacing.lg },
+    avatarSection: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.lg,
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      padding: spacing.lg,
+    },
+    avatarCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarText: { fontSize: 20, fontWeight: "800", color: colors.primaryText },
+    avatarTextWrap: { flex: 1, minWidth: 0 },
+    avatarName: { ...typography.subheading, color: colors.dark },
+    avatarSubtitle: {
+      fontSize: typography.caption.fontSize,
+      color: colors.slateMuted,
+      marginTop: 2,
+    },
+    card: {
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      overflow: "hidden",
+      padding: spacing.lg,
+    },
+    cardTitle: { ...typography.title, color: colors.dark },
+    conditionCard: {
+      borderRadius: radius.xl,
+      padding: spacing.lg,
+      borderWidth: 1.5,
+      gap: spacing.sm,
+    },
+    conditionLabel: { fontSize: 12, fontWeight: "600", color: colors.slateLight },
+    conditionPills: { gap: spacing.sm, paddingTop: spacing.sm, alignItems: "center" },
+    conditionPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 6,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      marginRight: spacing.sm,
+      backgroundColor: "transparent",
+    },
+    conditionPillText: { fontSize: 12, fontWeight: "600", color: colors.slateMedium },
+    rxScanRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+    rxButton: { flex: 1 },
+    sectionLabel: { ...sectionLabel, marginTop: spacing.sm },
+    settingsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    settingsIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.md,
+      backgroundColor: colors.primaryMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    settingsIconDestructive: { backgroundColor: colors.dangerBg },
+    settingsText: { flex: 1, gap: 2 },
+    settingsLabel: { ...typography.title, color: colors.dark },
+    settingsLabelDestructive: { color: colors.dangerText },
+    settingsSubtitle: { fontSize: typography.caption.fontSize, color: colors.slateMuted },
+    divider: { height: 1, backgroundColor: colors.cardBorder, marginVertical: spacing.sm },
+    notifHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    linkSmall: {
+      fontSize: typography.caption.fontSize,
+      fontWeight: "600",
+      color: colors.primaryText,
+    },
+    notifItem: {
+      paddingVertical: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.cardBorder,
+    },
+    notifTitle: {
+      fontSize: typography.bodySmall.fontSize,
+      fontWeight: "600",
+      color: colors.slateMedium,
+    },
+    notifUnread: { color: colors.dark, fontWeight: "700" },
+    notifBody: { fontSize: typography.caption.fontSize, color: colors.slateMuted, marginTop: 2 },
+    appInfo: { fontSize: typography.micro.fontSize, color: colors.slateMuted, textAlign: "center" },
+    bottomSpacer: { height: 100 },
+    modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+    modalSheet: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: radius.xxl,
+      borderTopRightRadius: radius.xxl,
+      padding: spacing.xl,
+      paddingBottom: spacing.xxxl,
+      gap: spacing.md,
+    },
+    modalTitle: { fontSize: typography.subheading.fontSize, fontWeight: "700", color: colors.dark },
+    modalError: { fontSize: typography.bodySmall.fontSize, color: colors.dangerText },
+    modalInput: {
+      backgroundColor: colors.cardBg,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      borderRadius: radius.lg,
+      paddingHorizontal: spacing.lg,
+      fontSize: typography.body.fontSize + 1,
+      color: colors.dark,
+      height: controlHeight.md,
+    },
+    modalInputTall: {
+      height: undefined,
+      minHeight: 100,
+      textAlignVertical: "top",
+      paddingVertical: spacing.md,
+    },
+    modalActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+    genderModalOptions: { gap: spacing.sm },
+    genderModalPill: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.cardBg,
+    },
+    genderModalPillActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+    genderModalText: { fontSize: typography.body.fontSize, fontWeight: "600", color: colors.dark },
+    genderModalTextActive: { color: colors.primaryText, fontWeight: "700" },
+    flex: { flex: 1 },
+  });

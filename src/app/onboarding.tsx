@@ -17,14 +17,25 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { controlHeight, radius, sectionLabel, spacing, typography, getConditionColor, type ThemeColors } from "../theme/tokens";
+import {
+  controlHeight,
+  radius,
+  sectionLabel,
+  spacing,
+  typography,
+  getConditionColor,
+  type ThemeColors,
+} from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 import { AppButton } from "../components/AppButton";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { GENDER_OPTIONS, PATIENT_CONDITIONS, type PatientCondition } from "../data/foodSafety";
 import { completeOnboarding } from "../services/onboardingService";
 import { formatAuthError } from "../services/authService";
-import { extractPrescriptionFromImage, type PrescriptionExtraction } from "../services/prescriptionVision";
+import {
+  extractPrescriptionFromImage,
+  type PrescriptionExtraction,
+} from "../services/prescriptionVision";
 import { authStore } from "../services/authStore";
 
 type PrescriptionPhase = "idle" | "extracting" | "preview" | "applied";
@@ -64,9 +75,7 @@ export default function OnboardingScreen() {
 
   const toggleCondition = (c: PatientCondition) => {
     setError(null);
-    setConditions((prev) =>
-      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
-    );
+    setConditions((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
   };
 
   const showRxSettingsAlert = (source: "camera" | "library") => {
@@ -75,7 +84,12 @@ export default function OnboardingScreen() {
       "Allow photo access to scan your prescription, or fill the form manually.",
       [
         ...(source === "camera"
-          ? [{ text: "Upload instead", onPress: () => void handlePickPrescription("library") } as const]
+          ? [
+              {
+                text: "Upload instead",
+                onPress: () => void handlePickPrescription("library"),
+              } as const,
+            ]
           : []),
         { text: "Open Settings", onPress: () => void Linking.openSettings() },
         { text: "Fill manually", style: "cancel" as const },
@@ -147,7 +161,9 @@ export default function OnboardingScreen() {
       }
     } catch {
       if (rxCancelled.current) return;
-      setRxError("We couldn't read the prescription. Try a clearer photo or enter details manually.");
+      setRxError(
+        "We couldn't read the prescription. Try a clearer photo or enter details manually."
+      );
       setRxPhase("idle");
     }
   };
@@ -247,7 +263,10 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.flex}
+      >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={styles.eyebrow}>Almost there</Text>
           <Text style={styles.heading}>Your health profile</Text>
@@ -279,7 +298,11 @@ export default function OnboardingScreen() {
               <>
                 {rxError && (
                   <View style={styles.rxBanner}>
-                    <Ionicons name="information-circle-outline" size={14} color={colors.slateMedium} />
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={14}
+                      color={colors.slateMedium}
+                    />
                     <Text style={styles.rxBannerText}>{rxError}</Text>
                   </View>
                 )}
@@ -361,11 +384,15 @@ export default function OnboardingScreen() {
                 {rxResult.allergensList && rxResult.allergensList.length > 0 && (
                   <View style={styles.rxFoundRow}>
                     <Text style={styles.rxFoundLabel}>Allergens:</Text>
-                    <Text style={styles.rxFoundValue} numberOfLines={2} ellipsizeMode="tail">{rxResult.allergensList.join(", ")}</Text>
+                    <Text style={styles.rxFoundValue} numberOfLines={2} ellipsizeMode="tail">
+                      {rxResult.allergensList.join(", ")}
+                    </Text>
                   </View>
                 )}
                 {rxResult.doctorName ? (
-                  <Text style={styles.rxFoundValue} numberOfLines={1} ellipsizeMode="tail">Doctor: {rxResult.doctorName}</Text>
+                  <Text style={styles.rxFoundValue} numberOfLines={1} ellipsizeMode="tail">
+                    Doctor: {rxResult.doctorName}
+                  </Text>
                 ) : null}
                 <AppButton
                   label="Apply to my profile"
@@ -480,7 +507,9 @@ export default function OnboardingScreen() {
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
                   >
-                    <Text style={[styles.genderText, selected && styles.genderTextActive]}>{g}</Text>
+                    <Text style={[styles.genderText, selected && styles.genderTextActive]}>
+                      {g}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -546,149 +575,193 @@ export default function OnboardingScreen() {
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
-  eyebrow: { ...sectionLabel, color: colors.primaryText, marginBottom: spacing.sm },
-  heading: { ...typography.display, color: colors.dark, marginBottom: 6 },
-  subheading: { fontSize: typography.body.fontSize, color: colors.slateMuted, lineHeight: 20, marginBottom: spacing.xl },
-  errorWrap: { marginBottom: spacing.lg },
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+    content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
+    eyebrow: { ...sectionLabel, color: colors.primaryText, marginBottom: spacing.sm },
+    heading: { ...typography.display, color: colors.dark, marginBottom: 6 },
+    subheading: {
+      fontSize: typography.body.fontSize,
+      color: colors.slateMuted,
+      lineHeight: 20,
+      marginBottom: spacing.xl,
+    },
+    errorWrap: { marginBottom: spacing.lg },
 
-  // ─── Prescription card ───
-  rxCard: {
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-    gap: spacing.md,
-  },
-  rxHeader: { flexDirection: "row", gap: spacing.md, alignItems: "center" },
-  rxIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rxHeaderTextWrap: { flex: 1, gap: 2 },
-  rxTitle: { fontSize: typography.title.fontSize, fontWeight: "700", color: colors.dark },
-  rxSubtitle: { fontSize: typography.caption.fontSize, color: colors.slateMuted, lineHeight: 16 },
-  rxActions: { flexDirection: "row", gap: spacing.sm },
-  rxBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: colors.bgSubtle,
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  rxBannerText: { flex: 1, fontSize: 12, color: colors.slateMedium, lineHeight: 17 },
-  rxExtracting: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.lg,
-  },
-  rxExtractingText: { fontSize: typography.bodySmall.fontSize, color: colors.slateMedium, fontWeight: "600" },
-  rxPreview: {
-    backgroundColor: colors.safeBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.safeBorder,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  rxApplied: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  rxAppliedText: { flex: 1, fontSize: 12, color: colors.safeText, fontWeight: "600", lineHeight: 17 },
-  rxPreviewHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  rxPreviewTitle: { fontSize: 13, fontWeight: "700", color: colors.safeText, textTransform: "capitalize" },
-  rxSummaryWrap: { gap: 2 },
-  rxSummary: { fontSize: 12, color: colors.slateMedium, lineHeight: 17 },
-  rxExpandToggle: { fontSize: 12, fontWeight: "700", color: colors.primaryText },
-  rxAppliedWrap: { gap: spacing.sm },
-  rxFoundRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" },
-  rxFoundLabel: { fontSize: 12, fontWeight: "700", color: colors.slateLight },
-  rxFoundValue: { fontSize: 12, color: colors.slateMedium, flexShrink: 1 },
-  rxChips: { flexDirection: "row", gap: 4, flexWrap: "wrap" },
-  rxChip: {
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: colors.safeBorder,
-  },
-  rxChipText: { fontSize: typography.micro.fontSize, fontWeight: "700", color: colors.safeText },
-  rxApplyButton: { flex: 1, marginTop: 2 },
+    // ─── Prescription card ───
+    rxCard: {
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      padding: spacing.lg,
+      marginBottom: spacing.xl,
+      gap: spacing.md,
+    },
+    rxHeader: { flexDirection: "row", gap: spacing.md, alignItems: "center" },
+    rxIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.md,
+      backgroundColor: colors.primaryMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    rxHeaderTextWrap: { flex: 1, gap: 2 },
+    rxTitle: { fontSize: typography.title.fontSize, fontWeight: "700", color: colors.dark },
+    rxSubtitle: { fontSize: typography.caption.fontSize, color: colors.slateMuted, lineHeight: 16 },
+    rxActions: { flexDirection: "row", gap: spacing.sm },
+    rxBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      backgroundColor: colors.bgSubtle,
+      borderRadius: radius.md,
+      padding: spacing.md,
+    },
+    rxBannerText: { flex: 1, fontSize: 12, color: colors.slateMedium, lineHeight: 17 },
+    rxExtracting: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.md,
+      paddingVertical: spacing.lg,
+    },
+    rxExtractingText: {
+      fontSize: typography.bodySmall.fontSize,
+      color: colors.slateMedium,
+      fontWeight: "600",
+    },
+    rxPreview: {
+      backgroundColor: colors.safeBg,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.safeBorder,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    rxApplied: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    rxAppliedText: {
+      flex: 1,
+      fontSize: 12,
+      color: colors.safeText,
+      fontWeight: "600",
+      lineHeight: 17,
+    },
+    rxPreviewHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+    rxPreviewTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.safeText,
+      textTransform: "capitalize",
+    },
+    rxSummaryWrap: { gap: 2 },
+    rxSummary: { fontSize: 12, color: colors.slateMedium, lineHeight: 17 },
+    rxExpandToggle: { fontSize: 12, fontWeight: "700", color: colors.primaryText },
+    rxAppliedWrap: { gap: spacing.sm },
+    rxFoundRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" },
+    rxFoundLabel: { fontSize: 12, fontWeight: "700", color: colors.slateLight },
+    rxFoundValue: { fontSize: 12, color: colors.slateMedium, flexShrink: 1 },
+    rxChips: { flexDirection: "row", gap: 4, flexWrap: "wrap" },
+    rxChip: {
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.pill,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderWidth: 1,
+      borderColor: colors.safeBorder,
+    },
+    rxChipText: { fontSize: typography.micro.fontSize, fontWeight: "700", color: colors.safeText },
+    rxApplyButton: { flex: 1, marginTop: 2 },
 
-  // ─── Form ───
-  label: {
-    fontSize: typography.bodySmall.fontSize,
-    fontWeight: "700",
-    color: colors.dark,
-    marginBottom: spacing.sm,
-  },
-  conditionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.xl },
-  conditionCard: {
-    width: "48%",
-    flexGrow: 1,
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    padding: spacing.md,
-    gap: 4,
-  },
-  conditionCardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  conditionCheck: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.gray3,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  conditionTitle: { fontSize: typography.body.fontSize, fontWeight: "700", color: colors.dark, marginTop: 4 },
-  conditionDesc: { fontSize: typography.micro.fontSize, color: colors.slateMuted, lineHeight: 15 },
-  row: { flexDirection: "row", gap: spacing.md },
-  field: { marginBottom: spacing.lg },
-  half: { flex: 1 },
-  input: {
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    paddingHorizontal: spacing.lg,
-    fontSize: typography.body.fontSize + 1,
-    color: colors.dark,
-    height: controlHeight.md,
-  },
-  notesInput: { height: undefined, minHeight: 88, textAlignVertical: "top", paddingVertical: spacing.md },
-  genderRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  genderPill: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.cardBg,
-  },
-  genderPillActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  genderText: { fontSize: typography.bodySmall.fontSize, fontWeight: "600", color: colors.slateMedium },
-  genderTextActive: { color: colors.primaryText },
-  submitButton: { marginTop: spacing.sm },
-});
+    // ─── Form ───
+    label: {
+      fontSize: typography.bodySmall.fontSize,
+      fontWeight: "700",
+      color: colors.dark,
+      marginBottom: spacing.sm,
+    },
+    conditionGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+      marginBottom: spacing.xl,
+    },
+    conditionCard: {
+      width: "48%",
+      flexGrow: 1,
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      padding: spacing.md,
+      gap: 4,
+    },
+    conditionCardTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    conditionCheck: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: colors.gray3,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    conditionTitle: {
+      fontSize: typography.body.fontSize,
+      fontWeight: "700",
+      color: colors.dark,
+      marginTop: 4,
+    },
+    conditionDesc: {
+      fontSize: typography.micro.fontSize,
+      color: colors.slateMuted,
+      lineHeight: 15,
+    },
+    row: { flexDirection: "row", gap: spacing.md },
+    field: { marginBottom: spacing.lg },
+    half: { flex: 1 },
+    input: {
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: spacing.lg,
+      fontSize: typography.body.fontSize + 1,
+      color: colors.dark,
+      height: controlHeight.md,
+    },
+    notesInput: {
+      height: undefined,
+      minHeight: 88,
+      textAlignVertical: "top",
+      paddingVertical: spacing.md,
+    },
+    genderRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+    genderPill: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm + 2,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.cardBg,
+    },
+    genderPillActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+    genderText: {
+      fontSize: typography.bodySmall.fontSize,
+      fontWeight: "600",
+      color: colors.slateMedium,
+    },
+    genderTextActive: { color: colors.primaryText },
+    submitButton: { marginTop: spacing.sm },
+  });

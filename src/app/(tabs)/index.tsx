@@ -19,7 +19,8 @@ import {
   FOOD_SUGGESTIONS,
   type PatientCondition,
   type FoodSafetyAnalysis,
-} from "../../data/foodSafety";import { DietaryProfileBar } from "../../components/DietaryProfileBar";
+} from "../../data/foodSafety";
+import { DietaryProfileBar } from "../../components/DietaryProfileBar";
 import { FoodCheckCard } from "../../components/FoodCheckCard";
 import { StepProgressState } from "../../components/StepProgressState";
 import { AppButton } from "../../components/AppButton";
@@ -44,7 +45,9 @@ export default function HomeScreen() {
   const { colors, isDark } = useThemeColors();
   const styles = makeStyles(colors);
   const router = useRouter();
-  const [conditions, setConditions] = useState<PatientCondition[]>(foodSafetyStore.getSelectedConditions());
+  const [conditions, setConditions] = useState<PatientCondition[]>(
+    foodSafetyStore.getSelectedConditions()
+  );
   const [searchText, setSearchText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeStep, setActiveStep] = useState<AnalysisStep | undefined>();
@@ -82,8 +85,9 @@ export default function HomeScreen() {
     try {
       const profile = await updateProfile({ conditions: newConditions });
       foodSafetyStore.hydratePatient(profile);
-    } catch {
-      /* local selection still applies */
+    } catch (e) {
+      // Local selection still applies, but log so sync failures are visible.
+      console.warn("handleConditionsChange: profile sync failed, keeping local selection", e);
     }
   };
 
@@ -119,7 +123,10 @@ export default function HomeScreen() {
       }
       setResult(analysis);
       if (analysis.status === "not_recommended") {
-        await notificationStore.push("Food check complete", `${analysis.foodName}: ${analysis.statusHeadline}`);
+        await notificationStore.push(
+          "Food check complete",
+          `${analysis.foodName}: ${analysis.statusHeadline}`
+        );
       }
     } catch {
       if (runId !== runIdRef.current || !mountedRef.current) {
@@ -156,7 +163,12 @@ export default function HomeScreen() {
         <Text style={styles.mainHeading}>Can I eat this?</Text>
 
         <View style={styles.searchRow}>
-          <View style={[styles.searchContainer, error && !searchText.trim() ? styles.searchError : null]}>
+          <View
+            style={[
+              styles.searchContainer,
+              error && !searchText.trim() ? styles.searchError : null,
+            ]}
+          >
             <Ionicons name="search-outline" size={20} color={colors.slateMuted} />
             <TextInput
               style={styles.searchInput}
@@ -181,7 +193,11 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.suggestionsRow}
+        >
           {FOOD_SUGGESTIONS.map((food) => (
             <Pressable
               key={food}
@@ -222,7 +238,11 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <StepProgressState visible={isAnalyzing} steps={TEXT_ANALYSIS_STEPS} activeStepId={activeStep} />
+        <StepProgressState
+          visible={isAnalyzing}
+          steps={TEXT_ANALYSIS_STEPS}
+          activeStepId={activeStep}
+        />
 
         {result && !isAnalyzing && (
           <View style={styles.resultSection}>
@@ -252,8 +272,16 @@ export default function HomeScreen() {
                 >
                   <View style={[styles.recentDot, { backgroundColor: sc.icon }]} />
                   <View style={styles.recentTextWrap}>
-                    <Text style={styles.recentFood} numberOfLines={1} ellipsizeMode="tail">{item.foodName}</Text>
-                    <Text style={[styles.recentVerdict, { color: sc.text }]} numberOfLines={1} ellipsizeMode="tail">{item.statusHeadline}</Text>
+                    <Text style={styles.recentFood} numberOfLines={1} ellipsizeMode="tail">
+                      {item.foodName}
+                    </Text>
+                    <Text
+                      style={[styles.recentVerdict, { color: sc.text }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {item.statusHeadline}
+                    </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={colors.gray3} />
                 </Pressable>
@@ -268,68 +296,88 @@ export default function HomeScreen() {
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
-  greeting: {
-    fontSize: typography.caption.fontSize,
-    fontWeight: "600",
-    color: colors.slateLight,
-    marginBottom: spacing.md,
-  },
-  mainHeading: {
-    ...typography.display,
-    color: colors.dark,
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  searchRow: { marginBottom: spacing.sm },
-  searchContainer: {
-    flexDirection: "row",
-    backgroundColor: colors.cardBg,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    borderRadius: radius.lg,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    height: 52,
-  },
-  searchError: { borderColor: colors.dangerBorder },
-  searchInput: { flex: 1, fontSize: typography.body.fontSize, marginLeft: 10, color: colors.dark },
-  suggestionsRow: { gap: spacing.sm, paddingVertical: spacing.sm },
-  suggestionPill: {
-    backgroundColor: colors.gray1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    marginRight: spacing.sm,
-  },
-  suggestionText: { fontSize: typography.micro.fontSize, color: colors.slateMuted, fontWeight: "500" },
-  actionRow: { marginTop: spacing.md, gap: spacing.xs },
-  errorWrap: { marginTop: spacing.md },
-  resultSection: { marginTop: spacing.xl, gap: spacing.md },
-  recentSection: { marginTop: spacing.xxl, gap: spacing.sm },
-  recentHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sectionLabel: { ...typography.caption, fontWeight: "700", color: colors.slateLight, textTransform: "uppercase", letterSpacing: 0.5 },
-  recentCount: { ...typography.caption, color: colors.slateMuted },
-  recentItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  recentDot: { width: 8, height: 8, borderRadius: 4 },
-  recentTextWrap: { flex: 1, minWidth: 0, gap: 1 },
-  recentFood: { fontSize: typography.bodySmall.fontSize + 1, fontWeight: "600", color: colors.dark },
-  recentVerdict: { fontSize: typography.micro.fontSize, fontWeight: "700" },
-  bottomSpacer: { height: 100 },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+    greeting: {
+      fontSize: typography.caption.fontSize,
+      fontWeight: "600",
+      color: colors.slateLight,
+      marginBottom: spacing.md,
+    },
+    mainHeading: {
+      ...typography.display,
+      color: colors.dark,
+      marginTop: spacing.lg,
+      marginBottom: spacing.md,
+    },
+    searchRow: { marginBottom: spacing.sm },
+    searchContainer: {
+      flexDirection: "row",
+      backgroundColor: colors.cardBg,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      borderRadius: radius.lg,
+      paddingHorizontal: 14,
+      alignItems: "center",
+      height: 52,
+    },
+    searchError: { borderColor: colors.dangerBorder },
+    searchInput: {
+      flex: 1,
+      fontSize: typography.body.fontSize,
+      marginLeft: 10,
+      color: colors.dark,
+    },
+    suggestionsRow: { gap: spacing.sm, paddingVertical: spacing.sm },
+    suggestionPill: {
+      backgroundColor: colors.gray1,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 6,
+      borderRadius: radius.pill,
+      marginRight: spacing.sm,
+    },
+    suggestionText: {
+      fontSize: typography.micro.fontSize,
+      color: colors.slateMuted,
+      fontWeight: "500",
+    },
+    actionRow: { marginTop: spacing.md, gap: spacing.xs },
+    errorWrap: { marginTop: spacing.md },
+    resultSection: { marginTop: spacing.xl, gap: spacing.md },
+    recentSection: { marginTop: spacing.xxl, gap: spacing.sm },
+    recentHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    sectionLabel: {
+      ...typography.caption,
+      fontWeight: "700",
+      color: colors.slateLight,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    recentCount: { ...typography.caption, color: colors.slateMuted },
+    recentItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      gap: spacing.sm,
+    },
+    recentDot: { width: 8, height: 8, borderRadius: 4 },
+    recentTextWrap: { flex: 1, minWidth: 0, gap: 1 },
+    recentFood: {
+      fontSize: typography.bodySmall.fontSize + 1,
+      fontWeight: "600",
+      color: colors.dark,
+    },
+    recentVerdict: { fontSize: typography.micro.fontSize, fontWeight: "700" },
+    bottomSpacer: { height: 100 },
+  });

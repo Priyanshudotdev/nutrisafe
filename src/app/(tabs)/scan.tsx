@@ -16,7 +16,11 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { radius, spacing, type ThemeColors } from "../../theme/tokens";
 import { useThemeColors } from "../../hooks/useThemeColors";
-import { foodSafetyStore, type FoodSafetyAnalysis, type PatientCondition } from "../../data/foodSafety";
+import {
+  foodSafetyStore,
+  type FoodSafetyAnalysis,
+  type PatientCondition,
+} from "../../data/foodSafety";
 import { DietaryProfileBar } from "../../components/DietaryProfileBar";
 import { FoodCheckCard } from "../../components/FoodCheckCard";
 import { StepProgressState } from "../../components/StepProgressState";
@@ -34,13 +38,16 @@ import type { FoodIdentificationResult } from "../../services/foodVision";
 import { updateProfile } from "../../services/profileService";
 import { notificationStore } from "../../services/notificationStore";
 
-type ScanPhase = "initial" | "web_camera" | "preview" | "processing" | "result" | "uncertain" | "error";
+type ScanPhase =
+  "initial" | "web_camera" | "preview" | "processing" | "result" | "uncertain" | "error";
 
 export default function FoodScannerScreen() {
   const { colors, isDark } = useThemeColors();
   const styles = makeStyles(colors);
   const router = useRouter();
-  const [conditions, setConditions] = useState<PatientCondition[]>(foodSafetyStore.getSelectedConditions());
+  const [conditions, setConditions] = useState<PatientCondition[]>(
+    foodSafetyStore.getSelectedConditions()
+  );
   const [phase, setPhase] = useState<ScanPhase>("initial");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<AnalysisStep | undefined>();
@@ -57,8 +64,9 @@ export default function FoodScannerScreen() {
     try {
       const profile = await updateProfile({ conditions: c });
       foodSafetyStore.hydratePatient(profile);
-    } catch {
-      /* local selection still applies */
+    } catch (e) {
+      // Local selection still applies, but log so sync failures are visible.
+      console.warn("handleConditionsChange: profile sync failed, keeping local selection", e);
     }
   };
 
@@ -66,7 +74,10 @@ export default function FoodScannerScreen() {
     if (forCamera) {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Camera access needed", "Allow camera access to scan food, or use Upload Photo instead.");
+        Alert.alert(
+          "Camera access needed",
+          "Allow camera access to scan food, or use Upload Photo instead."
+        );
         return false;
       }
     } else {
@@ -88,36 +99,43 @@ export default function FoodScannerScreen() {
   };
 
   const handlePickImage = async (source: "camera" | "library") => {
-    const permitted = await requestPermissions(source === "camera");
-    if (!permitted) {
-      if (source === "camera") {
-        // Fall back to upload when camera denied
+    try {
+      const permitted = await requestPermissions(source === "camera");
+      if (!permitted) {
+        if (source === "camera") {
+          // Fall back to upload when camera denied
+          return;
+        }
         return;
       }
-      return;
-    }
 
-    const pickerResult =
-      source === "camera"
-        ? await ImagePicker.launchCameraAsync({
-            mediaTypes: ["images"],
-            quality: 0.8,
-            allowsEditing: true,
-            aspect: [4, 3],
-          })
-        : await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ["images"],
-            quality: 0.8,
-            allowsEditing: true,
-            aspect: [4, 3],
-          });
+      const pickerResult =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync({
+              mediaTypes: ["images"],
+              quality: 0.8,
+              allowsEditing: true,
+              aspect: [4, 3],
+            })
+          : await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ["images"],
+              quality: 0.8,
+              allowsEditing: true,
+              aspect: [4, 3],
+            });
 
-    if (!pickerResult.canceled && pickerResult.assets[0]?.uri) {
-      setImageUri(pickerResult.assets[0].uri);
-      setPhase("preview");
-      setResult(null);
-      setIdentification(null);
-      setErrorMessage(null);
+      if (!pickerResult.canceled && pickerResult.assets[0]?.uri) {
+        setImageUri(pickerResult.assets[0].uri);
+        setPhase("preview");
+        setResult(null);
+        setIdentification(null);
+        setErrorMessage(null);
+      }
+    } catch {
+      Alert.alert(
+        source === "camera" ? "Couldn't open the camera" : "Couldn't open your photos",
+        "Please try again, or enter the food name manually."
+      );
     }
   };
 
@@ -184,7 +202,10 @@ export default function FoodScannerScreen() {
           .catch(() => {});
         if (!isCurrent()) return;
         setPhase("result");
-      } else if (scanResult.identification.status === "uncertain" && scanResult.identification.candidates) {
+      } else if (
+        scanResult.identification.status === "uncertain" &&
+        scanResult.identification.candidates
+      ) {
         if (!isCurrent()) return;
         setPhase("uncertain");
       } else {
@@ -227,7 +248,13 @@ export default function FoodScannerScreen() {
               Point your camera at the food or upload a clear photo of the full dish.
             </Text>
             <AppButton label="Open Camera" onPress={handleOpenCamera} icon="camera" size="lg" />
-            <AppButton label="Upload Photo" onPress={() => handlePickImage("library")} variant="secondary" size="lg" icon="image-outline" />
+            <AppButton
+              label="Upload Photo"
+              onPress={() => handlePickImage("library")}
+              variant="secondary"
+              size="lg"
+              icon="image-outline"
+            />
           </View>
         )}
 
@@ -244,10 +271,25 @@ export default function FoodScannerScreen() {
 
         {phase === "preview" && imageUri && (
           <View style={styles.previewCard}>
-            <Image source={{ uri: imageUri }} style={styles.previewImage} accessibilityLabel="Selected food photo" />
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.previewImage}
+              accessibilityLabel="Selected food photo"
+            />
             <View style={styles.previewActions}>
-              <AppButton label="Retake" onPress={resetScan} variant="secondary" size="md" style={styles.flexButton} />
-              <AppButton label="Use Photo" onPress={() => runAnalysis()} size="md" style={styles.flexButton} />
+              <AppButton
+                label="Retake"
+                onPress={resetScan}
+                variant="secondary"
+                size="md"
+                style={styles.flexButton}
+              />
+              <AppButton
+                label="Use Photo"
+                onPress={() => runAnalysis()}
+                size="md"
+                style={styles.flexButton}
+              />
             </View>
           </View>
         )}
@@ -261,7 +303,11 @@ export default function FoodScannerScreen() {
             <Ionicons name="help-circle-outline" size={28} color={colors.moderationIcon} />
             <Text style={styles.uncertainTitle}>Which food is this?</Text>
             {imageUri && (
-              <Image source={{ uri: imageUri }} style={styles.previewImage} accessibilityLabel="Scanned food photo" />
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.previewImage}
+                accessibilityLabel="Scanned food photo"
+              />
             )}
             <Text style={styles.uncertainText}>{identification.message}</Text>
             {identification.candidates.map((c) => (
@@ -272,16 +318,27 @@ export default function FoodScannerScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Confirm food as ${c.name}`}
               >
-                <Text style={styles.candidateName} numberOfLines={1} ellipsizeMode="tail">{c.name}</Text>
+                <Text style={styles.candidateName} numberOfLines={1} ellipsizeMode="tail">
+                  {c.name}
+                </Text>
                 {c.confidence > 0 && (
                   <Text style={styles.candidateConf}>{Math.round(c.confidence * 100)}% match</Text>
                 )}
                 <Ionicons name="chevron-forward" size={16} color={colors.gray3} />
               </Pressable>
             ))}
-            <AppButton label="Retake" onPress={() => setPhase("preview")} variant="secondary" size="md" />
+            <AppButton
+              label="Retake"
+              onPress={() => setPhase("preview")}
+              variant="secondary"
+              size="md"
+            />
             {/* Manual food search lives on Home (index); the "search" tab is History. */}
-            <AppLinkButton label="Enter food name manually" onPress={() => router.push("/(tabs)")} style={styles.linkButton} />
+            <AppLinkButton
+              label="Enter food name manually"
+              onPress={() => router.push("/(tabs)")}
+              style={styles.linkButton}
+            />
           </View>
         )}
 
@@ -298,7 +355,11 @@ export default function FoodScannerScreen() {
                 "Try a clearer, well-lit photo showing the full dish, or search for the food manually."}
             </Text>
             <AppButton label="Try Again" onPress={resetScan} size="md" />
-            <AppLinkButton label="Search manually" onPress={() => router.push("/(tabs)")} style={styles.linkButton} />
+            <AppLinkButton
+              label="Search manually"
+              onPress={() => router.push("/(tabs)")}
+              style={styles.linkButton}
+            />
           </View>
         )}
 
@@ -311,7 +372,12 @@ export default function FoodScannerScreen() {
             )}
             <FoodCheckCard analysis={result} expanded />
             <MedicalDisclaimer />
-            <AppButton label="Scan another food" onPress={resetScan} variant="secondary" size="md" />
+            <AppButton
+              label="Scan another food"
+              onPress={resetScan}
+              variant="secondary"
+              size="md"
+            />
           </View>
         )}
 
@@ -321,69 +387,75 @@ export default function FoodScannerScreen() {
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingHorizontal: spacing.xl },
-  profileWrap: { paddingTop: spacing.md },
-  initialCard: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: spacing.xl,
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  scanIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  initialText: { fontSize: 14, color: colors.slateMedium, textAlign: "center", lineHeight: 20 },
-  previewCard: { marginTop: spacing.xl, gap: spacing.md },
-  previewImage: { width: "100%", height: 260, borderRadius: radius.xl, backgroundColor: colors.gray1 },
-  previewActions: { flexDirection: "row", gap: spacing.sm },
-  flexButton: { flex: 1 },
-  uncertainCard: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.moderationBorder,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  uncertainTitle: { fontSize: 17, fontWeight: "700", color: colors.dark },
-  uncertainText: { fontSize: 13, color: colors.slateMedium, lineHeight: 19 },
-  candidateRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: colors.bgSubtle,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  candidateName: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600", color: colors.dark },
-  candidateConf: { fontSize: 12, color: colors.slateMuted },
-  errorCard: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.dangerBg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.dangerBorder,
-    padding: spacing.lg,
-    gap: spacing.md,
-    alignItems: "center",
-  },
-  errorTitle: { fontSize: 17, fontWeight: "700", color: colors.dangerText, textAlign: "center" },
-  errorBody: { fontSize: 13, color: colors.dangerText, textAlign: "center", lineHeight: 19 },
-  resultSection: { marginTop: spacing.xl, gap: spacing.md },
-  confidenceNote: { fontSize: 12, color: colors.slateMuted, fontWeight: "500" },
-  linkButton: { marginTop: spacing.xs },
-  bottomSpacer: { height: 100 },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    scrollContent: { paddingHorizontal: spacing.xl },
+    profileWrap: { paddingTop: spacing.md },
+    initialCard: {
+      marginTop: spacing.xl,
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      padding: spacing.xl,
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    scanIconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.primaryMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    initialText: { fontSize: 14, color: colors.slateMedium, textAlign: "center", lineHeight: 20 },
+    previewCard: { marginTop: spacing.xl, gap: spacing.md },
+    previewImage: {
+      width: "100%",
+      height: 260,
+      borderRadius: radius.xl,
+      backgroundColor: colors.gray1,
+    },
+    previewActions: { flexDirection: "row", gap: spacing.sm },
+    flexButton: { flex: 1 },
+    uncertainCard: {
+      marginTop: spacing.xl,
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.moderationBorder,
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
+    uncertainTitle: { fontSize: 17, fontWeight: "700", color: colors.dark },
+    uncertainText: { fontSize: 13, color: colors.slateMedium, lineHeight: 19 },
+    candidateRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: colors.bgSubtle,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    candidateName: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600", color: colors.dark },
+    candidateConf: { fontSize: 12, color: colors.slateMuted },
+    errorCard: {
+      marginTop: spacing.xl,
+      backgroundColor: colors.dangerBg,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.dangerBorder,
+      padding: spacing.lg,
+      gap: spacing.md,
+      alignItems: "center",
+    },
+    errorTitle: { fontSize: 17, fontWeight: "700", color: colors.dangerText, textAlign: "center" },
+    errorBody: { fontSize: 13, color: colors.dangerText, textAlign: "center", lineHeight: 19 },
+    resultSection: { marginTop: spacing.xl, gap: spacing.md },
+    confidenceNote: { fontSize: 12, color: colors.slateMuted, fontWeight: "500" },
+    linkButton: { marginTop: spacing.xs },
+    bottomSpacer: { height: 100 },
+  });

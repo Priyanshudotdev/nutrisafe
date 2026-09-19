@@ -1,4 +1,4 @@
-# NutriCheck — "Can I eat this?" answered in seconds
+# NutriSafe — "Can I eat this?" answered in seconds
 
 A cross-platform mobile app (Android / iOS / Web from one React Native codebase)
 that acts as a personal food-safety gatekeeper for people living with chronic
@@ -29,13 +29,13 @@ pnpm android    # terminal 2 — Expo (or: pnpm ios / pnpm start + scan QR in Ex
 The client auto-resolves the API host: `localhost` on web, Metro LAN IP on
 physical devices, `10.0.2.2` on Android emulators.
 
-| Command           | What it does                                      |
-| ----------------- | ------------------------------------------------- |
-| `pnpm api`        | Start the backend (`server/index.js`, port 4000)  |
-| `pnpm android/ios/start` | Start Expo for a target                   |
-| `pnpm typecheck`  | `tsc --noEmit`                                    |
-| `pnpm lint`       | ESLint                                            |
-| `pnpm test`       | Server AI tests (mocked smoke + e2e, no keys needed) |
+| Command                  | What it does                                         |
+| ------------------------ | ---------------------------------------------------- |
+| `pnpm api`               | Start the backend (`server/index.js`, port 4000)     |
+| `pnpm android/ios/start` | Start Expo for a target                              |
+| `pnpm typecheck`         | `tsc --noEmit`                                       |
+| `pnpm lint`              | ESLint                                               |
+| `pnpm test`              | Server AI tests (mocked smoke + e2e, no keys needed) |
 
 ## How it works
 
@@ -52,7 +52,7 @@ Expo client (src/) ──REST (JSON/multipart)──► Express server (server/:
   `not_configured` state and nutrition checks run through the local
   deterministic rules engine — the app never hard-fails.
 - **Multi-condition logic:** each condition contributes factors; the most
-  restrictive verdict wins (a food must be safe for *all* conditions).
+  restrictive verdict wins (a food must be safe for _all_ conditions).
 - **Dark mode:** system / light / dark (Account → Preferences → Theme); every
   screen resolves colors through `useThemeColors()`.
 - **Server env:** plain `node` doesn't inject Expo env, so the server loads
@@ -60,15 +60,15 @@ Expo client (src/) ──REST (JSON/multipart)──► Express server (server/:
 
 ## Environment
 
-| Variable | Required | Description |
-| -------- | -------- | ----------- |
-| `EXPO_PUBLIC_API_URL` | No (default `http://localhost:4000`) | App → API base URL |
-| `JWT_SECRET` | **Yes in prod** | JWT signing secret |
-| `GEMINI_API_KEY` | No | Enables real food recognition + nutrition analysis |
-| `GEMINI_MODEL` | No (default `gemini-3.5-flash`) | Gemini model id |
-| `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL` | No | OpenAI-compatible alternative |
-| `NUTRICHECK_DB_FILE` | No | Override SQLite path |
-| `NUTRICHECK_SKIP_ENV_FILE` | No | `1` disables `.env.local`/`.env` loading (tests) |
+| Variable                                              | Required                             | Description                                        |
+| ----------------------------------------------------- | ------------------------------------ | -------------------------------------------------- |
+| `EXPO_PUBLIC_API_URL`                                 | No (default `http://localhost:4000`) | App → API base URL                                 |
+| `JWT_SECRET`                                          | **Yes in prod**                      | JWT signing secret                                 |
+| `GEMINI_API_KEY`                                      | No                                   | Enables real food recognition + nutrition analysis |
+| `GEMINI_MODEL`                                        | No (default `gemini-3.5-flash`)      | Gemini model id                                    |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL` | No                                   | OpenAI-compatible alternative                      |
+| `NUTRISAFE_DB_FILE`                                   | No                                   | Override SQLite path                               |
+| `NUTRISAFE_SKIP_ENV_FILE`                             | No                                   | `1` disables `.env.local`/`.env` loading (tests)   |
 
 ## Adding a medical condition
 

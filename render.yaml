@@ -1,0 +1,29 @@
+# NutriSafe API — Render blueprint deploy.
+# Dashboard: New → Blueprint → point at this repo. Fill GEMINI_API_KEY when prompted.
+services:
+  - type: web
+    name: nutrisafe-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install
+    startCommand: pnpm start:server
+    healthCheckPath: /health
+    # Persistent disk for SQLite. NOTE: Render disks require a paid instance
+    # (Starter+). On the free plan, delete this `disk` block and the
+    # NUTRISAFE_DB_FILE var below — the app still works, but accounts/history
+    # reset whenever the service restarts or redeploys.
+    disk:
+      name: nutrisafe-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: NUTRISAFE_DB_FILE
+        value: /data/nutrisafe.db

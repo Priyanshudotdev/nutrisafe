@@ -40,7 +40,10 @@ export function StepProgressState({
   if (!visible) return null;
 
   const activeIndex = activeStepId
-    ? Math.max(0, steps.findIndex((s) => s.id === activeStepId))
+    ? Math.max(
+        0,
+        steps.findIndex((s) => s.id === activeStepId)
+      )
     : tick % steps.length;
 
   const currentLabel = steps[activeIndex]?.label ?? steps[0].label;
@@ -72,7 +75,9 @@ export function StepProgressState({
                   <View style={styles.stepDotInner} />
                 ) : null}
               </View>
-              <Text style={[styles.stepLabel, isActive && styles.stepLabelActive]}>{step.label}</Text>
+              <Text style={[styles.stepLabel, isActive && styles.stepLabelActive]}>
+                {step.label}
+              </Text>
             </View>
           );
         })}
@@ -84,67 +89,68 @@ export function StepProgressState({
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  stepsList: {
-    gap: spacing.sm,
-  },
-  stepRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  stepDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    borderColor: colors.gray3,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepDotActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryMuted,
-  },
-  stepDotDone: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  stepDotInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primary,
-  },
-  stepLabel: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.slateMuted,
-    fontWeight: "500",
-  },
-  stepLabelActive: {
-    color: colors.dark,
-    fontWeight: "600",
-  },
-  progressTrack: {
-    width: "100%",
-    height: 3,
-    backgroundColor: colors.gray1,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 2,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      marginTop: spacing.lg,
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
+    stepsList: {
+      gap: spacing.sm,
+    },
+    stepRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    stepDot: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 1.5,
+      borderColor: colors.gray3,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    stepDotActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primaryMuted,
+    },
+    stepDotDone: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    stepDotInner: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.primary,
+    },
+    stepLabel: {
+      flex: 1,
+      fontSize: 13,
+      color: colors.slateMuted,
+      fontWeight: "500",
+    },
+    stepLabelActive: {
+      color: colors.dark,
+      fontWeight: "600",
+    },
+    progressTrack: {
+      width: "100%",
+      height: 3,
+      backgroundColor: colors.gray1,
+      borderRadius: 2,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      backgroundColor: colors.primary,
+      borderRadius: 2,
+    },
+  });

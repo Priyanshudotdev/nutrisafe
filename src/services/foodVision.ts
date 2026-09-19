@@ -1,4 +1,4 @@
-import { FOOD_VISION_API_URL, VISION_CONFIDENCE_THRESHOLD, getApiBaseUrlCurrent } from "../config/api";
+import { VISION_CONFIDENCE_THRESHOLD, getApiBaseUrlCurrent } from "../config/api";
 import { authStore } from "./authStore";
 import { buildImageForm } from "./imageUpload";
 
@@ -53,7 +53,8 @@ function normalizeResult(data: VisionApiResponse): FoodIdentificationResult {
   if (!foodName) {
     return {
       status: "failed",
-      message: "No food was detected. Try a full-dish photo with good lighting, or search manually.",
+      message:
+        "No food was detected. Try a full-dish photo with good lighting, or search manually.",
       candidates: data.candidates,
     };
   }
@@ -77,17 +78,13 @@ function normalizeResult(data: VisionApiResponse): FoodIdentificationResult {
 }
 
 /**
- * Identifies food from an image.
- * Prefers the NutriCheck server proxy (/vision/identify) so keys stay server-side.
- * Falls back to EXPO_PUBLIC_FOOD_VISION_API_URL only if set for direct calls.
+ * Identifies food from an image via the authenticated NutriSafe server
+ * proxy (/vision/identify), so provider keys stay server-side.
  * Vision only identifies food — it never generates medical verdicts.
  */
 export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdentificationResult> {
-  const { form: formData } = await buildImageForm(imageUri, "image", "food");
-
   const token = authStore.getToken();
   const proxyUrl = `${getApiBaseUrlCurrent()}/vision/identify`;
-  const targetUrl = FOOD_VISION_API_URL || proxyUrl;
 
   const controller = new AbortController();
   // Keep the 45s timeout: server vision (upload + inference) can be slow.
@@ -95,15 +92,18 @@ export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdent
   // can offer retry without a stuck spinner.
   const timer = setTimeout(() => controller.abort(), FOOD_VISION_TIMEOUT_MS);
   try {
+    // Form-building sits inside try so an upload-construction failure maps
+    // to the normalized "failed" result instead of throwing raw to callers.
+    const { form: formData } = await buildImageForm(imageUri, "image", "food");
+
+    // All vision traffic goes through the authenticated server proxy, which
+    // keeps provider keys server-side and enforces per-user rate limits.
     const headers: Record<string, string> = { Accept: "application/json" };
-    // Auth only applies to the server proxy path. A direct third-party
-    // FOOD_VISION_API_URL uses its own key/ auth scheme, so no Bearer token
-    // is attached there — that omission is intentional.
-    if (!FOOD_VISION_API_URL && token) {
+    if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(targetUrl, {
+    const response = await fetch(proxyUrl, {
       method: "POST",
       body: formData,
       headers,
@@ -138,10 +138,7 @@ export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdent
 
     return normalizeResult(data);
   } catch (err) {
-    if (
-      controller.signal.aborted ||
-      (err instanceof Error && err.name === "AbortError")
-    ) {
+    if (controller.signal.aborted || (err instanceof Error && err.name === "AbortError")) {
       return {
         status: "failed",
         message: "Request timed out. Please check your connection and try again.",

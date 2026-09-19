@@ -48,20 +48,21 @@ Run the following command inside the `nutrisafe` folder to install all required 
 ```cmd
 pnpm install
 ```
-*(This may take 1–2 minutes. Wait until it finishes completely.)*
+
+_(This may take 1–2 minutes. Wait until it finishes completely.)_
 
 ---
 
 ## ⚙️ Step 4: Start the Backend Server
 
-The app requires the NutriCheck API backend server to handle account creation, login, and data storage.
+The app requires the NutriSafe API backend server to handle account creation, login, and data storage.
 
 1. In your Command Prompt window, run:
    ```cmd
    pnpm api
    ```
 2. You will see a message:
-   `NutriCheck API server running on http://0.0.0.0:4000`
+   `NutriSafe API server running on http://0.0.0.0:4000`
 3. 📌 **Keep this terminal window OPEN!** Do not close it while using the app.
 
 > 🤖 **Optional — real photo recognition:** copy `.env.example` to `.env.local`,
@@ -78,7 +79,7 @@ The app requires the NutriCheck API backend server to handle account creation, l
    ```cmd
    cd nutrisafe
    ```
-   *(Or specify the full path if you saved it elsewhere, e.g. `cd C:\Users\priya\Code\testing\nutrisafe`)*
+   _(Or specify the full path if you saved it elsewhere, e.g. `cd C:\Users\priya\Code\testing\nutrisafe`)_
 3. Start the Expo mobile app server:
    ```cmd
    pnpm start
@@ -98,7 +99,7 @@ The app requires the NutriCheck API backend server to handle account creation, l
 
 ## 💡 Troubleshooting & Common Fixes
 
-- **"Cannot reach NutriCheck API" or Connection Error**:
+- **"Cannot reach NutriSafe API" or Connection Error**:
   - Make sure **both** terminal windows are running: `pnpm api` in one, and `pnpm start` in the other.
   - Ensure your phone and PC are connected to the **same Wi-Fi**.
   - If Windows Firewall prompts you, click **Allow access** for Node.js.

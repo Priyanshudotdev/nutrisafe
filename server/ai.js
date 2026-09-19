@@ -1,4 +1,4 @@
-/* NutriCheck — AI layer (server-side only, keys never reach the client)
+/* NutriSafe — AI layer (server-side only, keys never reach the client)
  *
  * Providers (first match wins):
  *   1. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-3.5-flash)
@@ -108,7 +108,11 @@ async function callGemini({ parts, systemPrompt, timeoutMs }) {
       headers: { "Content-Type": "application/json", "x-goog-api-key": provider.apiKey },
       body: JSON.stringify({
         contents,
-        generationConfig: { temperature: 0.3, responseMimeType: "application/json", maxOutputTokens: 2048 },
+        generationConfig: {
+          temperature: 0.3,
+          responseMimeType: "application/json",
+          maxOutputTokens: 2048,
+        },
       }),
     },
     timeoutMs
@@ -194,9 +198,11 @@ function callModel({ parts, systemPrompt, messages, timeoutMs }) {
 const CONDITIONS = {
   diabetes: "Diabetes (Type 1 & 2) — focus on glycemic index, added sugars, total carbs, fiber",
   ckd: "Chronic Kidney Disease — focus on potassium, phosphorus (esp. inorganic additives), sodium, protein load",
-  hypertension: "Heart Disease & Hypertension — focus on sodium, saturated fat, trans fat, cholesterol",
+  hypertension:
+    "Heart Disease & Hypertension — focus on sodium, saturated fat, trans fat, cholesterol",
   celiac: "Celiac Disease — focus on gluten presence (wheat/rye/barley/spelt), cross-contact risk",
-  allergy: "Food Allergy — screen against the patient's allergen list (peanuts, tree nuts, dairy, soy, shellfish, eggs, sesame)",
+  allergy:
+    "Food Allergy — screen against the patient's allergen list (peanuts, tree nuts, dairy, soy, shellfish, eggs, sesame)",
 };
 
 const ALLOWED_ICONS = [
@@ -286,7 +292,9 @@ function normalizeAnalysis(raw, foodQuery, condition) {
         .slice(0, 6)
         .map((f) => ({
           name: String(f.name),
-          level: ["Low", "Moderate", "High", "Contains", "None"].includes(f.level) ? f.level : "Moderate",
+          level: ["Low", "Moderate", "High", "Contains", "None"].includes(f.level)
+            ? f.level
+            : "Moderate",
           impact: validImpacts.has(f.impact) ? f.impact : "neutral",
           detail: typeof f.detail === "string" ? f.detail : "",
         }))
@@ -304,8 +312,12 @@ function normalizeAnalysis(raw, foodQuery, condition) {
     : [];
 
   return {
-    foodName: typeof raw.foodName === "string" && raw.foodName.trim() ? raw.foodName.trim() : foodQuery,
-    category: typeof raw.category === "string" && raw.category.trim() ? raw.category.trim() : "General Food",
+    foodName:
+      typeof raw.foodName === "string" && raw.foodName.trim() ? raw.foodName.trim() : foodQuery,
+    category:
+      typeof raw.category === "string" && raw.category.trim()
+        ? raw.category.trim()
+        : "General Food",
     condition,
     status,
     statusHeadline: headlineFor[status],
@@ -331,19 +343,18 @@ async function identifyFood(imageBuffer, mimetype) {
   // Log a warning since some providers reject HEIC outright.
   const effectiveMime = mimetype || "image/jpeg";
   if (/heic|heif/i.test(effectiveMime)) {
-    console.warn(`[ai] identifyFood received ${effectiveMime}; passing through (provider may reject HEIC).`);
+    console.warn(
+      `[ai] identifyFood received ${effectiveMime}; passing through (provider may reject HEIC).`
+    );
   }
 
   const prompt =
     "Identify the food dish in this photo. If the image contains no recognizable food, set foodName to null. " +
     'Respond with STRICT JSON only: {"foodName": string|null, "confidence": number between 0 and 1, ' +
     '"candidates": [{"name": string, "confidence": number}] with up to 3 most likely dishes, best first}. ' +
-    "Use concise, well-known dish names (e.g. \"Margherita Pizza\", \"Idli with Sambar\").";
+    'Use concise, well-known dish names (e.g. "Margherita Pizza", "Idli with Sambar").';
 
-  const parts = [
-    { text: prompt },
-    { inline_data: { mime_type: effectiveMime, data: base64 } },
-  ];
+  const parts = [{ text: prompt }, { inline_data: { mime_type: effectiveMime, data: base64 } }];
 
   const messages = [
     {
@@ -369,7 +380,8 @@ async function identifyFood(imageBuffer, mimetype) {
   if (!foodName) {
     return {
       status: "failed",
-      message: "No food was detected. Try a full-dish photo with good lighting, or search manually.",
+      message:
+        "No food was detected. Try a full-dish photo with good lighting, or search manually.",
     };
   }
 
@@ -378,7 +390,10 @@ async function identifyFood(imageBuffer, mimetype) {
     ? result.candidates
         .filter((c) => c && typeof c.name === "string")
         .slice(0, 3)
-        .map((c) => ({ name: String(c.name), confidence: Math.min(1, Math.max(0, Number(c.confidence) || 0)) }))
+        .map((c) => ({
+          name: String(c.name),
+          confidence: Math.min(1, Math.max(0, Number(c.confidence) || 0)),
+        }))
     : [];
 
   return { status: "success", foodName, confidence, candidates };
@@ -435,8 +450,14 @@ async function extractPrescription(imageBuffer, mimetype) {
     {
       role: "user",
       content: [
-        { type: "text", text: "Read this medical document and extract the dietary information as instructed." },
-        { type: "image_url", image_url: { url: `data:${mimetype || "image/jpeg"};base64,${base64}` } },
+        {
+          type: "text",
+          text: "Read this medical document and extract the dietary information as instructed.",
+        },
+        {
+          type: "image_url",
+          image_url: { url: `data:${mimetype || "image/jpeg"};base64,${base64}` },
+        },
       ],
     },
   ];
@@ -446,14 +467,19 @@ async function extractPrescription(imageBuffer, mimetype) {
     result = await callModel({ parts, messages, timeoutMs: VISION_TIMEOUT_MS });
   } catch (err) {
     if (err instanceof AiError && err.code === "not_configured") throw err;
-    throw new AiError("We couldn't read the prescription right now. Check your connection and try again.");
+    throw new AiError(
+      "We couldn't read the prescription right now. Check your connection and try again."
+    );
   }
 
   const conditions = Array.isArray(result.conditions)
     ? [...new Set(result.conditions.filter((c) => VALID_CONDITIONS.includes(c)))]
     : [];
   const allergensList = Array.isArray(result.allergensList)
-    ? result.allergensList.filter((a) => typeof a === "string" && a.trim()).map((a) => String(a).trim()).slice(0, 12)
+    ? result.allergensList
+        .filter((a) => typeof a === "string" && a.trim())
+        .map((a) => String(a).trim())
+        .slice(0, 12)
     : [];
 
   return {
@@ -462,7 +488,10 @@ async function extractPrescription(imageBuffer, mimetype) {
     conditions,
     allergensList,
     notes: typeof result.notes === "string" ? result.notes.slice(0, 600) : "",
-    doctorName: typeof result.doctorName === "string" && result.doctorName.trim() ? result.doctorName.trim() : null,
+    doctorName:
+      typeof result.doctorName === "string" && result.doctorName.trim()
+        ? result.doctorName.trim()
+        : null,
     summary: typeof result.summary === "string" ? result.summary : "",
   };
 }

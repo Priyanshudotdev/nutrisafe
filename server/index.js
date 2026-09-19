@@ -1,4 +1,4 @@
-/* NutriCheck — local API server
+/* NutriSafe — local API server
  *
  * Start with:  node server/index.js     (or  pnpm api)
  * Defaults to port 4000.  Set PORT env var to override.
@@ -24,10 +24,10 @@ const store = require("./store");
 // Plain `node` doesn't inject Expo's .env.local — load it (and .env) here so
 // GEMINI_API_KEY / OPENAI_* / PORT / JWT_SECRET just work. Real environment
 // variables always win; values already set are never overwritten.
-// Set NUTRICHECK_SKIP_ENV_FILE=1 to disable (used by hermetic tests).
+// Set NUTRISAFE_SKIP_ENV_FILE=1 to disable (used by hermetic tests).
 // Robust loader: handles \r, `export KEY=`, quoted values with # inside,
 // and skips multiline values (best-effort, no dep).
-if (process.env.NUTRICHECK_SKIP_ENV_FILE !== "1") {
+if (process.env.NUTRISAFE_SKIP_ENV_FILE !== "1") {
   for (const file of [".env.local", ".env"]) {
     try {
       const p = path.join(process.cwd(), file);
@@ -80,17 +80,17 @@ if (process.env.NUTRICHECK_SKIP_ENV_FILE !== "1") {
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT ?? 4000;
-const JWT_DEV_FALLBACK = "nutricheck-dev-secret-change-in-prod";
+const JWT_DEV_FALLBACK = "nutrisafe-dev-secret-change-in-prod";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const _envJwt = process.env.JWT_SECRET;
 if (IS_PRODUCTION) {
-  if (! _envJwt || _envJwt === JWT_DEV_FALLBACK || _envJwt.length < 32) {
+  if (!_envJwt || _envJwt === JWT_DEV_FALLBACK || _envJwt.length < 32) {
     console.error(
       "FATAL: JWT_SECRET must be set to a strong value (>=32 chars) in production. Refusing to boot."
     );
     process.exit(1);
   }
-} else if (! _envJwt || _envJwt === JWT_DEV_FALLBACK) {
+} else if (!_envJwt || _envJwt === JWT_DEV_FALLBACK) {
   console.warn("JWT_SECRET is using the dev fallback — do not use in production.");
 } else if (_envJwt.length < 32) {
   console.warn("JWT_SECRET is short (<32 chars). Use a longer secret in production.");
@@ -227,11 +227,23 @@ function rateLimit({ windowMs, max }) {
 
 const authLimiter = rateLimit({ windowMs: 60_000, max: 60 });
 const aiLimiter = rateLimit({ windowMs: 60_000, max: 60 });
+const apiLimiter = rateLimit({ windowMs: 60_000, max: 180 });
 app.use("/auth", authLimiter);
+app.use("/profile", apiLimiter);
+app.use("/onboarding", apiLimiter);
+app.use("/history", apiLimiter);
+
+// ─── Email + token helpers ─────────────────────────────────────────────────────
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function normalizeEmail(v) {
+  return String(v ?? "")
+    .trim()
+    .toLowerCase();
+}
 
 // ─── Auth helpers ──────────────────────────────────────────────────────────────
-function signToken(userId) {
-  return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+function signToken(userId, tokenVersion = 0) {
+  return jwt.sign({ sub: userId, tv: tokenVersion }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 function verifyToken(token) {
@@ -249,6 +261,14 @@ function requireAuth(req, res, next) {
 
   const payload = verifyToken(token);
   if (!payload) return res.status(401).json({ error: "Invalid or expired token." });
+
+  // Token-version check: logout / password / email changes bump the user's
+  // version, instantly revoking previously issued tokens (no blacklist needed).
+  const authUser = findUserById(payload.sub);
+  if (!authUser) return res.status(401).json({ error: "Account no longer exists." });
+  if ((payload.tv ?? 0) !== (authUser.tokenVersion ?? 0)) {
+    return res.status(401).json({ error: "Session revoked. Please sign in again." });
+  }
 
   req.userId = payload.sub;
   next();
@@ -271,12 +291,16 @@ app.get("/health", (_req, res) =>
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
 app.post("/auth/signup", async (req, res) => {
-  const { email, password, name } = req.body;
+  const { password, name } = req.body;
+  const email = normalizeEmail(req.body.email);
 
   if (!email || !password || !name) {
     return res.status(400).json({ error: "email, password and name are required." });
   }
-  if (usersByEmail.has(email.toLowerCase())) {
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: "Enter a valid email address." });
+  }
+  if (usersByEmail.has(email)) {
     return res.status(409).json({ error: "An account with this email already exists." });
   }
   if (password.length < 8) {
@@ -291,7 +315,7 @@ app.post("/auth/signup", async (req, res) => {
     name: String(name).trim(),
     age: null,
     gender: null,
-    email: email.toLowerCase(),
+    email,
     city: null,
     primaryCondition: "ckd",
     allergensList: [],
@@ -300,34 +324,58 @@ app.post("/auth/signup", async (req, res) => {
     onboardingCompleted: false,
   };
 
-  const user = { id, email: email.toLowerCase(), passwordHash, profile, createdAt: new Date().toISOString() };
-  usersByEmail.set(email.toLowerCase(), user);
+  const user = {
+    id,
+    email,
+    passwordHash,
+    profile,
+    tokenVersion: 0,
+    createdAt: new Date().toISOString(),
+  };
+  usersByEmail.set(email, user);
   userDataById.set(id, { history: [] });
   persist();
 
-  const token = signToken(id);
+  const token = signToken(id, 0);
   return res.status(201).json({ token, profile });
 });
 
 app.post("/auth/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { password } = req.body;
+  const email = normalizeEmail(req.body.email);
   if (!email || !password) {
     return res.status(400).json({ error: "email and password are required." });
   }
 
-  const user = usersByEmail.get(email.toLowerCase());
+  const user = usersByEmail.get(email);
   if (!user) return res.status(401).json({ error: "Incorrect email or password." });
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) return res.status(401).json({ error: "Incorrect email or password." });
 
-  const token = signToken(user.id);
+  const token = signToken(user.id, user.tokenVersion ?? 0);
   return res.json({ token, profile: user.profile });
 });
 
-app.post("/auth/logout", requireAuth, (_req, res) => {
-  // JWTs are stateless; client discards token.  For a blacklist, store token IDs in a Set here.
+app.post("/auth/logout", requireAuth, (req, res) => {
+  // Bump the token version so the current token (and any copies of it)
+  // stop validating immediately — no blacklist table required.
+  const user = findUserById(req.userId);
+  if (user) {
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+    persist();
+  }
   res.json({ message: "Logged out." });
+});
+
+// Sliding sessions: a valid (non-revoked, non-expired) token can be
+// exchanged for a fresh 7-day token. The client calls this proactively
+// before expiry so users aren't force-logged-out mid-use.
+app.post("/auth/refresh", requireAuth, (req, res) => {
+  const user = findUserById(req.userId);
+  if (!user) return res.status(404).json({ error: "User not found." });
+  const token = signToken(user.id, user.tokenVersion ?? 0);
+  res.json({ token });
 });
 
 app.post("/auth/change-password", requireAuth, async (req, res) => {
@@ -346,16 +394,23 @@ app.post("/auth/change-password", requireAuth, async (req, res) => {
   if (!valid) return res.status(401).json({ error: "Current password is incorrect." });
 
   user.passwordHash = await bcrypt.hash(newPassword, 12);
+  // Revoke all other sessions; hand the caller a fresh token so this
+  // session continues uninterrupted.
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   persist();
-  res.json({ message: "Password updated." });
+  res.json({ message: "Password updated.", token: signToken(user.id, user.tokenVersion) });
 });
 
 app.post("/auth/change-email", requireAuth, async (req, res) => {
-  const { newEmail, password } = req.body;
+  const { password } = req.body;
+  const newEmail = normalizeEmail(req.body.newEmail);
   if (!newEmail || !password) {
     return res.status(400).json({ error: "newEmail and password are required." });
   }
-  if (usersByEmail.has(newEmail.toLowerCase())) {
+  if (!EMAIL_RE.test(newEmail)) {
+    return res.status(400).json({ error: "Enter a valid email address." });
+  }
+  if (usersByEmail.has(newEmail)) {
     return res.status(409).json({ error: "This email is already in use." });
   }
 
@@ -366,12 +421,18 @@ app.post("/auth/change-email", requireAuth, async (req, res) => {
   if (!valid) return res.status(401).json({ error: "Password is incorrect." });
 
   usersByEmail.delete(user.email);
-  user.email = newEmail.toLowerCase();
-  user.profile.email = newEmail.toLowerCase();
+  user.email = newEmail;
+  user.profile.email = newEmail;
   usersByEmail.set(user.email, user);
+  // Sessions are keyed to the old identity — re-issue.
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   persist();
 
-  res.json({ message: "Email updated.", profile: user.profile });
+  res.json({
+    message: "Email updated.",
+    profile: user.profile,
+    token: signToken(user.id, user.tokenVersion),
+  });
 });
 
 // ─── Profile ───────────────────────────────────────────────────────────────────
@@ -406,7 +467,10 @@ app.patch("/profile", requireAuth, (req, res) => {
   }
   if ("age" in req.body) {
     const v = req.body.age;
-    if (v !== null && v !== undefined && v !== "") {
+    if (v === "") {
+      // Empty string clears the field (matches onboarding's null convention).
+      req.body.age = null;
+    } else if (v !== null && v !== undefined) {
       if (typeof v === "boolean" || (typeof v === "object" && v !== null) || Array.isArray(v)) {
         return res.status(400).json({ error: "age must be a number between 1 and 120." });
       }
@@ -414,8 +478,9 @@ app.patch("/profile", requireAuth, (req, res) => {
       if (!Number.isFinite(n) || n < 1 || n > 120) {
         return res.status(400).json({ error: "age must be a number between 1 and 120." });
       }
-    } else if (v !== null && v !== undefined && v !== "") {
-      return res.status(400).json({ error: "age must be a number between 1 and 120." });
+      // Coerce numeric strings ("30") to real numbers so the stored
+      // profile keeps its `age: number|null` type (matches /onboarding).
+      req.body.age = n;
     }
   }
   const stringField = (key, max) => {
@@ -429,7 +494,12 @@ app.patch("/profile", requireAuth, (req, res) => {
     }
     return null;
   };
-  for (const [key, max] of [["gender", 50], ["city", 100], ["notes", 1000], ["doctorName", 100]]) {
+  for (const [key, max] of [
+    ["gender", 50],
+    ["city", 100],
+    ["notes", 1000],
+    ["doctorName", 100],
+  ]) {
     const msg = stringField(key, max);
     if (msg) return res.status(400).json({ error: msg });
   }
@@ -456,7 +526,9 @@ app.patch("/profile", requireAuth, (req, res) => {
       VALID_CONDITIONS.includes(c)
     );
     if (user.profile.conditions.length === 0) {
-      return res.status(400).json({ error: "conditions must contain at least one valid condition." });
+      return res
+        .status(400)
+        .json({ error: "conditions must contain at least one valid condition." });
     }
     user.profile.primaryCondition = user.profile.conditions[0];
   } else if (VALID_CONDITIONS.includes(user.profile.primaryCondition)) {
@@ -474,15 +546,25 @@ app.post("/onboarding", requireAuth, (req, res) => {
   const user = findUserById(req.userId);
   if (!user) return res.status(404).json({ error: "User not found." });
 
-  const { age, gender, city, conditions, primaryCondition, allergensList, notes, doctorName } = req.body;
+  const { age, gender, city, conditions, primaryCondition, allergensList, notes, doctorName } =
+    req.body;
 
   // Accept a multi-select list of conditions; fall back to the single legacy field.
-  let conditionList = Array.isArray(conditions)
-    ? [...new Set(conditions)]
-    : primaryCondition
-      ? [primaryCondition]
-      : [];
-  conditionList = conditionList.filter((c) => VALID_CONDITIONS.includes(c));
+  // Unknown entries are rejected (400) — same strictness as PATCH /profile —
+  // instead of being silently dropped.
+  let conditionList;
+  if (Array.isArray(conditions)) {
+    const invalid = conditions.filter((c) => !VALID_CONDITIONS.includes(c));
+    if (invalid.length > 0) {
+      return res.status(400).json({
+        error: `conditions contains invalid entr${invalid.length === 1 ? "y" : "ies"}: ${invalid.join(", ")}.`,
+      });
+    }
+    conditionList = [...new Set(conditions)];
+  } else {
+    conditionList = primaryCondition ? [primaryCondition] : [];
+    conditionList = conditionList.filter((c) => VALID_CONDITIONS.includes(c));
+  }
 
   if (conditionList.length === 0) {
     return res.status(400).json({ error: "Select at least one medical condition to continue." });
@@ -517,7 +599,10 @@ app.get("/history", requireAuth, (req, res) => {
   const data = userDataById.get(req.userId);
   const history = data?.history ?? [];
   const rawLimit = parseInt(String(req.query.limit ?? HISTORY_PAGE_DEFAULT), 10);
-  const limit = Math.min(Math.max(Number.isNaN(rawLimit) ? HISTORY_PAGE_DEFAULT : rawLimit, 1), HISTORY_PAGE_MAX);
+  const limit = Math.min(
+    Math.max(Number.isNaN(rawLimit) ? HISTORY_PAGE_DEFAULT : rawLimit, 1),
+    HISTORY_PAGE_MAX
+  );
   res.json({ history: history.slice(0, limit) });
 });
 
@@ -534,27 +619,29 @@ app.post(
     next();
   },
   (req, res) => {
-  const { analysis } = req.body;
-  if (!analysis || typeof analysis !== "object" || Array.isArray(analysis)) {
-    return res.status(400).json({ error: "analysis object is required." });
-  }
-  if (typeof analysis.id !== "string" || typeof analysis.foodName !== "string") {
-    return res.status(400).json({ error: "analysis must include string id and foodName." });
-  }
-  if (!VALID_STATUSES.includes(analysis.status)) {
-    return res.status(400).json({ error: "analysis.status must be safe, moderation or not_recommended." });
-  }
-  if (JSON.stringify(analysis).length > 100_000) {
-    return res.status(413).json({ error: "analysis object is too large." });
-  }
+    const { analysis } = req.body;
+    if (!analysis || typeof analysis !== "object" || Array.isArray(analysis)) {
+      return res.status(400).json({ error: "analysis object is required." });
+    }
+    if (typeof analysis.id !== "string" || typeof analysis.foodName !== "string") {
+      return res.status(400).json({ error: "analysis must include string id and foodName." });
+    }
+    if (!VALID_STATUSES.includes(analysis.status)) {
+      return res
+        .status(400)
+        .json({ error: "analysis.status must be safe, moderation or not_recommended." });
+    }
+    if (JSON.stringify(analysis).length > 100_000) {
+      return res.status(413).json({ error: "analysis object is too large." });
+    }
 
-  const data = userDataById.get(req.userId);
-  if (!data) return res.status(404).json({ error: "User data not found." });
+    const data = userDataById.get(req.userId);
+    if (!data) return res.status(404).json({ error: "User data not found." });
 
-  // Upsert by id: retries/double-taps replace instead of duplicating.
-  data.history = [analysis, ...data.history.filter((a) => a?.id !== analysis.id)];
-  persist();
-  res.status(201).json({ analysis });
+    // Upsert by id: retries/double-taps replace instead of duplicating.
+    data.history = [analysis, ...data.history.filter((a) => a?.id !== analysis.id)];
+    persist();
+    res.status(201).json({ analysis });
   }
 );
 
@@ -602,7 +689,8 @@ app.post("/vision/identify", requireAuth, aiLimiter, uploadSingleImage, async (r
       if (!response.ok) {
         return res.status(502).json({
           status: "failed",
-          message: "The food recognition service returned an error. Try a clearer photo or search manually.",
+          message:
+            "The food recognition service returned an error. Try a clearer photo or search manually.",
         });
       }
 
@@ -626,7 +714,8 @@ app.post("/vision/identify", requireAuth, aiLimiter, uploadSingleImage, async (r
     console.error("Vision error:", err);
     return res.status(502).json({
       status: "failed",
-      message: "We couldn't reach the food recognition service. Check your connection and try again.",
+      message:
+        "We couldn't reach the food recognition service. Check your connection and try again.",
     });
   } finally {
     if (imagePath && fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
@@ -663,7 +752,8 @@ app.post("/nutrition/analyze", requireAuth, aiLimiter, async (req, res) => {
     }
     return res.status(502).json({
       source: "ai_failed",
-      message: "The AI analysis service returned an error. The app will fall back to its local rules engine.",
+      message:
+        "The AI analysis service returned an error. The app will fall back to its local rules engine.",
     });
   }
 });
@@ -692,7 +782,8 @@ app.post("/prescription/extract", requireAuth, aiLimiter, uploadSingleImage, asy
     console.error("Prescription extraction error:", err);
     return res.status(502).json({
       status: "failed",
-      message: "We couldn't read the prescription right now. Try a clearer, well-lit photo or enter details manually.",
+      message:
+        "We couldn't read the prescription right now. Try a clearer, well-lit photo or enter details manually.",
     });
   } finally {
     if (imagePath && fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
@@ -706,9 +797,11 @@ app.use((err, _req, res, _next) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`NutriCheck API server running on http://0.0.0.0:${PORT}`);
+  console.log(`NutriSafe API server running on http://0.0.0.0:${PORT}`);
   console.log(`  Local:   http://localhost:${PORT}`);
-  console.log(`  Data:    SQLite → ${process.env.NUTRICHECK_DB_FILE || path.join(__dirname, "data", "nutricheck.db")}`);
+  console.log(
+    `  Data:    SQLite → ${process.env.NUTRISAFE_DB_FILE || path.join(__dirname, "data", "nutrisafe.db")}`
+  );
   if (JWT_SECRET === JWT_DEV_FALLBACK && process.env.NODE_ENV === "production") {
     console.error("  ✗  Running with the default JWT_SECRET in production — set JWT_SECRET.");
   }

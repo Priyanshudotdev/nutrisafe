@@ -36,16 +36,26 @@ interface PrescriptionApiResponse {
   error?: string;
 }
 
-const VALID_CONDITIONS: PatientCondition[] = ["diabetes", "ckd", "hypertension", "celiac", "allergy"];
+const VALID_CONDITIONS: PatientCondition[] = [
+  "diabetes",
+  "ckd",
+  "hypertension",
+  "celiac",
+  "allergy",
+];
 
-export async function extractPrescriptionFromImage(imageUri: string): Promise<PrescriptionExtraction> {
-  const { form: formData } = await buildImageForm(imageUri, "image", "prescription");
-
+export async function extractPrescriptionFromImage(
+  imageUri: string
+): Promise<PrescriptionExtraction> {
   const token = authStore.getToken();
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PRESCRIPTION_VISION_TIMEOUT_MS);
   try {
+    // Form-building sits inside try so an upload-construction failure maps
+    // to the normalized "failed" result instead of throwing raw to callers.
+    const { form: formData } = await buildImageForm(imageUri, "image", "prescription");
+
     const headers: Record<string, string> = { Accept: "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -113,10 +123,7 @@ export async function extractPrescriptionFromImage(imageUri: string): Promise<Pr
       message: data.summary || "Prescription details extracted.",
     };
   } catch (err) {
-    if (
-      controller.signal.aborted ||
-      (err instanceof Error && err.name === "AbortError")
-    ) {
+    if (controller.signal.aborted || (err instanceof Error && err.name === "AbortError")) {
       return {
         status: "failed",
         message: "Request timed out. Please check your connection and try again.",

@@ -10,7 +10,12 @@ export function MedicalDisclaimer(): JSX.Element {
   const styles = makeStyles(colors);
   return (
     <View style={styles.container}>
-      <Ionicons name="information-circle-outline" size={16} color={colors.slateMuted} accessible={false} />
+      <Ionicons
+        name="information-circle-outline"
+        size={16}
+        color={colors.slateMuted}
+        accessible={false}
+      />
       <Text style={styles.text}>
         Food recommendations are for informational and decision-support purposes and do not replace
         advice from your doctor or dietitian.
@@ -19,19 +24,20 @@ export function MedicalDisclaimer(): JSX.Element {
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: colors.bgSubtle,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  text: {
-    flex: 1,
-    ...typography.caption,
-    color: colors.slateMuted,
-    lineHeight: 17,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      backgroundColor: colors.bgSubtle,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    text: {
+      flex: 1,
+      ...typography.caption,
+      color: colors.slateMuted,
+      lineHeight: 17,
+    },
+  });

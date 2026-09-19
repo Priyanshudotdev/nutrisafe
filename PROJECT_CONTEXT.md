@@ -1,32 +1,32 @@
-# NutriCheck — Project Context
+# NutriSafe — Project Context
 
-> One-liner: **"Can I eat this?" answered in seconds** — NutriCheck scans any food, identifies it with AI, and tells you whether it is safe for *your* medical condition before you take a bite.
+> One-liner: **"Can I eat this?" answered in seconds** — NutriSafe scans any food, identifies it with AI, and tells you whether it is safe for _your_ medical condition before you take a bite.
 
 ---
 
 ## 1. What It Is
 
-NutriCheck is a cross-platform mobile app (Android/iOS/Web via one React Native codebase) that acts as a personal food-safety gatekeeper for people living with chronic dietary restrictions — diabetes, chronic kidney disease (CKD), hypertension, celiac disease, and food allergies.
+NutriSafe is a cross-platform mobile app (Android/iOS/Web via one React Native codebase) that acts as a personal food-safety gatekeeper for people living with chronic dietary restrictions — diabetes, chronic kidney disease (CKD), hypertension, celiac disease, and food allergies.
 
 Instead of reading nutrition labels and cross-referencing medical advice manually, the user photographs their food (or types its name), and the app:
 
 1. Identifies the dish from the image using an AI vision model,
 2. Evaluates that dish against the user's **personal medical/dietary profile**,
-3. Returns a color-coded verdict — **Safe / Moderation / Not Recommended** — with a per-nutrient breakdown explaining *why*.
+3. Returns a color-coded verdict — **Safe / Moderation / Not Recommended** — with a per-nutrient breakdown explaining _why_.
 
 It also reads **doctor's prescriptions**: photograph an Rx and the app extracts diagnoses/conditions and offers to apply them directly to your health profile.
 
 ## 2. The Problem It Solves
 
-| Without NutriCheck | With NutriCheck |
-|---|---|
-| Guessing whether a dish fits your restrictions | Instant, personalized verdict per dish |
-| Reading labels without knowing *your* limits (K? Phos? sugar?) | Per-nutrient factor breakdown tuned to each condition |
-| Carrying condition knowledge in your head | Profile captured once — via form **or prescription photo** |
-| Generic diet apps that ignore CKD/celiac/allergy overlap | Multi-condition engine where the **most restrictive rule wins** |
-| Nutrition info useless without local context | Localized alternatives for Indian foods & regional availability |
+| Without NutriSafe                                              | With NutriSafe                                                  |
+| -------------------------------------------------------------- | --------------------------------------------------------------- |
+| Guessing whether a dish fits your restrictions                 | Instant, personalized verdict per dish                          |
+| Reading labels without knowing _your_ limits (K? Phos? sugar?) | Per-nutrient factor breakdown tuned to each condition           |
+| Carrying condition knowledge in your head                      | Profile captured once — via form **or prescription photo**      |
+| Generic diet apps that ignore CKD/celiac/allergy overlap       | Multi-condition engine where the **most restrictive rule wins** |
+| Nutrition info useless without local context                   | Localized alternatives for Indian foods & regional availability |
 
-The core insight: generic calorie apps answer *"how much?"* — patients need *"is this dangerous **for me**?"*
+The core insight: generic calorie apps answer _"how much?"_ — patients need _"is this dangerous **for me**?"_
 
 ## 3. User Flow
 
@@ -49,28 +49,33 @@ Account ── profile editing, Rx re-scan, theme, notifications, security
 ## 4. Features
 
 ### Health profiling
+
 - **5 supported conditions:** Diabetes, Chronic Kidney Disease, Hypertension, Celiac, Food Allergy — multi-select with a primary condition.
-- **Prescription scanning (Rx):** photo of a prescription → AI extracts conditions → one-tap apply to profile (during onboarding *and* from Account).
+- **Prescription scanning (Rx):** photo of a prescription → AI extracts conditions → one-tap apply to profile (during onboarding _and_ from Account).
 - Allergy specifics free-text (e.g. "Peanuts, Shellfish") plus doctor's notes field.
 - Dietary profile lives in a persistent bottom bar on Home for quick edits.
 
 ### Food checking
+
 - **Text check:** type a dish name → rules engine evaluates instantly.
 - **Photo check:** camera capture or gallery upload → AI vision identifies the dish (with candidate suggestions if unsure) → full analysis.
-- Staged progress UX: *Identifying food → Checking nutritional information → Comparing dietary guidelines → Preparing your recommendation.*
+- Staged progress UX: _Identifying food → Checking nutritional information → Comparing dietary guidelines → Preparing your recommendation._
 - Verdict card: safety badge, per-nutrient factors (each flagged safe/caution/limit), and **safer alternative suggestions** localized to Indian foods/regional availability.
 
 ### History & notifications
+
 - Every analysis saved automatically; searchable history with delete.
 - In-app notification center (completion events like "History cleared", scan results).
 - Empty states with CTAs everywhere data can be absent.
 
 ### Account & security
+
 - JWT auth: email/password signup, login, logout, change email/password.
 - Settings: theme (system/light/dark), location, in-app notifications toggle, profile fields, security.
 - Destructive actions are guarded (clear-history confirmation states count + consequence).
 
 ### Design system
+
 - `DESIGN_RULES.md` is the enforced source of truth: clinical teal accent reserved for the primary action, semantic colors only for safety status, fixed 8-tier typography scale, 40/48/52px control heights, shared primitives (`AppButton`, `ErrorBanner`, `ScreenHeader`).
 
 ## 5. Architecture
@@ -100,27 +105,27 @@ Account ── profile editing, Rx re-scan, theme, notifications, security
 
 **Graceful degradation:** with no AI keys configured, photo identification fails softly and nutrition checks still run through the **local deterministic rules engine** (`evaluateFoodSafetyMulti`) — the app never hard-fails.
 
-**Multi-condition logic:** each condition contributes factors; the final verdict is the most restrictive across all active conditions (a food must be safe for *all* of them).
+**Multi-condition logic:** each condition contributes factors; the final verdict is the most restrictive across all active conditions (a food must be safe for _all_ of them).
 
 ## 6. Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Expo SDK 57, React Native 0.86, React 19 |
-| Language | TypeScript (strict, JSX-checked) |
-| Navigation | expo-router (file-based, typed routes) |
-| UI kit | HeroUI Native |
-| Styling | Tailwind CSS v4 + uniwind; token-driven `StyleSheet`s |
-| State | Custom external stores + `useSyncExternalStore` (no Redux/Zustand) |
-| Persistence (client) | AsyncStorage-backed stores |
-| Camera/media | expo-image-picker (+ custom web camera fallback) |
-| Notifications | expo-notifications |
-| Backend | Node.js + Express 5 |
-| Auth | bcryptjs password hashing + JWT (jsonwebtoken) |
-| Uploads | multer |
-| AI | Gemini API or any OpenAI-compatible chat/vision endpoint (server-side only) |
-| Persistence (server) | JSON file store in `server/data/` (gitignored) |
-| Tooling | pnpm workspaces config, ESLint (expo config), Prettier, tsc |
+| Layer                | Technology                                                                  |
+| -------------------- | --------------------------------------------------------------------------- |
+| Framework            | Expo SDK 57, React Native 0.86, React 19                                    |
+| Language             | TypeScript (strict, JSX-checked)                                            |
+| Navigation           | expo-router (file-based, typed routes)                                      |
+| UI kit               | HeroUI Native                                                               |
+| Styling              | Tailwind CSS v4 + uniwind; token-driven `StyleSheet`s                       |
+| State                | Custom external stores + `useSyncExternalStore` (no Redux/Zustand)          |
+| Persistence (client) | AsyncStorage-backed stores                                                  |
+| Camera/media         | expo-image-picker (+ custom web camera fallback)                            |
+| Notifications        | expo-notifications                                                          |
+| Backend              | Node.js + Express 5                                                         |
+| Auth                 | bcryptjs password hashing + JWT (jsonwebtoken)                              |
+| Uploads              | multer                                                                      |
+| AI                   | Gemini API or any OpenAI-compatible chat/vision endpoint (server-side only) |
+| Persistence (server) | JSON file store in `server/data/` (gitignored)                              |
+| Tooling              | pnpm workspaces config, ESLint (expo config), Prettier, tsc                 |
 
 ## 7. Repository Layout
 
@@ -164,8 +169,8 @@ The client auto-resolves the API host: `localhost` on web, Metro LAN IP on physi
 ## 9. Status / Roadmap
 
 - [x] Dark mode: every screen resolves colors via `useThemeColors()` (system/light/dark in Account → Preferences).
-- [x] Server persistence is SQLite (`server/data/nutricheck.db`, zero deps via `node:sqlite`); legacy `db.json` auto-migrates once. Swap for Postgres before multi-instance scale.
+- [x] Server persistence is SQLite (`server/data/nutrisafe.db`, zero deps via `node:sqlite`); legacy `db.json` auto-migrates once. Swap for Postgres before multi-instance scale.
 - [x] Rules engine covers the 5 modeled conditions; `src/data/foodSafety.ts` documents the 5-step checklist for adding new ones.
-- [x] `app.json` / `package.json` carry NutriCheck branding (name/slug/scheme).
+- [x] `app.json` / `package.json` carry NutriSafe branding (name/slug/scheme).
 - [x] CI (`.github/workflows/ci.yml`): typecheck + lint + server AI smoke/e2e on push/PR.
 - [ ] Validate the new default AI model (`gemini-3.5-flash`) with one real photo scan + one Rx scan; the old default (`gemini-2.0-flash`) was shut down by Google in June 2026.

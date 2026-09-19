@@ -160,7 +160,13 @@ export function WebCameraCapture({
         },
       })}
       <View style={styles.actions}>
-        <Pressable style={styles.secondaryButton} onPress={() => { stopStream(); onCancel(); }}>
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => {
+            stopStream();
+            onCancel();
+          }}
+        >
           <Text style={styles.secondaryButtonText}>Cancel</Text>
         </Pressable>
         <Pressable
@@ -176,50 +182,51 @@ export function WebCameraCapture({
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  card: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.cardBg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: spacing.lg,
-    gap: spacing.md,
-    alignItems: "center",
-  },
-  errorText: {
-    fontSize: 14,
-    color: colors.dangerText,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    width: "100%",
-  },
-  primaryButton: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: colors.primaryDark,
-    borderRadius: radius.lg,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-  },
-  primaryButtonText: { color: colors.white, fontSize: 15, fontWeight: "700" },
-  secondaryButton: {
-    flex: 1,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryButtonText: { color: colors.primaryText, fontSize: 15, fontWeight: "700" },
-  linkButton: { paddingVertical: spacing.sm },
-  linkText: { color: colors.primaryText, fontWeight: "600" },
-  disabled: { opacity: 0.5 },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    card: {
+      marginTop: spacing.xl,
+      backgroundColor: colors.cardBg,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      padding: spacing.lg,
+      gap: spacing.md,
+      alignItems: "center",
+    },
+    errorText: {
+      fontSize: 14,
+      color: colors.dangerText,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    actions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      width: "100%",
+    },
+    primaryButton: {
+      flex: 1,
+      flexDirection: "row",
+      backgroundColor: colors.primaryDark,
+      borderRadius: radius.lg,
+      paddingVertical: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+    },
+    primaryButtonText: { color: colors.white, fontSize: 15, fontWeight: "700" },
+    secondaryButton: {
+      flex: 1,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+      paddingVertical: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    secondaryButtonText: { color: colors.primaryText, fontSize: 15, fontWeight: "700" },
+    linkButton: { paddingVertical: spacing.sm },
+    linkText: { color: colors.primaryText, fontWeight: "600" },
+    disabled: { opacity: 0.5 },
+  });

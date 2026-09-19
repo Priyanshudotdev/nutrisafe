@@ -43,15 +43,21 @@ function setGemini(text) {
   console.log("✓ extractJson handles plain / fenced / noisy responses");
 
   // invalid JSON must throw AiError (not raw SyntaxError)
-  await assert.rejects(() => Promise.resolve().then(() => ai.extractJson('{"a":}')), (err) => {
-    assert.strictEqual(err.name, "AiError");
-    assert.match(err.message, /did not contain valid JSON/);
-    return true;
-  });
-  await assert.rejects(() => Promise.resolve().then(() => ai.extractJson('```json\n{"a":}\n```')), (err) => {
-    assert.strictEqual(err.name, "AiError");
-    return true;
-  });
+  await assert.rejects(
+    () => Promise.resolve().then(() => ai.extractJson('{"a":}')),
+    (err) => {
+      assert.strictEqual(err.name, "AiError");
+      assert.match(err.message, /did not contain valid JSON/);
+      return true;
+    }
+  );
+  await assert.rejects(
+    () => Promise.resolve().then(() => ai.extractJson('```json\n{"a":}\n```')),
+    (err) => {
+      assert.strictEqual(err.name, "AiError");
+      return true;
+    }
+  );
   console.log("✓ extractJson invalid JSON throws AiError");
 
   // ── provider resolution ──
@@ -68,18 +74,20 @@ function setGemini(text) {
 
   // ── identifyFood via OpenAI-compatible ──
   setOpenAI({
-    choices: [{
-      message: {
-        content: JSON.stringify({
-          foodName: "Margherita Pizza",
-          confidence: 0.93,
-          candidates: [
-            { name: "Margherita Pizza", confidence: 0.93 },
-            { name: "Cheese Pizza", confidence: 0.05 },
-          ],
-        }),
+    choices: [
+      {
+        message: {
+          content: JSON.stringify({
+            foodName: "Margherita Pizza",
+            confidence: 0.93,
+            candidates: [
+              { name: "Margherita Pizza", confidence: 0.93 },
+              { name: "Cheese Pizza", confidence: 0.05 },
+            ],
+          }),
+        },
       },
-    }],
+    ],
   });
   let r = await ai.identifyFood(Buffer.from("fake"), "image/jpeg");
   assert.strictEqual(r.status, "success");
@@ -95,11 +103,16 @@ function setGemini(text) {
 
   // network failure → friendly AiError
   mockMode = "network-error";
-  await assert.rejects(() => ai.identifyFood(Buffer.from("x"), "image/jpeg"), /reach the food recognition/);
+  await assert.rejects(
+    () => ai.identifyFood(Buffer.from("x"), "image/jpeg"),
+    /reach the food recognition/
+  );
   console.log("✓ identifyFood network error mapping");
 
   // ── identifyFood via Gemini ──
-  setGemini('```json\n{"foodName":"Idli","confidence":0.88,"candidates":[{"name":"Idli","confidence":0.88}]}\n```');
+  setGemini(
+    '```json\n{"foodName":"Idli","confidence":0.88,"candidates":[{"name":"Idli","confidence":0.88}]}\n```'
+  );
   r = await ai.identifyFood(Buffer.from("fake"), "image/jpeg");
   assert.strictEqual(r.status, "success");
   assert.strictEqual(r.foodName, "Idli");
@@ -129,7 +142,10 @@ function setGemini(text) {
       alternatives: [{ name: "Apple", reason: "Low K", icon: "not-an-icon" }],
     })
   );
-  const analysis = await ai.analyzeNutrition("banana", "ckd", { age: 32, allergensList: ["Peanuts"] });
+  const analysis = await ai.analyzeNutrition("banana", "ckd", {
+    age: 32,
+    allergensList: ["Peanuts"],
+  });
   assert.strictEqual(analysis.status, "moderation");
   assert.strictEqual(analysis.statusHeadline, "Consume in Moderation");
   assert.strictEqual(analysis.condition, "ckd");
@@ -152,7 +168,12 @@ function setGemini(text) {
     callCount++;
     const body = JSON.parse(options.body);
     if (body.response_format && callCount === 1) {
-      return { ok: false, status: 400, text: async () => "response_format unsupported", json: async () => ({}) };
+      return {
+        ok: false,
+        status: 400,
+        text: async () => "response_format unsupported",
+        json: async () => ({}),
+      };
     }
     return {
       ok: true,
