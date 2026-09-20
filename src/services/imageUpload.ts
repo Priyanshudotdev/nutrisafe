@@ -1,4 +1,5 @@
-import { Platform } from "react-native";
+import { Image, Platform } from "react-native";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 
 function parseDataUriMime(uri: string): string | null {
   if (!uri.startsWith("data:")) return null;
@@ -28,6 +29,25 @@ function fileExtensionFor(mime: string): string {
   // .jpg — the filename must match the payload format.
   if (mime === "image/heic" || mime === "image/heif") return "heic";
   return "jpg";
+}
+
+/** Max long-edge (px) for uploads — full-res camera photos are 2–5 MB and
+ *  time out on slow connections. 1024px JPEG q0.75 lands at ~100–200 KB,
+ *  plenty for food recognition, and normalizes HEIC into vision-ready JPEG. */
+const UPLOAD_MAX_EDGE = 1024;
+
+function getImageSize(uri: string): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    try {
+      Image.getSize(
+        uri,
+        (width, height) => resolve({ width, height }),
+        () => resolve(null)
+      );
+    } catch {
+      resolve(null);
+    }
+  });
 }
 
 /**
@@ -73,10 +93,37 @@ export async function buildImageForm(
     }
     form.append(field, blob, name);
   } else {
+    // Downscale on-device before upload. Any failure here falls back to the
+    // original file — a big upload that might succeed beats no upload.
+    let uri = imageUri;
+    let outMime = mime;
+    let outName = name;
+    try {
+      const dims = await getImageSize(imageUri);
+      const actions: { resize?: { width: number; height: number } }[] = [];
+      if (dims && Math.max(dims.width, dims.height) > UPLOAD_MAX_EDGE) {
+        const scale = UPLOAD_MAX_EDGE / Math.max(dims.width, dims.height);
+        actions.push({
+          resize: {
+            width: Math.round(dims.width * scale),
+            height: Math.round(dims.height * scale),
+          },
+        });
+      }
+      const manipulated = await manipulateAsync(imageUri, actions, {
+        compress: 0.75,
+        format: SaveFormat.JPEG,
+      });
+      uri = manipulated.uri;
+      outMime = "image/jpeg";
+      outName = `${filename}.jpg`;
+    } catch (e) {
+      console.warn("buildImageForm: downscale failed, uploading original", e);
+    }
     form.append(field, {
-      uri: imageUri,
-      type: mime,
-      name,
+      uri,
+      type: outMime,
+      name: outName,
     } as unknown as Blob);
   }
   return { form, mime };

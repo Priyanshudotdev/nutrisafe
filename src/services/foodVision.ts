@@ -2,8 +2,9 @@ import { VISION_CONFIDENCE_THRESHOLD, getApiBaseUrlCurrent } from "../config/api
 import { authStore } from "./authStore";
 import { buildImageForm } from "./imageUpload";
 
-/** Server vision can be slow — abort long uploads/inference before they hang UX. */
-const FOOD_VISION_TIMEOUT_MS = 45_000;
+/** Server vision can be slow (cold start + inference) — and uploads on poor
+ *  networks need room. Abort truly hung requests before they trap UX. */
+const FOOD_VISION_TIMEOUT_MS = 90_000;
 
 export interface FoodCandidate {
   name: string;
@@ -87,7 +88,6 @@ export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdent
   const proxyUrl = `${getApiBaseUrlCurrent()}/vision/identify`;
 
   const controller = new AbortController();
-  // Keep the 45s timeout: server vision (upload + inference) can be slow.
   // An abort maps to a "failed" timeout message below (not a throw), so UX
   // can offer retry without a stuck spinner.
   const timer = setTimeout(() => controller.abort(), FOOD_VISION_TIMEOUT_MS);

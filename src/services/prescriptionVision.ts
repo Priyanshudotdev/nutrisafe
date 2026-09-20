@@ -9,8 +9,9 @@ import { authStore } from "./authStore";
 import { buildImageForm } from "./imageUpload";
 import type { PatientCondition } from "../data/foodSafety";
 
-/** Server extraction can be slow — abort long uploads/inference before they hang UX. */
-const PRESCRIPTION_VISION_TIMEOUT_MS = 45_000;
+/** Server extraction can be slow (cold start + inference) — and uploads on
+ *  poor networks need room. Abort truly hung requests before they trap UX. */
+const PRESCRIPTION_VISION_TIMEOUT_MS = 90_000;
 
 export interface PrescriptionExtraction {
   status: "success" | "unreadable" | "failed" | "not_configured";
