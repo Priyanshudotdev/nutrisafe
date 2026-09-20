@@ -374,6 +374,10 @@ async function identifyFood(imageBuffer, mimetype) {
     result = await callModel({ parts, messages, timeoutMs: VISION_TIMEOUT_MS });
   } catch (err) {
     if (err instanceof AiError && err.code === "not_configured") throw err;
+    console.error(
+      "[ai] identifyFood inner:",
+      err instanceof Error ? `${err.name}: ${err.message}` : err
+    );
     throw new AiError(
       "We couldn't reach the food recognition service. Check your connection and try again."
     );
@@ -484,6 +488,10 @@ async function extractPrescription(imageBuffer, mimetype) {
         summary: "",
       };
     }
+    console.error(
+      "[ai] extractPrescription inner:",
+      err instanceof Error ? `${err.name}: ${err.message}` : err
+    );
     throw new AiError(
       "We couldn't read the prescription right now. Check your connection and try again."
     );
