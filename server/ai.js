@@ -436,8 +436,8 @@ async function analyzeNutrition(foodName, conditions, patient) {
 
 /**
  * Extract dietary-relevant health info from a prescription/report photo.
- * @returns {{ readable, documentType, conditions, allergensList, notes, doctorName, summary }}
- */
+  * @returns {{ status: "success"|"unreadable", readable, documentType, conditions, allergensList, notes, doctorName, summary }}
+  */
 async function extractPrescription(imageBuffer, mimetype) {
   const base64 = Buffer.from(imageBuffer).toString("base64");
 
@@ -482,8 +482,12 @@ async function extractPrescription(imageBuffer, mimetype) {
         .slice(0, 12)
     : [];
 
+  const readable = result.readable === true;
   return {
-    readable: result.readable === true,
+    // Discriminator mirrors /vision/identify's contract so clients can
+    // switch on `status` instead of inferring from `readable`.
+    status: readable ? "success" : "unreadable",
+    readable,
     documentType: typeof result.documentType === "string" ? result.documentType : "unknown",
     conditions,
     allergensList,
