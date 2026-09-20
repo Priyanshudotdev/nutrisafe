@@ -36,16 +36,31 @@ function fileExtensionFor(mime: string): string {
  *  plenty for food recognition, and normalizes HEIC into vision-ready JPEG. */
 const UPLOAD_MAX_EDGE = 1024;
 
+/** getImageSize silently never resolves for some URIs (no timeout, and on
+ *  some Android builds neither callback fires). Race it so a stuck probe
+ *  degrades to "compress without resize" instead of hanging the upload
+ *  forever behind an infinite spinner. */
+const IMAGE_SIZE_TIMEOUT_MS = 8000;
+
 function getImageSize(uri: string): Promise<{ width: number; height: number } | null> {
   return new Promise((resolve) => {
+    let settled = false;
+    const done = (value: { width: number; height: number } | null) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        resolve(value);
+      }
+    };
+    const timer = setTimeout(() => done(null), IMAGE_SIZE_TIMEOUT_MS);
     try {
       Image.getSize(
         uri,
-        (width, height) => resolve({ width, height }),
-        () => resolve(null)
+        (width, height) => done({ width, height }),
+        () => done(null)
       );
     } catch {
-      resolve(null);
+      done(null);
     }
   });
 }
