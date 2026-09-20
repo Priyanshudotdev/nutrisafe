@@ -76,19 +76,22 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 
 /** Extract the first JSON object from a model response (handles fences/prose). */
 function extractJson(text) {
-  if (!text) throw new AiError("Empty AI response.");
+  // Content-level failures (blocked/empty/unparseable model output) carry a
+  // distinct code so callers can return a graceful "unreadable" result
+  // instead of surfacing a 502 transport-style error.
+  if (!text) throw new AiError("Empty AI response.", "unreadable_content");
   const cleaned = text.replace(/```json\s*/gi, "```").trim();
   const fenced = cleaned.match(/```([\s\S]*?)```/);
   const candidate = fenced ? fenced[1] : cleaned;
   const start = candidate.indexOf("{");
   const end = candidate.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) {
-    throw new AiError("AI response did not contain JSON.");
+    throw new AiError("AI response did not contain JSON.", "unreadable_content");
   }
   try {
     return JSON.parse(candidate.slice(start, end + 1));
   } catch {
-    throw new AiError("AI response did not contain valid JSON.");
+    throw new AiError("AI response did not contain valid JSON.", "unreadable_content");
   }
 }
 
@@ -467,6 +470,20 @@ async function extractPrescription(imageBuffer, mimetype) {
     result = await callModel({ parts, messages, timeoutMs: VISION_TIMEOUT_MS });
   } catch (err) {
     if (err instanceof AiError && err.code === "not_configured") throw err;
+    if (err instanceof AiError && err.code === "unreadable_content") {
+      // The model returned nothing usable (blocked/empty/garbled) — the
+      // image simply yielded no reading. HTTP 200 + unreadable, not a 502.
+      return {
+        status: "unreadable",
+        readable: false,
+        documentType: "unknown",
+        conditions: [],
+        allergensList: [],
+        notes: "",
+        doctorName: null,
+        summary: "",
+      };
+    }
     throw new AiError(
       "We couldn't read the prescription right now. Check your connection and try again."
     );
