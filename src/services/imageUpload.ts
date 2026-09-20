@@ -142,7 +142,11 @@ export async function buildImageForm(
     try {
       const response = await fetch(uri);
       if (!response.ok) throw new Error(`image fetch failed with status ${response.status}`);
-      const blob = await response.blob();
+      // Some Android file:// fetches return a Blob with an empty or generic
+      // MIME type. Multer uses that value for file.mimetype, so normalize it
+      // explicitly or the server quite correctly rejects the upload.
+      const bytes = await response.arrayBuffer();
+      const blob = new Blob([bytes], { type: outMime });
       form.append(field, blob, outName);
     } catch (e) {
       console.warn("buildImageForm: Blob materialization failed, using native file form", e);
