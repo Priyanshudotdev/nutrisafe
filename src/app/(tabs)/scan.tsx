@@ -35,6 +35,7 @@ import {
   type AnalysisStep,
 } from "../../services/foodAnalysis";
 import type { FoodIdentificationResult } from "../../services/foodVision";
+import { getApiBaseUrlCurrent } from "../../config/api";
 import { updateProfile } from "../../services/profileService";
 import { notificationStore } from "../../services/notificationStore";
 
@@ -354,6 +355,7 @@ export default function FoodScannerScreen() {
               {errorMessage ??
                 "Try a clearer, well-lit photo showing the full dish, or search for the food manually."}
             </Text>
+            <Text style={styles.debugLine}>API: {getApiBaseUrlCurrent()}</Text>
             <AppButton label="Try Again" onPress={resetScan} size="md" />
             <AppLinkButton
               label="Search manually"
@@ -454,6 +456,7 @@ const makeStyles = (colors: ThemeColors) =>
     },
     errorTitle: { fontSize: 17, fontWeight: "700", color: colors.dangerText, textAlign: "center" },
     errorBody: { fontSize: 13, color: colors.dangerText, textAlign: "center", lineHeight: 19 },
+    debugLine: { fontSize: 11, color: colors.slateMuted, textAlign: "center" },
     resultSection: { marginTop: spacing.xl, gap: spacing.md },
     confidenceNote: { fontSize: 12, color: colors.slateMuted, fontWeight: "500" },
     linkButton: { marginTop: spacing.xs },
