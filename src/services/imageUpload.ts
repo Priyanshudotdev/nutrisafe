@@ -100,7 +100,7 @@ export async function buildImageForm(
     let outName = name;
     try {
       const dims = await getImageSize(imageUri);
-      const actions: { resize?: { width: number; height: number } }[] = [];
+      const actions: { resize: { width?: number; height?: number } }[] = [];
       if (dims && Math.max(dims.width, dims.height) > UPLOAD_MAX_EDGE) {
         const scale = UPLOAD_MAX_EDGE / Math.max(dims.width, dims.height);
         actions.push({
