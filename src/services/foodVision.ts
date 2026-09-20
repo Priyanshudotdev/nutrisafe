@@ -83,72 +83,103 @@ function normalizeResult(data: VisionApiResponse): FoodIdentificationResult {
  * proxy (/vision/identify), so provider keys stay server-side.
  * Vision only identifies food — it never generates medical verdicts.
  */
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Upload attempts: one retry with backoff covers transient mobile-network
+ *  blips (tunnel drops, radio handoffs). Read-only endpoint, safe to repeat. */
+const VISION_MAX_ATTEMPTS = 2;
+
 export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdentificationResult> {
   const token = authStore.getToken();
   const proxyUrl = `${getApiBaseUrlCurrent()}/vision/identify`;
 
-  const controller = new AbortController();
-  // An abort maps to a "failed" timeout message below (not a throw), so UX
-  // can offer retry without a stuck spinner.
-  const timer = setTimeout(() => controller.abort(), FOOD_VISION_TIMEOUT_MS);
+  // Build once up front so a construction failure maps to the normalized
+  // "failed" result instead of throwing raw to callers.
+  let formData: FormData;
   try {
-    // Form-building sits inside try so an upload-construction failure maps
-    // to the normalized "failed" result instead of throwing raw to callers.
-    const { form: formData } = await buildImageForm(imageUri, "image", "food");
-
-    // All vision traffic goes through the authenticated server proxy, which
-    // keeps provider keys server-side and enforces per-user rate limits.
-    const headers: Record<string, string> = { Accept: "application/json" };
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    const response = await fetch(proxyUrl, {
-      method: "POST",
-      body: formData,
-      headers,
-      signal: controller.signal,
-    });
-
-    let data: VisionApiResponse = {};
-    try {
-      data = (await response.json()) as VisionApiResponse;
-    } catch {
-      data = {};
-    }
-
-    if (response.status === 503 || data.status === "not_configured") {
-      return {
-        status: "not_configured",
-        message:
-          data.message ??
-          "Food recognition isn't available right now. Search for the food manually instead.",
-      };
-    }
-
-    if (!response.ok) {
-      return {
-        status: "failed",
-        message:
-          data.message ??
-          data.error ??
-          "We couldn't identify this food from the image. Try a clearer photo or search manually.",
-      };
-    }
-
-    return normalizeResult(data);
-  } catch (err) {
-    if (controller.signal.aborted || (err instanceof Error && err.name === "AbortError")) {
-      return {
-        status: "failed",
-        message: "Request timed out. Please check your connection and try again.",
-      };
-    }
+    ({ form: formData } = await buildImageForm(imageUri, "image", "food"));
+  } catch {
     return {
       status: "failed",
-      message: "We couldn't reach the identification service. Check your connection and try again.",
+      message: "We couldn't prepare this photo for upload. Try picking the photo again.",
     };
-  } finally {
-    clearTimeout(timer);
   }
+
+  for (let attempt = 1; attempt <= VISION_MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    // An abort maps to a "failed" timeout message below (not a throw), so UX
+    // can offer retry without a stuck spinner.
+    const timer = setTimeout(() => controller.abort(), FOOD_VISION_TIMEOUT_MS);
+    try {
+      // All vision traffic goes through the authenticated server proxy, which
+      // keeps provider keys server-side and enforces per-user rate limits.
+      const headers: Record<string, string> = { Accept: "application/json" };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(proxyUrl, {
+        method: "POST",
+        body: formData,
+        headers,
+        signal: controller.signal,
+      });
+
+      let data: VisionApiResponse = {};
+      try {
+        data = (await response.json()) as VisionApiResponse;
+      } catch {
+        data = {};
+      }
+
+      if (response.status === 503 || data.status === "not_configured") {
+        return {
+          status: "not_configured",
+          message:
+            data.message ??
+            "Food recognition isn't available right now. Search for the food manually instead.",
+        };
+      }
+
+      if (!response.ok) {
+        return {
+          status: "failed",
+          message:
+            data.message ??
+            data.error ??
+            "We couldn't identify this food from the image. Try a clearer photo or search manually.",
+        };
+      }
+
+      return normalizeResult(data);
+    } catch (err) {
+      clearTimeout(timer);
+      const aborted =
+        controller.signal.aborted || (err instanceof Error && err.name === "AbortError");
+      if (attempt < VISION_MAX_ATTEMPTS) {
+        // Transient network blip — back off and retry once before surfacing.
+        await sleep(1500 * attempt);
+        continue;
+      }
+      if (aborted) {
+        return {
+          status: "failed",
+          message: "Request timed out. Please check your connection and try again.",
+        };
+      }
+      return {
+        status: "failed",
+        message:
+          "We couldn't reach the identification service. Check your connection and try again.",
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Unreachable: the loop always returns or continues within bounds.
+  return {
+    status: "failed",
+    message: "We couldn't reach the identification service. Check your connection and try again.",
+  };
 }
