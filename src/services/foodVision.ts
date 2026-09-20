@@ -93,19 +93,20 @@ export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdent
   const token = authStore.getToken();
   const proxyUrl = `${getApiBaseUrlCurrent()}/vision/identify`;
 
-  // Build once up front so a construction failure maps to the normalized
-  // "failed" result instead of throwing raw to callers.
-  let formData: FormData;
-  try {
-    ({ form: formData } = await buildImageForm(imageUri, "image", "food"));
-  } catch {
-    return {
-      status: "failed",
-      message: "We couldn't prepare this photo for upload. Try picking the photo again.",
-    };
-  }
-
   for (let attempt = 1; attempt <= VISION_MAX_ATTEMPTS; attempt++) {
+    // FormData request bodies are consumable. Rebuild the body for every
+    // retry; reusing one after a failed fetch can produce an empty upload on
+    // Android without reaching the server.
+    let formData: FormData;
+    try {
+      ({ form: formData } = await buildImageForm(imageUri, "image", "food"));
+    } catch {
+      return {
+        status: "failed",
+        message: "We couldn't prepare this photo for upload. Try picking the photo again.",
+      };
+    }
+
     const controller = new AbortController();
     // An abort maps to a "failed" timeout message below (not a throw), so UX
     // can offer retry without a stuck spinner.

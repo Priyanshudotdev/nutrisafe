@@ -135,11 +135,23 @@ export async function buildImageForm(
     } catch (e) {
       console.warn("buildImageForm: downscale failed, uploading original", e);
     }
-    form.append(field, {
-      uri,
-      type: outMime,
-      name: outName,
-    } as unknown as Blob);
+    // Materialize the local file as a real Blob when possible. This avoids
+    // relying on the platform-specific `{ uri, type, name }` FormData shim,
+    // which can fail silently in standalone Android builds. Keep the native
+    // URI form as a fallback for runtimes that cannot fetch file:// URIs.
+    try {
+      const response = await fetch(uri);
+      if (!response.ok) throw new Error(`image fetch failed with status ${response.status}`);
+      const blob = await response.blob();
+      form.append(field, blob, outName);
+    } catch (e) {
+      console.warn("buildImageForm: Blob materialization failed, using native file form", e);
+      form.append(field, {
+        uri,
+        type: outMime,
+        name: outName,
+      } as unknown as Blob);
+    }
   }
   return { form, mime };
 }
