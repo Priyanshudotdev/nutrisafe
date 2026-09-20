@@ -106,3 +106,23 @@ The app requires the NutriSafe API backend server to handle account creation, lo
 
 - **How to stop the app**:
   - Click on each terminal window and press `Ctrl + C`, then type `y` and press **Enter**.
+
+---
+
+## 📦 Installing a standalone Android build (EAS)
+
+Expo Go can discover the API running on your PC. A standalone APK cannot: it needs a public HTTPS API URL embedded at build time. Both the `preview` and `production` EAS profiles are configured to use the deployed NutriSafe API.
+
+Build a new APK after changing the API URL or EAS configuration:
+
+```cmd
+eas build --platform android --profile preview
+```
+
+For a store/release build, use:
+
+```cmd
+eas build --platform android --profile production
+```
+
+> Do not reinstall an APK built before the EAS configuration was updated. Its embedded API URL may still be `localhost`, which points to the phone/emulator itself. In that case text checks can still show local rule-engine results, but photo scanning cannot reach the server.

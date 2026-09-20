@@ -16,7 +16,11 @@
         "EXPO_PUBLIC_API_URL": "https://nutrisafe-server.onrender.com"
       }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://nutrisafe-server.onrender.com"
+      }
+    }
   },
   "submit": {
     "production": {}
