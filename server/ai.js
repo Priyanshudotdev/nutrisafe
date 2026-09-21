@@ -1,12 +1,10 @@
 /* NutriSafe — AI layer (server-side only, keys never reach the client)
  *
  * Providers (first match wins):
- *   1. Muse Spark (Meta Model API) → MUSE_SPARK_API_KEY (optional MUSE_SPARK_MODEL,
- *      default muse-spark-1.3-contributor; optional MUSE_SPARK_BASE_URL,
- *      default https://api.meta.ai/v1). Served on the Responses API
- *      (POST /v1/responses); vision via input_image data-URL blocks,
- *      system guidance via instructions. On model_not_found the tier
- *      counterpart (contributor ↔ standard) is retried once.
+ *   1. Google Gemini          → GEMINI_API_KEY (optional GEMINI_MODEL, default
+ *      gemini-2.5-flash; unknown ids fall through 2.0-flash → 1.5-flash)
+ *   2. Muse Spark (Meta Model API) → MUSE_SPARK_API_KEY (Responses API;
+ *      dormant until Meta billing is configured on the account)
  *   2. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-2.5-flash)
  *   3. OpenAI-compatible      → OPENAI_API_KEY            (optional OPENAI_BASE_URL, OPENAI_MODEL)
  *      Works with OpenAI, OpenRouter, Groq, Together, Ollama, LM Studio, ...
@@ -34,8 +32,18 @@ const TEXT_TIMEOUT_MS = 30_000;
 // ─── Provider resolution ───────────────────────────────────────────────────────
 
 function resolveProvider() {
-  // Muse Spark (Meta Model API) — Responses API (POST /v1/responses).
-  // Key is server-side only; never ship it in the app bundle.
+  // Gemini first: the active provider. Muse Spark stays wired as fallback
+  // (Meta Model API billing is not configured on this account).
+  // Keys are server-side only; never ship them in the app bundle.
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+  if (geminiKey) {
+    return {
+      name: "gemini",
+      apiKey: geminiKey,
+      model: process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL,
+    };
+  }
+
   const museKey = process.env.MUSE_SPARK_API_KEY?.trim();
   if (museKey) {
     return {
@@ -46,15 +54,6 @@ function resolveProvider() {
         /\/$/,
         ""
       ),
-    };
-  }
-
-  const geminiKey = process.env.GEMINI_API_KEY?.trim();
-  if (geminiKey) {
-    return {
-      name: "gemini",
-      apiKey: geminiKey,
-      model: process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL,
     };
   }
 
@@ -131,6 +130,23 @@ function _setGeminiOverride(fn) {
   _geminiOverride = fn;
 }
 
+/**
+ * Ordered Gemini model ids: configured → 2.5-flash → 2.0-flash → 1.5-flash.
+ * Google retires aliases over time; each model-not-found moves on.
+ */
+function geminiModelCandidates(configured) {
+  const out = [];
+  for (const m of [configured, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]) {
+    if (typeof m === "string" && m && !out.includes(m)) out.push(m);
+  }
+  return out;
+}
+
+function isGeminiModelNotFound(err) {
+  const msg = err instanceof Error ? `${err.message}` : String(err);
+  return /404|not.?found|MODEL_NOT_FOUND/i.test(msg);
+}
+
 async function callGemini({ parts, systemPrompt, timeoutMs }) {
   const provider = resolveProvider();
 
@@ -164,30 +180,40 @@ async function callGemini({ parts, systemPrompt, timeoutMs }) {
   }
   const ai = new GoogleGenAI({ apiKey: provider.apiKey });
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await ai.models.generateContent({
-      model: provider.model,
-      contents: [{ role: "user", parts: normalizedParts }],
-      config: {
-        temperature: 0.3,
-        maxOutputTokens: 2048,
-        responseMimeType: "application/json",
-        ...(systemPrompt ? { systemInstruction: systemPrompt } : {}),
-        abortSignal: controller.signal,
-      },
-    });
-    const text = typeof response.text === "string" ? response.text : "";
-    return extractJson(text);
-  } catch (err) {
-    if (err instanceof AiError) throw err;
-    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-    if (/abort/i.test(msg)) throw new AiError(`Gemini request timed out after ${timeoutMs}ms.`);
-    throw new AiError(`Gemini request failed: ${msg.slice(0, 300)}`);
-  } finally {
-    clearTimeout(timer);
+  let lastError = null;
+  for (const model of geminiModelCandidates(provider.model)) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ role: "user", parts: normalizedParts }],
+        config: {
+          temperature: 0.3,
+          maxOutputTokens: 2048,
+          responseMimeType: "application/json",
+          ...(systemPrompt ? { systemInstruction: systemPrompt } : {}),
+          abortSignal: controller.signal,
+        },
+      });
+      if (model !== provider.model) console.log(`[ai] gemini model fallback in use: ${model}`);
+      const text = typeof response.text === "string" ? response.text : "";
+      return extractJson(text);
+    } catch (err) {
+      if (err instanceof AiError) throw err;
+      const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      if (/abort/i.test(msg)) throw new AiError(`Gemini request timed out after ${timeoutMs}ms.`);
+      lastError = new AiError(`Gemini request failed: ${msg.slice(0, 300)}`);
+      if (isGeminiModelNotFound(err) && model !== geminiModelCandidates(provider.model).pop()) {
+        console.warn(`[ai] gemini model ${model} not found, trying next candidate`);
+        continue;
+      }
+      throw lastError;
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  throw lastError ?? new AiError("Gemini request failed.");
 }
 
 /** REST fallback — kept for reference/debugging (SDK is the live path). */
@@ -813,5 +839,6 @@ module.exports = {
   // exported for tests
   extractJson,
   normalizeAnalysis,
+  geminiModelCandidates,
   _setGeminiOverride,
 };

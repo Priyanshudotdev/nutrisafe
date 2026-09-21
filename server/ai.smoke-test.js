@@ -101,14 +101,28 @@ function setGemini(text) {
   process.env.MUSE_SPARK_API_KEY = "k";
   assert.strictEqual(ai.isConfigured(), true);
   assert.ok(ai.describeConfig().includes("muse-spark"));
-  // First match wins: muse beats gemini + openai when all are set.
+  // First match wins: gemini beats muse + openai when all are set.
   process.env.GEMINI_API_KEY = "k";
   process.env.OPENAI_API_KEY = "k";
-  assert.ok(ai.describeConfig().includes("muse-spark"));
+  assert.ok(ai.describeConfig().includes("gemini"));
   delete process.env.GEMINI_API_KEY;
   delete process.env.OPENAI_API_KEY;
   delete process.env.MUSE_SPARK_API_KEY;
   console.log("✓ provider detection (none / openai / gemini / muse + priority)");
+
+  // Gemini model fallback chain order (retired aliases rotate forward).
+  assert.deepStrictEqual(ai.geminiModelCandidates("gemini-9.9-custom"), [
+    "gemini-9.9-custom",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+  ]);
+  assert.deepStrictEqual(ai.geminiModelCandidates("gemini-1.5-flash"), [
+    "gemini-1.5-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ]);
+  console.log("✓ gemini model candidate order");
 
   // ── identifyFood via OpenAI-compatible ──
   setOpenAI({
