@@ -354,13 +354,23 @@ function museCounterpart(model) {
 }
 
 /**
- * Ordered model ids to try: configured → tier counterpart → free-tier id.
- * Different keys are entitled to different catalog entries; each 404 moves
- * to the next candidate. Only failure paths pay extra requests.
+ * Ordered model ids to try: explicit MUSE_SPARK_MODELS list first (comma-
+ * separated dashboard env — no code push needed to try new ids), then
+ * configured → tier counterpart → free-tier id. Each 404 moves to the next
+ * candidate. Only failure paths pay extra requests.
  */
 function museModelCandidates(configured) {
   const out = [];
-  for (const m of [configured, museCounterpart(configured), "muse-spark-1.3-contributor-free"]) {
+  const fromEnv = (process.env.MUSE_SPARK_MODELS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const m of [
+    ...fromEnv,
+    configured,
+    museCounterpart(configured),
+    "muse-spark-1.3-contributor-free",
+  ]) {
     if (typeof m === "string" && m && !out.includes(m)) out.push(m);
   }
   return out;

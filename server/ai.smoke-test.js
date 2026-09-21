@@ -362,9 +362,10 @@ function setGemini(text) {
     console.log("✓ analyzeNutrition via Muse Spark sends instructions");
   }
 
-  // Muse 404 model_not_found → tier counterpart, then free-tier id
+  // Muse 404 model_not_found → env list first, then tier chain
   {
     const seenModels = [];
+    process.env.MUSE_SPARK_MODELS = "custom-a,custom-b";
     global.fetch = async (_url, options) => {
       const body = JSON.parse(options.body);
       seenModels.push(body.model);
@@ -401,10 +402,11 @@ function setGemini(text) {
     delete process.env.OPENAI_API_KEY;
     ai._setGeminiOverride(null);
     r = await ai.identifyFood(Buffer.from("fake"), "image/jpeg");
+    delete process.env.MUSE_SPARK_MODELS;
     assert.deepStrictEqual(seenModels, [
+      "custom-a",
+      "custom-b",
       "muse-spark-1.3-contributor",
-      "muse-spark-1.3",
-      "muse-spark-1.3-contributor-free",
     ]);
     assert.strictEqual(r.foodName, "Idli");
     console.log("✓ Muse Spark model fallback chain on model_not_found");
