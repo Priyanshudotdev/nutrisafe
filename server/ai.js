@@ -2,7 +2,7 @@
  *
  * Providers (first match wins):
  *   1. Muse Spark (Meta Model API) → MUSE_SPARK_API_KEY (optional MUSE_SPARK_MODEL,
- *      default muse-spark-1.3-contributor; optional MUSE_SPARK_BASE_URL,
+ *      default muse-spark-1.3; optional MUSE_SPARK_BASE_URL,
  *      default https://api.meta.ai/v1). OpenAI-compatible chat-completions
  *      surface; vision via image_url data-URL blocks in user messages.
  *   2. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-2.5-flash)
@@ -16,7 +16,10 @@
  * Without any key, isConfigured() returns false and routes degrade gracefully.
  */
 
-const DEFAULT_MUSE_SPARK_MODEL = "muse-spark-1.3-contributor";
+// NOTE: default to the Standard-tier id. Contributor-tier ids
+// (muse-spark-1.3-contributor, ...) 404 for keys not entitled to that
+// tier — override via MUSE_SPARK_MODEL if your key allows it.
+const DEFAULT_MUSE_SPARK_MODEL = "muse-spark-1.3";
 const DEFAULT_MUSE_SPARK_BASE_URL = "https://api.meta.ai/v1";
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";

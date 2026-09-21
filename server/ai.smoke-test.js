@@ -307,7 +307,7 @@ function setGemini(text) {
   assert.strictEqual(lastOptions.headers.Authorization, "Bearer test-key");
   {
     const museBody = JSON.parse(lastOptions.body);
-    assert.strictEqual(museBody.model, "muse-spark-1.3-contributor");
+    assert.strictEqual(museBody.model, "muse-spark-1.3");
     const content = museBody.messages?.find((m) => m.role === "user")?.content;
     assert.ok(Array.isArray(content), "Muse vision must use user content array");
     const imgPart = content.find((p) => p.type === "image_url");
