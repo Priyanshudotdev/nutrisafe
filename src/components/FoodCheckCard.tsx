@@ -3,11 +3,9 @@ import type { JSX } from "react";
 import React, { useState } from "react";
 import {
   LayoutAnimation,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
-  UIManager,
   View,
 } from "react-native";
 import {
@@ -24,10 +22,6 @@ import {
 } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 import { SafetyStatusBadge } from "./SafetyStatusBadge";
-
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 function getConditionLabel(conditionId: string): string {
   return (

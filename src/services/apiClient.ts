@@ -43,9 +43,12 @@ const TOKEN_REFRESH_SKEW_MS = 48 * 60 * 60 * 1000;
 
 function getTokenExpiryMs(token: string): number | null {
   try {
-    const payload = token.split(".")[1];
+    let payload = token.split(".")[1];
     if (!payload) return null;
-    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))) as {
+    payload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    // atob requires length % 4 === 0 — pad base64url payloads from JWTs.
+    while (payload.length % 4 !== 0) payload += "=";
+    const json = JSON.parse(atob(payload)) as {
       exp?: number;
     };
     return typeof json.exp === "number" ? json.exp * 1000 : null;
@@ -82,6 +85,33 @@ async function refreshToken(baseUrl: string, token: string): Promise<string | nu
 
 export function getApiBaseUrl(): string {
   return getApiBaseUrlCurrent();
+}
+
+/**
+ * Proactive token refresh shared by JSON (apiFetch) and multipart (vision)
+ * callers. Returns a fresh-or-current token, or null when logged out.
+ * Skips refresh for auth endpoints to avoid recursion.
+ */
+export async function ensureFreshToken(path = "/vision/identify"): Promise<string | null> {
+  const baseUrl = getApiBaseUrlCurrent();
+  let token = authStore.getToken();
+  if (token && !path.startsWith("/auth")) {
+    const expiry = getTokenExpiryMs(token);
+    if (expiry !== null && expiry - Date.now() < TOKEN_REFRESH_SKEW_MS) {
+      const fresh = await refreshToken(baseUrl, token);
+      if (fresh) token = fresh;
+    }
+  }
+  return token;
+}
+
+/** Mirror apiFetch's 401 behavior for non-apiFetch callers (vision). */
+export function handleVisionAuthFailure(status: number, path = "/vision/identify"): boolean {
+  if (status === 401 && !path.startsWith("/auth")) {
+    void authStore.logout();
+    return true;
+  }
+  return false;
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {

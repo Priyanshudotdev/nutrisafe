@@ -1,4 +1,6 @@
-/* Smoke test for server/ai.js with a mocked fetch — no API keys needed.
+/* Smoke test for server/ai.js with mocked providers — no API keys needed.
+ * OpenAI-compatible path mocks global.fetch; Gemini path (official
+ * @google/genai SDK) uses ai._setGeminiOverride to avoid network access.
  * Run: node server/ai.smoke-test.js
  */
 
@@ -9,30 +11,54 @@ let mockMode = "";
 let mockResponse = null;
 let lastUrl = "";
 let lastOptions = null;
-global.fetch = async (url, options) => {
-  lastUrl = String(url);
-  lastOptions = options;
-  if (mockMode === "network-error") throw new Error("ECONNREFUSED");
-  return {
-    ok: mockResponse.ok,
-    status: mockResponse.status ?? 200,
-    text: async () => JSON.stringify(mockResponse.body ?? {}),
-    json: async () => mockResponse.body ?? {},
+function installRecorder() {
+  global.fetch = async (url, options) => {
+    lastUrl = String(url);
+    lastOptions = options;
+    if (mockMode === "network-error") throw new Error("ECONNREFUSED");
+    return {
+      ok: mockResponse.ok,
+      status: mockResponse.status ?? 200,
+      text: async () => JSON.stringify(mockResponse.body ?? {}),
+      json: async () => mockResponse.body ?? {},
+    };
   };
-};
+}
+installRecorder();
 
 function setOpenAI(body) {
   mockMode = "openai";
+  installRecorder();
   process.env.OPENAI_API_KEY = "test-key";
   delete process.env.GEMINI_API_KEY;
+  delete process.env.MUSE_SPARK_API_KEY;
+  ai._setGeminiOverride(null);
   mockResponse = { ok: true, body };
 }
 
+function setMuse(body) {
+  mockMode = "muse";
+  installRecorder();
+  process.env.MUSE_SPARK_API_KEY = "test-key";
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.OPENAI_API_KEY;
+  delete process.env.MUSE_SPARK_MODEL;
+  delete process.env.MUSE_SPARK_BASE_URL;
+  ai._setGeminiOverride(null);
+  mockResponse = { ok: true, body };
+}
+
+let lastGeminiArgs = null;
 function setGemini(text) {
   mockMode = "gemini";
   process.env.GEMINI_API_KEY = "test-key";
   delete process.env.OPENAI_API_KEY;
-  mockResponse = { ok: true, body: { candidates: [{ content: { parts: [{ text }] } }] } };
+  delete process.env.MUSE_SPARK_API_KEY;
+  lastGeminiArgs = null;
+  ai._setGeminiOverride(async (args) => {
+    lastGeminiArgs = args;
+    return text;
+  });
 }
 
 (async () => {
@@ -63,6 +89,7 @@ function setGemini(text) {
   // ── provider resolution ──
   delete process.env.GEMINI_API_KEY;
   delete process.env.OPENAI_API_KEY;
+  delete process.env.MUSE_SPARK_API_KEY;
   assert.strictEqual(ai.isConfigured(), false);
   process.env.OPENAI_API_KEY = "k";
   assert.strictEqual(ai.isConfigured(), true);
@@ -70,7 +97,18 @@ function setGemini(text) {
   delete process.env.OPENAI_API_KEY;
   process.env.GEMINI_API_KEY = "k";
   assert.ok(ai.describeConfig().includes("gemini"));
-  console.log("✓ provider detection (none / openai / gemini)");
+  delete process.env.GEMINI_API_KEY;
+  process.env.MUSE_SPARK_API_KEY = "k";
+  assert.strictEqual(ai.isConfigured(), true);
+  assert.ok(ai.describeConfig().includes("muse-spark"));
+  // First match wins: muse beats gemini + openai when all are set.
+  process.env.GEMINI_API_KEY = "k";
+  process.env.OPENAI_API_KEY = "k";
+  assert.ok(ai.describeConfig().includes("muse-spark"));
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.OPENAI_API_KEY;
+  delete process.env.MUSE_SPARK_API_KEY;
+  console.log("✓ provider detection (none / openai / gemini / muse + priority)");
 
   // ── identifyFood via OpenAI-compatible ──
   setOpenAI({
@@ -116,15 +154,28 @@ function setGemini(text) {
   r = await ai.identifyFood(Buffer.from("fake"), "image/jpeg");
   assert.strictEqual(r.status, "success");
   assert.strictEqual(r.foodName, "Idli");
-  console.log("✓ identifyFood success path (Gemini)");
+  console.log("✓ identifyFood success path (Gemini SDK)");
 
-  // Gemini auth must go via x-goog-api-key header, never ?key= in URL
-  assert.ok(!lastUrl.includes("key="), `Gemini URL must not contain key, got: ${lastUrl}`);
-  assert.ok(!lastUrl.includes("test-key"), "Gemini URL must not leak API key");
-  assert.strictEqual(lastOptions.headers["x-goog-api-key"], "test-key");
-  const geminiBody = JSON.parse(lastOptions.body);
-  assert.strictEqual(geminiBody.generationConfig.maxOutputTokens, 2048);
-  console.log("✓ Gemini uses x-goog-api-key header (no key in URL) + maxOutputTokens");
+  // SDK must receive camelCase inlineData/mimeType — snake_case
+  // inline_data/mime_type was the P0 400 bug. The SDK also keeps the key
+  // out of the URL entirely (apiKey passed to the client, not query).
+  {
+    assert.ok(lastGeminiArgs, "Gemini override must have been called");
+    assert.ok(
+      typeof lastGeminiArgs.model === "string" && lastGeminiArgs.model.length > 0,
+      "Gemini model id must be set"
+    );
+    const userParts = lastGeminiArgs.parts ?? [];
+    const imgPart = userParts.find((p) => p.inlineData);
+    assert.ok(imgPart, "Gemini vision parts must contain inlineData");
+    assert.strictEqual(imgPart.inlineData.mimeType, "image/jpeg");
+    assert.ok(typeof imgPart.inlineData.data === "string" && imgPart.inlineData.data.length > 0);
+    assert.ok(
+      !userParts.some((p) => p.inline_data),
+      "Gemini parts must not use snake_case inline_data"
+    );
+    console.log("✓ Gemini SDK vision uses inlineData.mimeType (not inline_data.mime_type)");
+  }
 
   // ── analyzeNutrition + normalizeAnalysis ──
   setGemini(
@@ -155,6 +206,47 @@ function setGemini(text) {
   assert.strictEqual(analysis.alternatives[0].icon, "nutrition-outline"); // whitelisted
   console.log("✓ analyzeNutrition normalizes malformed AI output");
 
+  // P0 regression: analyzeNutrition must supply parts + systemInstruction
+  // for Gemini (the SDK ignores OpenAI-style `messages`).
+  {
+    assert.ok(lastGeminiArgs, "Gemini override must have been called for nutrition");
+    assert.ok(
+      typeof lastGeminiArgs.systemPrompt === "string" &&
+        lastGeminiArgs.systemPrompt.includes("clinical dietitian"),
+      "Gemini nutrition must carry the dietitian system prompt"
+    );
+    const nutriText = (lastGeminiArgs.parts?.[0]?.text ?? "");
+    assert.ok(nutriText.includes('Food: "banana"'), "Gemini nutrition parts must carry the food prompt");
+    console.log("✓ analyzeNutrition sends parts + systemInstruction for Gemini SDK");
+  }
+
+  // P0 regression: extractPrescription must send the prescription schema
+  // (PRESCRIPTION_SYSTEM_PROMPT) — without it the model returns prose.
+  setGemini(
+    JSON.stringify({
+      readable: true,
+      documentType: "prescription",
+      conditions: ["diabetes"],
+      allergensList: [],
+      notes: "Take with food.",
+      doctorName: "Dr. Test",
+      summary: "Diabetes prescription.",
+    })
+  );
+  {
+    const rx = await ai.extractPrescription(Buffer.from("fake"), "image/jpeg");
+    assert.strictEqual(rx.status, "success");
+    assert.deepStrictEqual(rx.conditions, ["diabetes"]);
+    assert.ok(
+      typeof lastGeminiArgs.systemPrompt === "string" &&
+        lastGeminiArgs.systemPrompt.includes("medical records assistant"),
+      "Gemini prescription must carry the extraction schema as system prompt"
+    );
+    const rxParts = lastGeminiArgs.parts ?? [];
+    assert.ok(rxParts.some((p) => p.inlineData), "Gemini prescription must include inlineData image");
+    console.log("✓ extractPrescription sends schema via systemInstruction + inlineData image");
+  }
+
   // invalid condition rejected
   await assert.rejects(() => ai.analyzeNutrition("rice", "gout", {}), /Invalid medical condition/);
   console.log("✓ analyzeNutrition rejects unknown conditions");
@@ -163,6 +255,7 @@ function setGemini(text) {
   mockMode = "openai";
   delete process.env.GEMINI_API_KEY;
   process.env.OPENAI_API_KEY = "test-key";
+  ai._setGeminiOverride(null);
   let callCount = 0;
   global.fetch = async (_url, options) => {
     callCount++;
@@ -188,6 +281,102 @@ function setGemini(text) {
   assert.strictEqual(callCount, 2);
   assert.strictEqual(r.foodName, "Dosa");
   console.log("✓ OpenAI-compatible retry without response_format");
+
+  // ── identifyFood via Muse Spark (Meta Model API, chat completions) ──
+  setMuse({
+    choices: [
+      {
+        message: {
+          content: JSON.stringify({
+            foodName: "Masala Dosa",
+            confidence: 0.91,
+            candidates: [{ name: "Masala Dosa", confidence: 0.91 }],
+          }),
+        },
+      },
+    ],
+  });
+  r = await ai.identifyFood(Buffer.from("fake"), "image/jpeg");
+  assert.strictEqual(r.status, "success");
+  assert.strictEqual(r.foodName, "Masala Dosa");
+  assert.ok(
+    String(lastUrl).startsWith("https://api.meta.ai/v1/chat/completions"),
+    `Muse URL must hit Meta Model API chat completions, got: ${lastUrl}`
+  );
+  assert.ok(!lastUrl.includes("test-key"), "Muse URL must not leak API key");
+  assert.strictEqual(lastOptions.headers.Authorization, "Bearer test-key");
+  {
+    const museBody = JSON.parse(lastOptions.body);
+    assert.strictEqual(museBody.model, "muse-spark-1.3-contributor");
+    const content = museBody.messages?.find((m) => m.role === "user")?.content;
+    assert.ok(Array.isArray(content), "Muse vision must use user content array");
+    const imgPart = content.find((p) => p.type === "image_url");
+    assert.ok(
+      typeof imgPart?.image_url?.url === "string" &&
+        imgPart.image_url.url.startsWith("data:image/jpeg;base64,"),
+      "Muse vision must send base64 data URL"
+    );
+    console.log("✓ identifyFood success path (Muse Spark chat completions)");
+  }
+
+  // ── analyzeNutrition via Muse Spark carries the dietitian system prompt ──
+  setMuse({
+    choices: [
+      {
+        message: {
+          content: JSON.stringify({
+            foodName: "Apple",
+            category: "Fruit",
+            status: "safe",
+            summary: "Low potassium.",
+            detailedWhy: "Safe for CKD in normal portions.",
+            factors: [{ name: "Potassium", level: "Low", impact: "positive", detail: "~195mg" }],
+            alternatives: [],
+            portionGuidance: "One medium apple.",
+          }),
+        },
+      },
+    ],
+  });
+  {
+    const apple = await ai.analyzeNutrition("apple", "ckd", {});
+    assert.strictEqual(apple.status, "safe");
+    const museBody = JSON.parse(lastOptions.body);
+    assert.strictEqual(museBody.messages?.[0]?.role, "system");
+    assert.ok(
+      String(museBody.messages[0].content).includes("clinical dietitian"),
+      "Muse nutrition must carry the dietitian system prompt"
+    );
+    console.log("✓ analyzeNutrition via Muse Spark sends system prompt");
+  }
+
+  // Muse 400 → retry without response_format still works
+  {
+    let museCalls = 0;
+    global.fetch = async (_url, options) => {
+      museCalls++;
+      const body = JSON.parse(options.body);
+      if (body.response_format && museCalls === 1) {
+        return { ok: false, status: 400, text: async () => "unsupported", json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => "",
+        json: async () => ({
+          choices: [{ message: { content: '{"foodName":"Idli","confidence":0.9,"candidates":[]}' } }],
+        }),
+      };
+    };
+    process.env.MUSE_SPARK_API_KEY = "test-key";
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    ai._setGeminiOverride(null);
+    r = await ai.identifyFood(Buffer.from("fake"), "image/jpeg");
+    assert.strictEqual(museCalls, 2);
+    assert.strictEqual(r.foodName, "Idli");
+    console.log("✓ Muse Spark retry without response_format");
+  }
 
   console.log("\nAll AI smoke tests passed.");
 })().catch((err) => {

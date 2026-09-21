@@ -44,7 +44,7 @@ Expo client (src/) ──REST (JSON/multipart)──► Express server (server/:
   app/        expo-router screens                  JWT auth (bcrypt + jsonwebtoken)
   components/ design-system primitives             SQLite persistence (server/data/)
   services/   stores & API clients                 AI layer (server/ai.js):
-  data/       local rules engine (foodSafety.ts)     Gemini (default gemini-3.5-flash)
+  data/       local rules engine (foodSafety.ts)     Gemini (default gemini-2.5-flash)
   theme/      light tokens + dark overrides          or any OpenAI-compatible endpoint
 ```
 
@@ -64,8 +64,10 @@ Expo client (src/) ──REST (JSON/multipart)──► Express server (server/:
 | ----------------------------------------------------- | ------------------------------------ | -------------------------------------------------- |
 | `EXPO_PUBLIC_API_URL`                                 | No (default `http://localhost:4000`) | App → API base URL                                 |
 | `JWT_SECRET`                                          | **Yes in prod**                      | JWT signing secret                                 |
-| `GEMINI_API_KEY`                                      | No                                   | Enables real food recognition + nutrition analysis |
-| `GEMINI_MODEL`                                        | No (default `gemini-3.5-flash`)      | Gemini model id                                    |
+| `GEMINI_API_KEY`                                      | No                                   | Enables real food recognition + nutrition analysis (fallback) |
+| `MUSE_SPARK_API_KEY`                                  | No                                   | Muse Spark key (Meta Model API) — first-match provider        |
+| `MUSE_SPARK_MODEL`                                    | No (default `muse-spark-1.3-contributor`) | Muse Spark model id                                    |
+| `GEMINI_MODEL`                                        | No (default `gemini-2.5-flash`)      | Gemini model id                                    |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL` | No                                   | OpenAI-compatible alternative                      |
 | `NUTRISAFE_DB_FILE`                                   | No                                   | Override SQLite path                               |
 | `NUTRISAFE_SKIP_ENV_FILE`                             | No                                   | `1` disables `.env.local`/`.env` loading (tests)   |

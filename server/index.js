@@ -116,6 +116,15 @@ function persist() {
 const uploadDir = path.join(process.cwd(), ".tmp-uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
+/** Best-effort tmp-file delete — never throw inside finally blocks. */
+function safeUnlink(p) {
+  try {
+    if (p && fs.existsSync(p)) fs.unlinkSync(p);
+  } catch {
+    // ignore cleanup errors so they never mask the real response
+  }
+}
+
 // Startup sweep: delete stale tmp-upload files older than 1h (best-effort).
 try {
   const now = Date.now();
@@ -142,9 +151,74 @@ const upload = multer({
   },
 });
 
+// ─── JSON image uploads (preferred mobile path) ──────────────────────────────
+// Same vision capabilities as the multipart routes, but the image travels as
+// a base64 string in JSON: one representation on every platform, no
+// boundary/Content-Type footguns, retry-safe (strings are reusable, unlike
+// consumable FormData bodies). Multipart routes stay as fallback.
+const JSON_IMAGE_MAX_BYTES = 2_500_000; // decoded bytes
+
+/**
+ * Validate + decode a { imageBase64, mime } JSON body.
+ * Returns { buffer, mime } or { errStatus, errBody } for an immediate 4xx.
+ * Never logs the base64 payload — only mime + byte counts.
+ */
+function decodeImageJson(body) {
+  const imageBase64 = body?.imageBase64;
+  const mime = typeof body?.mime === "string" && body.mime ? body.mime.toLowerCase() : "image/jpeg";
+
+  if (typeof imageBase64 !== "string" || imageBase64.length === 0) {
+    return { errStatus: 400, errBody: { error: "imageBase64 is required." } };
+  }
+  if (!mime.startsWith("image/")) {
+    return {
+      errStatus: 400,
+      errBody: {
+        status: "failed",
+        message: "This file doesn't look like an image. Please pick a JPEG or PNG photo.",
+      },
+    };
+  }
+  if (/heic|heif/i.test(mime)) {
+    return {
+      errStatus: 400,
+      errBody: {
+        status: "failed",
+        message:
+          "This photo is in HEIC format (iPhone), which can't be analyzed. Please retake it as JPEG or pick a JPEG/PNG from your gallery.",
+      },
+    };
+  }
+  let buffer;
+  try {
+    buffer = Buffer.from(imageBase64, "base64");
+  } catch {
+    return { errStatus: 400, errBody: { error: "imageBase64 is not valid base64." } };
+  }
+  if (buffer.length < 32) {
+    return {
+      errStatus: 400,
+      errBody: {
+        status: "failed",
+        message:
+          "We couldn't read this photo. Try picking the photo again or retaking it.",
+      },
+    };
+  }
+  if (buffer.length > JSON_IMAGE_MAX_BYTES) {
+    return {
+      errStatus: 413,
+      errBody: {
+        status: "failed",
+        message: "This photo is too large to analyze. Try a smaller photo or retake it.",
+      },
+    };
+  }
+  return { buffer, mime };
+}
+
 // Map multer errors to clear 4xx responses instead of falling through to 500.
-function uploadSingleImage(req, res, next) {
-  upload.single("image")(req, res, (err) => {
+function uploadSingleImage(req, res, next) {  upload.single("image")(req, res, (err) => {
     if (err) {
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {
@@ -673,6 +747,18 @@ app.post("/vision/identify", requireAuth, aiLimiter, uploadSingleImage, async (r
     return res.status(400).json({ error: "No image file received." });
   }
 
+  // HEIC/HEIF (iPhone) is rejected by most vision providers. The client
+  // normalizes to JPEG before upload — if one still arrives, fail fast with
+  // an actionable message instead of burning a provider call.
+  if (/heic|heif/i.test(req.file?.mimetype || "")) {
+    safeUnlink(imagePath);
+    return res.status(400).json({
+      status: "failed",
+      message:
+        "This photo is in HEIC format (iPhone), which can't be analyzed. Please retake it as JPEG or pick a JPEG/PNG from your gallery.",
+    });
+  }
+
   try {
     // Option A: explicit external vision endpoint (legacy override).
     if (FOOD_VISION_API_URL) {
@@ -698,12 +784,12 @@ app.post("/vision/identify", requireAuth, aiLimiter, uploadSingleImage, async (r
       return res.json(data);
     }
 
-    // Option B: built-in AI layer (Gemini / OpenAI-compatible).
+    // Option B: built-in AI layer (Muse Spark / Gemini / OpenAI-compatible).
     if (!ai.isConfigured()) {
       return res.status(503).json({
         status: "not_configured",
         message:
-          "Food image recognition is not configured. Set GEMINI_API_KEY or OPENAI_API_KEY on the server, or use manual food search.",
+          "Food image recognition is not configured. Set MUSE_SPARK_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY on the server, or use manual food search.",
       });
     }
 
@@ -718,7 +804,32 @@ app.post("/vision/identify", requireAuth, aiLimiter, uploadSingleImage, async (r
         "We couldn't reach the food recognition service. Check your connection and try again.",
     });
   } finally {
-    if (imagePath && fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+    safeUnlink(imagePath);
+  }
+});
+
+// ─── Vision (JSON) — same identification, base64 body, no multer ─────────────
+app.post("/vision/identify-json", requireAuth, aiLimiter, async (req, res) => {
+  const decoded = decodeImageJson(req.body);
+  if (decoded.errStatus) return res.status(decoded.errStatus).json(decoded.errBody);
+
+  try {
+    if (!ai.isConfigured()) {
+      return res.status(503).json({
+        status: "not_configured",
+        message:
+          "Food image recognition is not configured. Set MUSE_SPARK_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY on the server, or use manual food search.",
+      });
+    }
+    const result = await ai.identifyFood(decoded.buffer, decoded.mime);
+    return res.json(result);
+  } catch (err) {
+    console.error("Vision (JSON) error:", err);
+    return res.status(502).json({
+      status: "failed",
+      message:
+        "We couldn't reach the food recognition service. Check your connection and try again.",
+    });
   }
 });
 
@@ -766,12 +877,21 @@ app.post("/prescription/extract", requireAuth, aiLimiter, uploadSingleImage, asy
     return res.status(400).json({ error: "No image file received." });
   }
 
+  if (/heic|heif/i.test(req.file?.mimetype || "")) {
+    safeUnlink(imagePath);
+    return res.status(400).json({
+      status: "failed",
+      message:
+        "This photo is in HEIC format (iPhone), which can't be analyzed. Please retake it as JPEG or pick a JPEG/PNG from your gallery.",
+    });
+  }
+
   try {
     if (!ai.isConfigured()) {
       return res.status(503).json({
         status: "not_configured",
         message:
-          "Prescription scanning needs an AI provider. Set GEMINI_API_KEY or OPENAI_API_KEY on the server — or fill your health profile manually below.",
+          "Prescription scanning needs an AI provider. Set MUSE_SPARK_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY on the server — or fill your health profile manually below.",
       });
     }
 
@@ -786,7 +906,32 @@ app.post("/prescription/extract", requireAuth, aiLimiter, uploadSingleImage, asy
         "We couldn't read the prescription right now. Try a clearer, well-lit photo or enter details manually.",
     });
   } finally {
-    if (imagePath && fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+    safeUnlink(imagePath);
+  }
+});
+
+// ─── Prescription extraction (JSON) — base64 body, no multer ──────────────────
+app.post("/prescription/extract-json", requireAuth, aiLimiter, async (req, res) => {
+  const decoded = decodeImageJson(req.body);
+  if (decoded.errStatus) return res.status(decoded.errStatus).json(decoded.errBody);
+
+  try {
+    if (!ai.isConfigured()) {
+      return res.status(503).json({
+        status: "not_configured",
+        message:
+          "Prescription scanning needs an AI provider. Set MUSE_SPARK_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY on the server — or fill your health profile manually below.",
+      });
+    }
+    const result = await ai.extractPrescription(decoded.buffer, decoded.mime);
+    return res.json(result);
+  } catch (err) {
+    console.error("Prescription extraction (JSON) error:", err);
+    return res.status(502).json({
+      status: "failed",
+      message:
+        "We couldn't read the prescription right now. Try a clearer, well-lit photo or enter details manually.",
+    });
   }
 });
 

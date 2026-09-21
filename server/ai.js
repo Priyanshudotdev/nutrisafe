@@ -1,8 +1,12 @@
 /* NutriSafe — AI layer (server-side only, keys never reach the client)
  *
  * Providers (first match wins):
- *   1. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-3.5-flash)
- *   2. OpenAI-compatible      → OPENAI_API_KEY            (optional OPENAI_BASE_URL, OPENAI_MODEL)
+ *   1. Muse Spark (Meta Model API) → MUSE_SPARK_API_KEY (optional MUSE_SPARK_MODEL,
+ *      default muse-spark-1.3-contributor; optional MUSE_SPARK_BASE_URL,
+ *      default https://api.meta.ai/v1). OpenAI-compatible chat-completions
+ *      surface; vision via image_url data-URL blocks in user messages.
+ *   2. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-2.5-flash)
+ *   3. OpenAI-compatible      → OPENAI_API_KEY            (optional OPENAI_BASE_URL, OPENAI_MODEL)
  *      Works with OpenAI, OpenRouter, Groq, Together, Ollama, LM Studio, ...
  *
  * Capabilities:
@@ -12,7 +16,9 @@
  * Without any key, isConfigured() returns false and routes degrade gracefully.
  */
 
-const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
+const DEFAULT_MUSE_SPARK_MODEL = "muse-spark-1.3-contributor";
+const DEFAULT_MUSE_SPARK_BASE_URL = "https://api.meta.ai/v1";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 
@@ -22,6 +28,21 @@ const TEXT_TIMEOUT_MS = 30_000;
 // ─── Provider resolution ───────────────────────────────────────────────────────
 
 function resolveProvider() {
+  // Muse Spark (Meta Model API) — OpenAI-compatible chat-completions surface.
+  // Key is server-side only; never ship it in the app bundle.
+  const museKey = process.env.MUSE_SPARK_API_KEY?.trim();
+  if (museKey) {
+    return {
+      name: "muse",
+      apiKey: museKey,
+      model: process.env.MUSE_SPARK_MODEL?.trim() || DEFAULT_MUSE_SPARK_MODEL,
+      baseUrl: (process.env.MUSE_SPARK_BASE_URL?.trim() || DEFAULT_MUSE_SPARK_BASE_URL).replace(
+        /\/$/,
+        ""
+      ),
+    };
+  }
+
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
   if (geminiKey) {
     return {
@@ -51,6 +72,7 @@ function isConfigured() {
 function describeConfig() {
   const p = resolveProvider();
   if (!p) return "not configured";
+  if (p.name === "muse") return `muse-spark (${p.model})`;
   return p.name === "gemini" ? `gemini (${p.model})` : `openai-compatible (${p.model})`;
 }
 
@@ -95,28 +117,106 @@ function extractJson(text) {
   }
 }
 
+/** Test hook: when set, callGemini routes through this fn instead of the
+ *  real @google/genai client. Smoke tests use it to avoid network access.
+ *  fn receives { model, parts, systemPrompt } and must resolve to raw text. */
+let _geminiOverride = null;
+function _setGeminiOverride(fn) {
+  _geminiOverride = fn;
+}
+
 async function callGemini({ parts, systemPrompt, timeoutMs }) {
   const provider = resolveProvider();
-  // Auth via header — never put the key in the URL (avoids leaking in logs/proxies).
+
+  // Normalize caller-supplied parts to the SDK shape.
+  // Legacy callers used snake_case { inline_data: { mime_type, data } } —
+  // the API requires camelCase { inlineData: { mimeType, data } }.
+  const normalizedParts = (Array.isArray(parts) ? parts : []).map((p) => {
+    if (p && typeof p === "object" && p.inline_data) {
+      const mimeType = p.inline_data.mime_type || p.inline_data.mimeType || "image/jpeg";
+      return { inlineData: { mimeType, data: p.inline_data.data } };
+    }
+    return p;
+  });
+
+  if (_geminiOverride) {
+    const text = await _geminiOverride({
+      model: provider.model,
+      parts: normalizedParts,
+      systemPrompt,
+    });
+    return extractJson(text);
+  }
+
+  // Official SDK — handles auth header, wire format, and model routing.
+  // Never put the key in the URL (avoids leaking in logs/proxies).
+  let GoogleGenAI;
+  try {
+    ({ GoogleGenAI } = require("@google/genai"));
+  } catch (err) {
+    throw new AiError(`Gemini SDK unavailable: ${err.message || err}`);
+  }
+  const ai = new GoogleGenAI({ apiKey: provider.apiKey });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await ai.models.generateContent({
+      model: provider.model,
+      contents: [{ role: "user", parts: normalizedParts }],
+      config: {
+        temperature: 0.3,
+        maxOutputTokens: 2048,
+        responseMimeType: "application/json",
+        ...(systemPrompt ? { systemInstruction: systemPrompt } : {}),
+        abortSignal: controller.signal,
+      },
+    });
+    const text = typeof response.text === "string" ? response.text : "";
+    return extractJson(text);
+  } catch (err) {
+    if (err instanceof AiError) throw err;
+    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    if (/abort/i.test(msg)) throw new AiError(`Gemini request timed out after ${timeoutMs}ms.`);
+    throw new AiError(`Gemini request failed: ${msg.slice(0, 300)}`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** REST fallback — kept for reference/debugging (SDK is the live path). */
+async function callGeminiRest({ parts, systemPrompt, timeoutMs }) {
+  const provider = resolveProvider();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent`;
 
-  const contents = [];
-  if (systemPrompt) contents.push({ role: "user", parts: [{ text: systemPrompt }] });
-  contents.push({ role: "user", parts });
+  const normalizedParts = (Array.isArray(parts) ? parts : []).map((p) => {
+    if (p && typeof p === "object" && p.inline_data) {
+      const mimeType = p.inline_data.mime_type || p.inline_data.mimeType || "image/jpeg";
+      return { inlineData: { mimeType, data: p.inline_data.data } };
+    }
+    return p;
+  });
+
+  const contents = [{ role: "user", parts: normalizedParts }];
+
+  const payload = {
+    contents,
+    generationConfig: {
+      temperature: 0.3,
+      responseMimeType: "application/json",
+      maxOutputTokens: 2048,
+    },
+  };
+  if (systemPrompt) {
+    payload.systemInstruction = { parts: [{ text: systemPrompt }] };
+  }
 
   const response = await fetchWithTimeout(
     url,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": provider.apiKey },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.3,
-          responseMimeType: "application/json",
-          maxOutputTokens: 2048,
-        },
-      }),
+      body: JSON.stringify(payload),
     },
     timeoutMs
   );
@@ -183,17 +283,73 @@ async function callOpenAI({ messages, timeoutMs }) {
   return extractJson(data?.choices?.[0]?.message?.content ?? "");
 }
 
+/**
+ * Muse Spark (Meta Model API) via its OpenAI-compatible chat-completions
+ * endpoint. Vision arrives as image_url data-URL blocks inside user messages
+ * — the same envelope as the OpenAI path — so prompts are shared unchanged.
+ * Never send reasoning_effort:"none" (Muse Spark rejects it with 400).
+ */
+async function callMuseSpark({ messages, timeoutMs }) {
+  const provider = resolveProvider();
+  const url = `${provider.baseUrl}/chat/completions`;
+
+  const body = {
+    model: provider.model,
+    messages,
+    temperature: 0.3,
+    response_format: { type: "json_object" },
+  };
+
+  let response = await fetchWithTimeout(
+    url,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${provider.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    },
+    timeoutMs
+  );
+
+  // Retry once without response_format — mirrors the OpenAI-compatible path.
+  if (!response.ok && response.status === 400) {
+    const retryBody = { ...body };
+    delete retryBody.response_format;
+    response = await fetchWithTimeout(
+      url,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${provider.apiKey}`,
+        },
+        body: JSON.stringify(retryBody),
+      },
+      timeoutMs
+    );
+  }
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => "");
+    throw new AiError(`Muse Spark request failed (${response.status}): ${errBody.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  return extractJson(data?.choices?.[0]?.message?.content ?? "");
+}
+
 function callModel({ parts, systemPrompt, messages, timeoutMs }) {
   const provider = resolveProvider();
   if (!provider) throw new AiError("No AI provider configured.", "not_configured");
-  return provider.name === "gemini"
-    ? callGemini({ parts, systemPrompt, timeoutMs })
-    : callOpenAI({
-        messages: systemPrompt
-          ? [{ role: "system", content: systemPrompt }, ...messages]
-          : messages,
-        timeoutMs,
-      });
+  if (provider.name === "gemini") return callGemini({ parts, systemPrompt, timeoutMs });
+  return (provider.name === "muse" ? callMuseSpark : callOpenAI)({
+    messages: systemPrompt
+      ? [{ role: "system", content: systemPrompt }, ...messages]
+      : messages,
+    timeoutMs,
+  });
 }
 
 // ─── Safety constants shared by prompts ────────────────────────────────────────
@@ -357,7 +513,7 @@ async function identifyFood(imageBuffer, mimetype) {
     '"candidates": [{"name": string, "confidence": number}] with up to 3 most likely dishes, best first}. ' +
     'Use concise, well-known dish names (e.g. "Margherita Pizza", "Idli with Sambar").';
 
-  const parts = [{ text: prompt }, { inline_data: { mime_type: effectiveMime, data: base64 } }];
+  const parts = [{ text: prompt }, { inlineData: { mimeType: effectiveMime, data: base64 } }];
 
   const messages = [
     {
@@ -374,6 +530,15 @@ async function identifyFood(imageBuffer, mimetype) {
     result = await callModel({ parts, messages, timeoutMs: VISION_TIMEOUT_MS });
   } catch (err) {
     if (err instanceof AiError && err.code === "not_configured") throw err;
+    if (err instanceof AiError && err.code === "unreadable_content") {
+      // Blocked/empty/garbled model output — treat as "no reading",
+      // not a transport failure, so the client shows its failed UX.
+      return {
+        status: "failed",
+        message:
+          "No food was detected. Try a full-dish photo with good lighting, or search manually.",
+      };
+    }
     console.error(
       "[ai] identifyFood inner:",
       err instanceof Error ? `${err.name}: ${err.message}` : err
@@ -433,6 +598,9 @@ async function analyzeNutrition(foodName, conditions, patient) {
 
   const raw = await callModel({
     systemPrompt: NUTRITION_SYSTEM_PROMPT,
+    // Gemini (callGemini) consumes `parts`; OpenAI-compatible consumes
+    // `messages`. Supply both so either provider works.
+    parts: [{ text: userPrompt }],
     messages: [{ role: "user", content: userPrompt }],
     timeoutMs: TEXT_TIMEOUT_MS,
   });
@@ -447,10 +615,11 @@ async function analyzeNutrition(foodName, conditions, patient) {
   */
 async function extractPrescription(imageBuffer, mimetype) {
   const base64 = Buffer.from(imageBuffer).toString("base64");
+  const effectiveMime = mimetype || "image/jpeg";
 
   const parts = [
     { text: "Read this medical document and extract the dietary information as instructed." },
-    { inline_data: { mime_type: mimetype || "image/jpeg", data: base64 } },
+    { inlineData: { mimeType: effectiveMime, data: base64 } },
   ];
 
   const messages = [
@@ -463,7 +632,7 @@ async function extractPrescription(imageBuffer, mimetype) {
         },
         {
           type: "image_url",
-          image_url: { url: `data:${mimetype || "image/jpeg"};base64,${base64}` },
+          image_url: { url: `data:${effectiveMime};base64,${base64}` },
         },
       ],
     },
@@ -471,7 +640,12 @@ async function extractPrescription(imageBuffer, mimetype) {
 
   let result;
   try {
-    result = await callModel({ parts, messages, timeoutMs: VISION_TIMEOUT_MS });
+    result = await callModel({
+      systemPrompt: PRESCRIPTION_SYSTEM_PROMPT,
+      parts,
+      messages,
+      timeoutMs: VISION_TIMEOUT_MS,
+    });
   } catch (err) {
     if (err instanceof AiError && err.code === "not_configured") throw err;
     if (err instanceof AiError && err.code === "unreadable_content") {
@@ -534,4 +708,5 @@ module.exports = {
   // exported for tests
   extractJson,
   normalizeAnalysis,
+  _setGeminiOverride,
 };

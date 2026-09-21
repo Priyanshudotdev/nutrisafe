@@ -173,4 +173,5 @@ The client auto-resolves the API host: `localhost` on web, Metro LAN IP on physi
 - [x] Rules engine covers the 5 modeled conditions; `src/data/foodSafety.ts` documents the 5-step checklist for adding new ones.
 - [x] `app.json` / `package.json` carry NutriSafe branding (name/slug/scheme).
 - [x] CI (`.github/workflows/ci.yml`): typecheck + lint + server AI smoke/e2e on push/PR.
-- [ ] Validate the new default AI model (`gemini-3.5-flash`) with one real photo scan + one Rx scan; the old default (`gemini-2.0-flash`) was shut down by Google in June 2026.
+- [x] AI provider priority is Muse Spark (`MUSE_SPARK_API_KEY`, default `muse-spark-1.3-contributor` via Meta Model API chat completions) → Gemini → OpenAI-compatible; image transport is base64-JSON-first (`-json` routes) with multipart fallback.
+- [ ] Validate with one real photo scan + one Rx scan against the deployed Render server (needs `MUSE_SPARK_API_KEY` set in dashboard + redeploy); then EAS rebuild the APK for the JSON-path client.

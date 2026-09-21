@@ -17,7 +17,10 @@ Defaults to **http://localhost:4000**. Set `PORT` to change.
 | `PORT`                    | No (default 4000)                        | Server port                                                                                         |
 | `JWT_SECRET`              | **Yes in prod**                          | Secret used to sign JWTs. Change from default.                                                      |
 | `GEMINI_API_KEY`          | No                                       | Google Gemini key — enables AI food identification + nutrition analysis.                            |
-| `GEMINI_MODEL`            | No (default `gemini-3.5-flash`)          | Gemini model id.                                                                                    |
+| `MUSE_SPARK_API_KEY`      | No                                       | Muse Spark key (Meta Model API, `LLM\|...`) — first-match provider when set.                      |
+| `MUSE_SPARK_MODEL`        | No (default `muse-spark-1.3-contributor`)| Muse Spark model id.                                                                              |
+| `MUSE_SPARK_BASE_URL`     | No (default `https://api.meta.ai/v1`)    | Meta Model API base URL.                                                                          |
+| `GEMINI_MODEL`            | No (default `gemini-2.5-flash`)          | Gemini model id.                                                                                    |
 | `OPENAI_API_KEY`          | No                                       | OpenAI-compatible key (OpenAI, OpenRouter, Groq, Ollama, ...). Used if no Gemini key.               |
 | `OPENAI_BASE_URL`         | No (default `https://api.openai.com/v1`) | Base URL for OpenAI-compatible providers.                                                           |
 | `OPENAI_MODEL`            | No (default `gpt-4o-mini`)               | Model id for OpenAI-compatible providers.                                                           |
@@ -31,7 +34,9 @@ Defaults to **http://localhost:4000**. Set `PORT` to change.
 
 **AI behavior:** with any provider configured, `/vision/identify` performs real
 food-image recognition and `/nutrition/analyze` returns a full structured
-analysis (`source: "ai"`). Without a provider, vision returns a clear
+analysis (`source: "ai"`). Gemini calls go through the official
+`@google/genai` SDK (camelCase `inlineData`, `systemInstruction`); OpenAI
+uses the chat-completions REST API. Without a provider, vision returns a clear
 `not_configured` state and nutrition returns `source: "local-rules-engine"` so
 the app falls back to its built-in deterministic rules engine.
 
@@ -79,7 +84,10 @@ also set a real `JWT_SECRET`.
 | Method | Path                 | Auth   | Description                                                                                              |
 | ------ | -------------------- | ------ | -------------------------------------------------------------------------------------------------------- |
 | `GET`  | `/health`            | —      | Status + configured AI provider                                                                          |
-| `POST` | `/vision/identify`   | Bearer | multipart `image` → `{ status, foodName, confidence, candidates? }`                                      |
+| `POST` | `/vision/identify`   | Bearer | multipart `image` → `{ status, foodName, confidence, candidates? }` (legacy fallback) |
+| `POST` | `/vision/identify-json` | Bearer | JSON `{ imageBase64, mime }` → same shape (preferred mobile path)              |
+| `POST` | `/prescription/extract` | Bearer | multipart `image` → extraction result (legacy fallback)                        |
+| `POST` | `/prescription/extract-json` | Bearer | JSON `{ imageBase64, mime }` → same shape (preferred mobile path)         |
 | `POST` | `/nutrition/analyze` | Bearer | `{ foodName, condition, patient? }` → `{ source: "ai", analysis }` or `{ source: "local-rules-engine" }` |
 
 Valid conditions: `diabetes`, `ckd`, `hypertension`, `celiac`, `allergy`.

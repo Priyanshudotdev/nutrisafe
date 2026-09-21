@@ -197,6 +197,32 @@ const PNG_B64 =
       `   → ${visionRes.body.foodName} (${Math.round(visionRes.body.confidence * 100)}% confidence)`
     );
 
+    // Vision identify via JSON (base64 body, no multer)
+    const jsonVision = await post(
+      API_PORT,
+      "/vision/identify-json",
+      { imageBase64: PNG_B64, mime: "image/png" },
+      auth
+    );
+    assertOk(jsonVision.status === 200, "vision-json status");
+    assertOk(jsonVision.body.status === "success", "vision-json success");
+    assertOk(jsonVision.body.foodName === "Margherita Pizza", "vision-json foodName");
+    console.log("✓ /vision/identify-json identifies food via AI (base64, no multer)");
+
+    // JSON validation: missing payload → 400, non-image mime → 400
+    const jsonMissing = await post(API_PORT, "/vision/identify-json", {}, auth);
+    assertOk(jsonMissing.status === 400, "vision-json missing → 400");
+    const jsonBadMime = await post(
+      API_PORT,
+      "/vision/identify-json",
+      { imageBase64: PNG_B64, mime: "application/pdf" },
+      auth
+    );
+    assertOk(jsonBadMime.status === 400, "vision-json bad mime → 400");
+    const rxJsonMissing = await post(API_PORT, "/prescription/extract-json", {}, auth);
+    assertOk(rxJsonMissing.status === 400, "rx-json missing → 400");
+    console.log("✓ -json routes validate payloads with clear 400s");
+
     console.log("\nAll E2E AI tests passed.");
   } catch (err) {
     console.error("E2E TEST FAILED:", err.message);
