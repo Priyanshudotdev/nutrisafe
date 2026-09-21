@@ -353,6 +353,19 @@ function museCounterpart(model) {
   return m ? `${m[1]}-contributor` : null;
 }
 
+/**
+ * Ordered model ids to try: configured → tier counterpart → free-tier id.
+ * Different keys are entitled to different catalog entries; each 404 moves
+ * to the next candidate. Only failure paths pay extra requests.
+ */
+function museModelCandidates(configured) {
+  const out = [];
+  for (const m of [configured, museCounterpart(configured), "muse-spark-1.3-contributor-free"]) {
+    if (typeof m === "string" && m && !out.includes(m)) out.push(m);
+  }
+  return out;
+}
+
 async function musePost({ apiKey, baseUrl, body, timeoutMs }) {
   return fetchWithTimeout(
     `${baseUrl}/responses`,
@@ -381,9 +394,7 @@ async function callMuseSpark({ messages, systemPrompt, timeoutMs }) {
     max_output_tokens: 2048,
   });
 
-  const modelsToTry = [provider.model];
-  const counterpart = museCounterpart(provider.model);
-  if (counterpart && counterpart !== provider.model) modelsToTry.push(counterpart);
+  const modelsToTry = museModelCandidates(provider.model);
 
   let lastError = null;
   for (const model of modelsToTry) {
@@ -406,11 +417,17 @@ async function callMuseSpark({ messages, systemPrompt, timeoutMs }) {
       lastError = new AiError(
         `Muse Spark request failed (${response.status}): ${errBody.slice(0, 300)}`
       );
-      // Wrong-tier model id → retry once with the tier counterpart.
-      if (response.status === 404 && model !== modelsToTry[modelsToTry.length - 1]) continue;
+      // Wrong-tier model id → try the next candidate (log it; no secrets).
+      if (response.status === 404 && model !== modelsToTry[modelsToTry.length - 1]) {
+        console.warn(`[ai] muse model ${model} not found, trying next candidate`);
+        continue;
+      }
       throw lastError;
     }
 
+    if (model !== provider.model) {
+      console.log(`[ai] muse model fallback in use: ${model}`);
+    }
     const data = await response.json();
     return extractJson(museTextFromResponse(data));
   }
