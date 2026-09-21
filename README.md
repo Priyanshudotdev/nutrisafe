@@ -66,7 +66,7 @@ Expo client (src/) ──REST (JSON/multipart)──► Express server (server/:
 | `JWT_SECRET`                                          | **Yes in prod**                      | JWT signing secret                                 |
 | `GEMINI_API_KEY`                                      | No                                   | Enables real food recognition + nutrition analysis (fallback) |
 | `MUSE_SPARK_API_KEY`                                  | No                                   | Muse Spark key (Meta Model API) — first-match provider        |
-| `MUSE_SPARK_MODEL`                                    | No (default `muse-spark-1.3`) | Muse Spark model id (`-contributor` variant for contributor keys) |
+| `MUSE_SPARK_MODEL`                                    | No (default `muse-spark-1.3-contributor`, auto-fallback to `muse-spark-1.3`) | Muse Spark model id |
 | `GEMINI_MODEL`                                        | No (default `gemini-2.5-flash`)      | Gemini model id                                    |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL` | No                                   | OpenAI-compatible alternative                      |
 | `NUTRISAFE_DB_FILE`                                   | No                                   | Override SQLite path                               |

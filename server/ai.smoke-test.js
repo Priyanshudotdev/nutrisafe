@@ -282,17 +282,22 @@ function setGemini(text) {
   assert.strictEqual(r.foodName, "Dosa");
   console.log("✓ OpenAI-compatible retry without response_format");
 
-  // ── identifyFood via Muse Spark (Meta Model API, chat completions) ──
+  // ── identifyFood via Muse Spark (Meta Model API, Responses API) ──
   setMuse({
-    choices: [
+    output: [
       {
-        message: {
-          content: JSON.stringify({
-            foodName: "Masala Dosa",
-            confidence: 0.91,
-            candidates: [{ name: "Masala Dosa", confidence: 0.91 }],
-          }),
-        },
+        type: "message",
+        role: "assistant",
+        content: [
+          {
+            type: "output_text",
+            text: JSON.stringify({
+              foodName: "Masala Dosa",
+              confidence: 0.91,
+              candidates: [{ name: "Masala Dosa", confidence: 0.91 }],
+            }),
+          },
+        ],
       },
     ],
   });
@@ -300,41 +305,49 @@ function setGemini(text) {
   assert.strictEqual(r.status, "success");
   assert.strictEqual(r.foodName, "Masala Dosa");
   assert.ok(
-    String(lastUrl).startsWith("https://api.meta.ai/v1/chat/completions"),
-    `Muse URL must hit Meta Model API chat completions, got: ${lastUrl}`
+    String(lastUrl).endsWith("/v1/responses"),
+    `Muse URL must hit Meta Responses API, got: ${lastUrl}`
   );
   assert.ok(!lastUrl.includes("test-key"), "Muse URL must not leak API key");
   assert.strictEqual(lastOptions.headers.Authorization, "Bearer test-key");
   {
     const museBody = JSON.parse(lastOptions.body);
-    assert.strictEqual(museBody.model, "muse-spark-1.3");
-    const content = museBody.messages?.find((m) => m.role === "user")?.content;
-    assert.ok(Array.isArray(content), "Muse vision must use user content array");
-    const imgPart = content.find((p) => p.type === "image_url");
+    assert.strictEqual(museBody.model, "muse-spark-1.3-contributor");
+    assert.strictEqual(museBody.stream, false);
+    assert.strictEqual(museBody.store, false);
+    assert.ok(!("temperature" in museBody), "Responses must omit temperature");
+    assert.ok(!("response_format" in museBody), "Responses must omit response_format");
+    const userMsg = (museBody.input ?? []).find((i) => i.role === "user");
+    const imgBlock = (userMsg?.content ?? []).find((p) => p.type === "input_image");
     assert.ok(
-      typeof imgPart?.image_url?.url === "string" &&
-        imgPart.image_url.url.startsWith("data:image/jpeg;base64,"),
-      "Muse vision must send base64 data URL"
+      typeof imgBlock?.image_url === "string" &&
+        imgBlock.image_url.startsWith("data:image/jpeg;base64,"),
+      "Muse vision must send input_image data URL string"
     );
-    console.log("✓ identifyFood success path (Muse Spark chat completions)");
+    console.log("✓ identifyFood success path (Muse Spark Responses API)");
   }
 
-  // ── analyzeNutrition via Muse Spark carries the dietitian system prompt ──
+  // ── analyzeNutrition via Muse Spark carries instructions ──
   setMuse({
-    choices: [
+    output: [
       {
-        message: {
-          content: JSON.stringify({
-            foodName: "Apple",
-            category: "Fruit",
-            status: "safe",
-            summary: "Low potassium.",
-            detailedWhy: "Safe for CKD in normal portions.",
-            factors: [{ name: "Potassium", level: "Low", impact: "positive", detail: "~195mg" }],
-            alternatives: [],
-            portionGuidance: "One medium apple.",
-          }),
-        },
+        type: "message",
+        role: "assistant",
+        content: [
+          {
+            type: "output_text",
+            text: JSON.stringify({
+              foodName: "Apple",
+              category: "Fruit",
+              status: "safe",
+              summary: "Low potassium.",
+              detailedWhy: "Safe for CKD in normal portions.",
+              factors: [{ name: "Potassium", level: "Low", impact: "positive", detail: "~195mg" }],
+              alternatives: [],
+              portionGuidance: "One medium apple.",
+            }),
+          },
+        ],
       },
     ],
   });
@@ -342,29 +355,44 @@ function setGemini(text) {
     const apple = await ai.analyzeNutrition("apple", "ckd", {});
     assert.strictEqual(apple.status, "safe");
     const museBody = JSON.parse(lastOptions.body);
-    assert.strictEqual(museBody.messages?.[0]?.role, "system");
     assert.ok(
-      String(museBody.messages[0].content).includes("clinical dietitian"),
-      "Muse nutrition must carry the dietitian system prompt"
+      String(museBody.instructions).includes("clinical dietitian"),
+      "Muse nutrition must carry the dietitian instructions"
     );
-    console.log("✓ analyzeNutrition via Muse Spark sends system prompt");
+    console.log("✓ analyzeNutrition via Muse Spark sends instructions");
   }
 
-  // Muse 400 → retry without response_format still works
+  // Muse 404 model_not_found → retry once with tier counterpart
   {
-    let museCalls = 0;
+    const seenModels = [];
     global.fetch = async (_url, options) => {
-      museCalls++;
       const body = JSON.parse(options.body);
-      if (body.response_format && museCalls === 1) {
-        return { ok: false, status: 400, text: async () => "unsupported", json: async () => ({}) };
+      seenModels.push(body.model);
+      if (seenModels.length === 1) {
+        return {
+          ok: false,
+          status: 404,
+          text: async () => '{"error":{"code":"model_not_found"}}',
+          json: async () => ({}),
+        };
       }
       return {
         ok: true,
         status: 200,
         text: async () => "",
         json: async () => ({
-          choices: [{ message: { content: '{"foodName":"Idli","confidence":0.9,"candidates":[]}' } }],
+          output: [
+            {
+              type: "message",
+              role: "assistant",
+              content: [
+                {
+                  type: "output_text",
+                  text: '{"foodName":"Idli","confidence":0.9,"candidates":[]}',
+                },
+              ],
+            },
+          ],
         }),
       };
     };
@@ -373,9 +401,9 @@ function setGemini(text) {
     delete process.env.OPENAI_API_KEY;
     ai._setGeminiOverride(null);
     r = await ai.identifyFood(Buffer.from("fake"), "image/jpeg");
-    assert.strictEqual(museCalls, 2);
+    assert.deepStrictEqual(seenModels, ["muse-spark-1.3-contributor", "muse-spark-1.3"]);
     assert.strictEqual(r.foodName, "Idli");
-    console.log("✓ Muse Spark retry without response_format");
+    console.log("✓ Muse Spark tier fallback on model_not_found");
   }
 
   console.log("\nAll AI smoke tests passed.");

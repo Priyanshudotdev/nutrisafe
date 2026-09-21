@@ -18,7 +18,7 @@ Defaults to **http://localhost:4000**. Set `PORT` to change.
 | `JWT_SECRET`              | **Yes in prod**                          | Secret used to sign JWTs. Change from default.                                                      |
 | `GEMINI_API_KEY`          | No                                       | Google Gemini key — enables AI food identification + nutrition analysis.                            |
 | `MUSE_SPARK_API_KEY`      | No                                       | Muse Spark key (Meta Model API, `LLM\|...`) — first-match provider when set.                      |
-| `MUSE_SPARK_MODEL`        | No (default `muse-spark-1.3`)| Muse Spark model id (`muse-spark-1.3-contributor` for contributor-tier keys). |
+| `MUSE_SPARK_MODEL`        | No (default `muse-spark-1.3-contributor`)| Muse Spark model id (auto-falls-back to the tier counterpart on 404). |
 | `MUSE_SPARK_BASE_URL`     | No (default `https://api.meta.ai/v1`)    | Meta Model API base URL.                                                                          |
 | `GEMINI_MODEL`            | No (default `gemini-2.5-flash`)          | Gemini model id.                                                                                    |
 | `OPENAI_API_KEY`          | No                                       | OpenAI-compatible key (OpenAI, OpenRouter, Groq, Ollama, ...). Used if no Gemini key.               |
@@ -34,9 +34,9 @@ Defaults to **http://localhost:4000**. Set `PORT` to change.
 
 **AI behavior:** with any provider configured, `/vision/identify` performs real
 food-image recognition and `/nutrition/analyze` returns a full structured
-analysis (`source: "ai"`). Gemini calls go through the official
-`@google/genai` SDK (camelCase `inlineData`, `systemInstruction`); OpenAI
-uses the chat-completions REST API. Without a provider, vision returns a clear
+analysis (`source: "ai"`). Muse Spark calls go through the Meta Responses API
+(`input_image` blocks, `instructions`, tier fallback); Gemini calls go through
+the official `@google/genai` SDK; OpenAI uses the chat-completions REST API. Without a provider, vision returns a clear
 `not_configured` state and nutrition returns `source: "local-rules-engine"` so
 the app falls back to its built-in deterministic rules engine.
 

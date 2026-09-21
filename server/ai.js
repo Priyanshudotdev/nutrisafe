@@ -2,9 +2,11 @@
  *
  * Providers (first match wins):
  *   1. Muse Spark (Meta Model API) → MUSE_SPARK_API_KEY (optional MUSE_SPARK_MODEL,
- *      default muse-spark-1.3; optional MUSE_SPARK_BASE_URL,
- *      default https://api.meta.ai/v1). OpenAI-compatible chat-completions
- *      surface; vision via image_url data-URL blocks in user messages.
+ *      default muse-spark-1.3-contributor; optional MUSE_SPARK_BASE_URL,
+ *      default https://api.meta.ai/v1). Served on the Responses API
+ *      (POST /v1/responses); vision via input_image data-URL blocks,
+ *      system guidance via instructions. On model_not_found the tier
+ *      counterpart (contributor ↔ standard) is retried once.
  *   2. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-2.5-flash)
  *   3. OpenAI-compatible      → OPENAI_API_KEY            (optional OPENAI_BASE_URL, OPENAI_MODEL)
  *      Works with OpenAI, OpenRouter, Groq, Together, Ollama, LM Studio, ...
@@ -16,10 +18,11 @@
  * Without any key, isConfigured() returns false and routes degrade gracefully.
  */
 
-// NOTE: default to the Standard-tier id. Contributor-tier ids
-// (muse-spark-1.3-contributor, ...) 404 for keys not entitled to that
-// tier — override via MUSE_SPARK_MODEL if your key allows it.
-const DEFAULT_MUSE_SPARK_MODEL = "muse-spark-1.3";
+// NOTE: contributor-tier default matches the sample pairing in the Meta docs
+// (contributor key + contributor model on the Responses API). Keys without
+// Contributor entitlement auto-fall-back to the standard id on model_not_found;
+// MUSE_SPARK_MODEL overrides either way.
+const DEFAULT_MUSE_SPARK_MODEL = "muse-spark-1.3-contributor";
 const DEFAULT_MUSE_SPARK_BASE_URL = "https://api.meta.ai/v1";
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
@@ -31,7 +34,7 @@ const TEXT_TIMEOUT_MS = 30_000;
 // ─── Provider resolution ───────────────────────────────────────────────────────
 
 function resolveProvider() {
-  // Muse Spark (Meta Model API) — OpenAI-compatible chat-completions surface.
+  // Muse Spark (Meta Model API) — Responses API (POST /v1/responses).
   // Key is server-side only; never ship it in the app bundle.
   const museKey = process.env.MUSE_SPARK_API_KEY?.trim();
   if (museKey) {
@@ -287,67 +290,139 @@ async function callOpenAI({ messages, timeoutMs }) {
 }
 
 /**
- * Muse Spark (Meta Model API) via its OpenAI-compatible chat-completions
- * endpoint. Vision arrives as image_url data-URL blocks inside user messages
- * — the same envelope as the OpenAI path — so prompts are shared unchanged.
- * Never send reasoning_effort:"none" (Muse Spark rejects it with 400).
+ * Muse Spark (Meta Model API) via the Responses API (POST /v1/responses) —
+ * the endpoint Meta recommends, and the one contributor-tier keys are
+ * served on. Chat Completions 404s model_not_found for these keys, so it
+ * is not used here.
+ *
+ * Shape (per dev.meta.ai/docs):
+ *   request:  { model, instructions?, input: [{type:"message",role:"user",
+ *               content:[{type:"input_text",text},{type:"input_image",image_url}]}],
+ *               stream:false, store:false, max_output_tokens }
+ *   response: { output: [{type:"message",role:"assistant",
+ *               content:[{type:"output_text",text}]}] }
+ * System guidance goes in top-level `instructions` (developer-level).
+ * temperature/top_p/response_format are intentionally OMITTED — the model
+ * is tuned to its defaults and compat-only fields don't take effect here.
+ * store:false keeps medical images out of server-side history.
  */
-async function callMuseSpark({ messages, timeoutMs }) {
-  const provider = resolveProvider();
-  const url = `${provider.baseUrl}/chat/completions`;
+function museInputFromMessages(messages) {
+  return (Array.isArray(messages) ? messages : [])
+    .filter((m) => m && m.role === "user")
+    .map((m) => {
+      if (typeof m.content === "string") {
+        return { type: "message", role: "user", content: [{ type: "input_text", text: m.content }] };
+      }
+      const content = (Array.isArray(m.content) ? m.content : [])
+        .map((p) => {
+          if (!p || typeof p !== "object") return null;
+          if (p.type === "text" && typeof p.text === "string") {
+            return { type: "input_text", text: p.text };
+          }
+          if (p.type === "image_url") {
+            const url = typeof p.image_url?.url === "string" ? p.image_url.url : "";
+            if (!url) return null;
+            return { type: "input_image", image_url: url };
+          }
+          return null;
+        })
+        .filter(Boolean);
+      return { type: "message", role: "user", content };
+    });
+}
 
-  const body = {
-    model: provider.model,
-    messages,
-    temperature: 0.3,
-    response_format: { type: "json_object" },
-  };
+function museTextFromResponse(data) {
+  const out = Array.isArray(data?.output) ? data.output : [];
+  const texts = [];
+  for (const item of out) {
+    if (!item || item.type !== "message" || !Array.isArray(item.content)) continue;
+    for (const part of item.content) {
+      if (part && part.type === "output_text" && typeof part.text === "string") {
+        texts.push(part.text);
+      }
+    }
+  }
+  return texts.join("");
+}
 
-  let response = await fetchWithTimeout(
-    url,
+/** Tier counterpart for model_not_found fallback (contributor ↔ standard). */
+function museCounterpart(model) {
+  if (typeof model !== "string") return null;
+  if (model.endsWith("-contributor")) return model.slice(0, -"-contributor".length);
+  const m = model.match(/^(muse-spark-\d+\.\d+)$/);
+  return m ? `${m[1]}-contributor` : null;
+}
+
+async function musePost({ apiKey, baseUrl, body, timeoutMs }) {
+  return fetchWithTimeout(
+    `${baseUrl}/responses`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${provider.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(body),
     },
     timeoutMs
   );
+}
 
-  // Retry once without response_format — mirrors the OpenAI-compatible path.
-  if (!response.ok && response.status === 400) {
-    const retryBody = { ...body };
-    delete retryBody.response_format;
-    response = await fetchWithTimeout(
-      url,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${provider.apiKey}`,
-        },
-        body: JSON.stringify(retryBody),
-      },
-      timeoutMs
-    );
+async function callMuseSpark({ messages, systemPrompt, timeoutMs }) {
+  const provider = resolveProvider();
+
+  const input = museInputFromMessages(messages);
+  const buildBody = (model) => ({
+    model,
+    ...(systemPrompt ? { instructions: systemPrompt } : {}),
+    input,
+    stream: false,
+    store: false,
+    max_output_tokens: 2048,
+  });
+
+  const modelsToTry = [provider.model];
+  const counterpart = museCounterpart(provider.model);
+  if (counterpart && counterpart !== provider.model) modelsToTry.push(counterpart);
+
+  let lastError = null;
+  for (const model of modelsToTry) {
+    let response;
+    try {
+      response = await musePost({
+        apiKey: provider.apiKey,
+        baseUrl: provider.baseUrl,
+        body: buildBody(model),
+        timeoutMs,
+      });
+    } catch (err) {
+      throw new AiError(
+        `Muse Spark request failed: ${(err instanceof Error ? err.message : String(err)).slice(0, 200)}`
+      );
+    }
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      lastError = new AiError(
+        `Muse Spark request failed (${response.status}): ${errBody.slice(0, 300)}`
+      );
+      // Wrong-tier model id → retry once with the tier counterpart.
+      if (response.status === 404 && model !== modelsToTry[modelsToTry.length - 1]) continue;
+      throw lastError;
+    }
+
+    const data = await response.json();
+    return extractJson(museTextFromResponse(data));
   }
-
-  if (!response.ok) {
-    const errBody = await response.text().catch(() => "");
-    throw new AiError(`Muse Spark request failed (${response.status}): ${errBody.slice(0, 300)}`);
-  }
-
-  const data = await response.json();
-  return extractJson(data?.choices?.[0]?.message?.content ?? "");
+  throw lastError ?? new AiError("Muse Spark request failed.");
 }
 
 function callModel({ parts, systemPrompt, messages, timeoutMs }) {
   const provider = resolveProvider();
   if (!provider) throw new AiError("No AI provider configured.", "not_configured");
   if (provider.name === "gemini") return callGemini({ parts, systemPrompt, timeoutMs });
-  return (provider.name === "muse" ? callMuseSpark : callOpenAI)({
+  if (provider.name === "muse") return callMuseSpark({ messages, systemPrompt, timeoutMs });
+  return callOpenAI({
     messages: systemPrompt
       ? [{ role: "system", content: systemPrompt }, ...messages]
       : messages,
