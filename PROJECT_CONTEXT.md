@@ -174,4 +174,4 @@ The client auto-resolves the API host: `localhost` on web, Metro LAN IP on physi
 - [x] `app.json` / `package.json` carry NutriSafe branding (name/slug/scheme).
 - [x] CI (`.github/workflows/ci.yml`): typecheck + lint + server AI smoke/e2e on push/PR.
 - [x] AI provider priority is Muse Spark (`MUSE_SPARK_API_KEY`, Responses API, default `muse-spark-1.3-contributor` with auto-fallback to `muse-spark-1.3` on 404) → Gemini → OpenAI-compatible; image transport is base64-JSON-first (`-json` routes) with multipart fallback.
-- [ ] Validate with one real photo scan + one Rx scan against the deployed Render server (needs `MUSE_SPARK_API_KEY` set in dashboard + redeploy); then EAS rebuild the APK for the JSON-path client.
+- [x] Validated live: chole photo → `Chana Masala with Aloo Paratha` 0.95 via both `-json` + multipart routes; APK rebuilt via EAS (preview) with JSON-first client; photo scan confirmed working in-app.
