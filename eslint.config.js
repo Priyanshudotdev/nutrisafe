@@ -10,6 +10,8 @@ module.exports = [
       "expo-env.d.ts",
       "uniwind-types.d.ts",
       "server/*",
+      ".agents/**",
+      "skills-lock.json",
     ],
   },
 ];
