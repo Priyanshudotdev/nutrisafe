@@ -20,7 +20,7 @@ Defaults to **http://localhost:4000**. Set `PORT` to change.
 | `MUSE_SPARK_API_KEY`      | No                                       | Muse Spark key (Meta Model API, `LLM\|...`) — first-match provider when set.                      |
 | `MUSE_SPARK_MODEL`        | No (default `muse-spark-1.3-contributor`)| Muse Spark model id. Set `MUSE_SPARK_MODELS` (comma-separated) to try your exact entitled ids first — no code push needed. |
 | `MUSE_SPARK_BASE_URL`     | No (default `https://api.meta.ai/v1`)    | Meta Model API base URL.                                                                          |
-| `GEMINI_MODEL`            | No (default `gemini-2.5-flash`)          | Gemini model id.                                                                                    |
+| `GEMINI_MODEL`            | No (default `gemini-3.8-flash`)          | Gemini model id.                                                                                    |
 | `OPENAI_API_KEY`          | No                                       | OpenAI-compatible key (OpenAI, OpenRouter, Groq, Ollama, ...). Used if no Gemini key.               |
 | `OPENAI_BASE_URL`         | No (default `https://api.openai.com/v1`) | Base URL for OpenAI-compatible providers.                                                           |
 | `OPENAI_MODEL`            | No (default `gpt-4o-mini`)               | Model id for OpenAI-compatible providers.                                                           |

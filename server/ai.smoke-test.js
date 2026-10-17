@@ -113,12 +113,14 @@ function setGemini(text) {
   // Gemini model fallback chain order (retired aliases rotate forward).
   assert.deepStrictEqual(ai.geminiModelCandidates("gemini-9.9-custom"), [
     "gemini-9.9-custom",
+    "gemini-3.8-flash",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
     "gemini-1.5-flash",
   ]);
   assert.deepStrictEqual(ai.geminiModelCandidates("gemini-1.5-flash"), [
     "gemini-1.5-flash",
+    "gemini-3.8-flash",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
   ]);
