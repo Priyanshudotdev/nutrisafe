@@ -29,7 +29,9 @@ services:
         sync: false
       - key: MUSE_SPARK_MODEL
         value: muse-spark-1.3-contributor
+      # Pinned explicitly so a stale dashboard value can't re-break new keys
+      # (gemini-2.5-flash 404s for newer Gemini API keys).
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.8-flash
       - key: NUTRISAFE_DB_FILE
         value: /data/nutrisafe.db
