@@ -2,10 +2,10 @@
  *
  * Providers (first match wins):
  *   1. Google Gemini          → GEMINI_API_KEY (optional GEMINI_MODEL, default
- *      gemini-2.5-flash; unknown ids fall through 2.0-flash → 1.5-flash)
+ *      gemini-3.8-flash; unknown ids fall through 2.5-flash → 2.0-flash → 1.5-flash)
  *   2. Muse Spark (Meta Model API) → MUSE_SPARK_API_KEY (Responses API;
  *      dormant until Meta billing is configured on the account)
- *   2. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-2.5-flash)
+ *   2. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-3.8-flash)
  *   3. OpenAI-compatible      → OPENAI_API_KEY            (optional OPENAI_BASE_URL, OPENAI_MODEL)
  *      Works with OpenAI, OpenRouter, Groq, Together, Ollama, LM Studio, ...
  *
@@ -22,7 +22,7 @@
 // MUSE_SPARK_MODEL overrides either way.
 const DEFAULT_MUSE_SPARK_MODEL = "muse-spark-1.3-contributor";
 const DEFAULT_MUSE_SPARK_BASE_URL = "https://api.meta.ai/v1";
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 
@@ -131,12 +131,14 @@ function _setGeminiOverride(fn) {
 }
 
 /**
- * Ordered Gemini model ids: configured → 2.5-flash → 2.0-flash → 1.5-flash.
+ * Ordered Gemini model ids: configured → 3.8-flash → 2.5-flash → 2.0-flash → 1.5-flash.
  * Google retires aliases over time; each model-not-found moves on.
+ * (New API keys can no longer use gemini-2.5-flash — Google returns 404
+ * "no longer available to new users" and points at gemini-3.8-flash.)
  */
 function geminiModelCandidates(configured) {
   const out = [];
-  for (const m of [configured, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]) {
+  for (const m of [configured, "gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]) {
     if (typeof m === "string" && m && !out.includes(m)) out.push(m);
   }
   return out;

@@ -11,3 +11,5 @@ bun.lockb
 expo-env.d.ts
 uniwind-types.d.ts
 .DS_Store
+.agents
+skills-lock.json

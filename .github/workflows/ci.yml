@@ -2,16 +2,26 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
+
+# Cancel superseded runs on the same ref (keeps feature-branch pushes cheap).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
       - uses: pnpm/action-setup@v4
+        with:
+          # Pin to the version declared in package.json ("packageManager": "pnpm@11.0.8")
+          # so CI never floats when the action's default resolution changes.
+          version: 11.0.8
+          run_install: false
 
       - uses: actions/setup-node@v5
         with:
@@ -31,3 +41,8 @@ jobs:
 
       - name: Server AI e2e tests (mock provider, no keys needed)
         run: node server/ai.e2e-test.js
+        # Intentionally NOT run here (fast, keyless CI):
+        # - server/upload.e2e-test.js needs a live TARGET server + picsum.photos
+        #   download + real AI routes (external network, slow/flaky, burns quota).
+        # - server/vision.manual-test.js needs IMAGE=<local photo> + live TARGET
+        #   + real keys by design (asserts IMAGE exists; manual, not CI-safe).
