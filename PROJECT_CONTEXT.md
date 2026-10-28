@@ -43,6 +43,7 @@ Home ───┤                             ├──► Analysis result
                                              │
 History ◄──────── every check saved ─────────┘
 (search, re-open, delete)
+Log ── today's eaten / not-eaten foods → auto-recalculated daily report
 Account ── profile editing, Rx re-scan, theme, notifications, security
 ```
 
@@ -68,6 +69,14 @@ Account ── profile editing, Rx re-scan, theme, notifications, security
 - In-app notification center (completion events like "History cleared", scan results).
 - Empty states with CTAs everywhere data can be absent.
 
+### Food log & daily nutrition report
+
+- Separate **Eaten** and **Not eaten** lists per day; only eaten items count toward the report.
+- Toggling status or changing quantity recalculates the day's totals immediately (optimistic UI, server response is authoritative).
+- Daily report card: calories, protein, carbs, fat, fiber, sugar, sodium, potassium, phosphorus, saturated fat, cholesterol.
+- Date navigation with per-day history, plus quick access to recent days that have entries.
+- Nutrition is estimated per recorded unit from a local ~70-food catalog with a deterministic heuristic fallback — no AI keys required. Values are estimates, and the screen says so.
+
 ### Account & security
 
 - JWT auth: email/password signup, login, logout, change email/password.
@@ -85,21 +94,22 @@ Account ── profile editing, Rx re-scan, theme, notifications, security
 │  app/          expo-router screens (tabs, auth, onboard)│
 │  components/   design-system primitives + domain cards  │
 │  services/     stores & API clients (auth, history,     │
-│                vision, analysis, notifications, theme)  │
+│                food log, vision, analysis,              │
+│                notifications, theme)                    │
 │  data/         LOCAL rules engine (foodSafety.ts) +     │
 │                Indian-food localization                 │
 │  theme/        tokens.ts (light) + darkTokens.ts        │
 └──────────────────────┬──────────────────────────────────┘
                        │ REST (JSON / multipart)
 ┌──────────────────────▼──────────────────────────────────┐
-│            Express server (server/, port 4000)           │
-│  JWT auth + bcrypt │ JSON-file persistence (data/)      │
-│  multer uploads    │ AI layer (ai.js):                   │
+│            Express server (server/, port 4000)          │
+│  JWT auth + bcrypt │ SQLite persistence (store.js)      │
+│  multer uploads    │ AI layer (ai.js):                  │
 │    • Google Gemini  OR  OpenAI-compatible endpoint      │
 │    • Keys stay server-side only                         │
 │  Endpoints: /health, /auth/*, /profile, /onboarding,    │
-│   /history*, /vision/identify, /nutrition/analyze,      │
-│   /prescription/extract                                 │
+│   /history*, /food-log*, /vision/identify,              │
+│   /nutrition/analyze, /prescription/extract             │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -124,7 +134,7 @@ Account ── profile editing, Rx re-scan, theme, notifications, security
 | Auth                 | bcryptjs password hashing + JWT (jsonwebtoken)                              |
 | Uploads              | multer                                                                      |
 | AI                   | Gemini API or any OpenAI-compatible chat/vision endpoint (server-side only) |
-| Persistence (server) | JSON file store in `server/data/` (gitignored)                              |
+| Persistence (server) | SQLite via `node:sqlite` in `server/data/` (gitignored)                     |
 | Tooling              | pnpm workspaces config, ESLint (expo config), Prettier, tsc                 |
 
 ## 7. Repository Layout
@@ -135,22 +145,26 @@ nutrisafe/
 ├── PROJECT_CONTEXT.md     # this file
 ├── .env.example           # all env vars documented (client + server + AI)
 ├── src/
-│   ├── app/               # routes: (tabs)/{index,scan,search,account},
+│   ├── app/               # routes: (tabs)/{index,scan,search,log,account},
 │   │                      #         login, signup, onboarding
 │   ├── components/        # AppButton, ScreenHeader, ErrorBanner,
 │   │                      # FoodCheckCard, SafetyStatusBadge, ConditionSelector,
-│   │                      # DietaryProfileBar, StepProgressState, ...
+│   │                      # DietaryProfileBar, StepProgressState,
+│   │                      # NutritionSummaryCard, FoodLogRow, FoodLogEditorSheet
 │   ├── services/          # apiClient, authService/authStore, historyService,
-│   │                      # foodVision, foodAnalysis, prescriptionVision,
-│   │                      # sessionSync, notificationStore, themeStore
+│   │                      # foodLogService, foodVision, foodAnalysis,
+│   │                      # prescriptionVision, sessionSync, notificationStore,
+│   │                      # themeStore
 │   ├── data/              # foodSafety.ts (rules engine + demo seed),
-│   │                      # indianFoods.ts (localized alternatives)
+│   │                      # indianFoods.ts (localized alternatives),
+│   │                      # foodLog.ts (types, units, summary math)
 │   ├── hooks/             # useTheme, useThemeColors
 │   ├── theme/             # tokens.ts, darkTokens.ts
 │   └── config/api.ts      # smart base-URL resolution (device/emulator/web)
 └── server/                # index.js (API), store.js (persistence),
     ├── ai.js              # provider abstraction + tests
-                           # README.md
+    ├── nutrition.js       # food catalog + per-unit nutrition estimation
+    └── foodlog.e2e-test.js
 ```
 
 ## 8. Running It
@@ -161,6 +175,7 @@ pnpm api        # terminal 1 – Express backend on :4000
 pnpm android    # terminal 2 – Expo dev client / emulator (or ios / web)
 pnpm typecheck  # tsc --noEmit
 pnpm lint       # eslint .
+pnpm test       # server AI + food-log tests (no keys needed)
 cp .env.example .env.local   # then add GEMINI_API_KEY or OPENAI_API_KEY (optional)
 ```
 
@@ -172,6 +187,7 @@ The client auto-resolves the API host: `localhost` on web, Metro LAN IP on physi
 - [x] Server persistence is SQLite (`server/data/nutrisafe.db`, zero deps via `node:sqlite`); legacy `db.json` auto-migrates once. Swap for Postgres before multi-instance scale.
 - [x] Rules engine covers the 5 modeled conditions; `src/data/foodSafety.ts` documents the 5-step checklist for adding new ones.
 - [x] `app.json` / `package.json` carry NutriSafe branding (name/slug/scheme).
-- [x] CI (`.github/workflows/ci.yml`): typecheck + lint + server AI smoke/e2e on push/PR.
+- [x] CI (`.github/workflows/ci.yml`): typecheck + lint + server AI smoke/e2e + food-log e2e on push/PR.
+- [x] Food log: per-day Eaten / Not eaten tracking with an auto-recalculated nutrition report, date history, and a local nutrition catalog (`server/nutrition.js`) that needs no AI keys.
 - [x] AI provider priority is Muse Spark (`MUSE_SPARK_API_KEY`, Responses API, default `muse-spark-1.3-contributor` with auto-fallback to `muse-spark-1.3` on 404) → Gemini → OpenAI-compatible; image transport is base64-JSON-first (`-json` routes) with multipart fallback.
 - [x] Validated live: chole photo → `Chana Masala with Aloo Paratha` 0.95 via both `-json` + multipart routes; APK rebuilt via EAS (preview) with JSON-first client; photo scan confirmed working in-app.
