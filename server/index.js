@@ -18,6 +18,7 @@ const path = require("path");
 const fs = require("fs");
 
 const ai = require("./ai");
+const nutrition = require("./nutrition");
 const store = require("./store");
 
 // ─── Local env files ─────────────────────────────────────────────────────────
@@ -306,6 +307,7 @@ app.use("/auth", authLimiter);
 app.use("/profile", apiLimiter);
 app.use("/onboarding", apiLimiter);
 app.use("/history", apiLimiter);
+app.use("/food-log", apiLimiter);
 
 // ─── Email + token helpers ─────────────────────────────────────────────────────
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -407,7 +409,7 @@ app.post("/auth/signup", async (req, res) => {
     createdAt: new Date().toISOString(),
   };
   usersByEmail.set(email, user);
-  userDataById.set(id, { history: [] });
+  userDataById.set(id, { history: [], foodLog: [] });
   persist();
 
   const token = signToken(id, 0);
@@ -736,6 +738,282 @@ app.delete("/history", requireAuth, (req, res) => {
   if (data) data.history = [];
   persist();
   res.json({ message: "History cleared." });
+});
+
+// ─── Food log — planned vs actually eaten food + daily nutrition ──────────────
+// Every item stores nutrition for ONE recorded unit. Consumed totals are
+// derived (`nutritionPerUnit × quantity`) and include ONLY status="eaten"
+// items, so toggling a status or editing a quantity always recalculates.
+
+const VALID_MEALS = ["breakfast", "lunch", "dinner", "snack"];
+const VALID_UNITS = nutrition.UNITS;
+const VALID_FOOD_LOG_STATUSES = ["eaten", "not_eaten"];
+const MEAL_ORDER = { breakfast: 0, lunch: 1, snack: 2, dinner: 3 };
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function localDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function currentDateKey() {
+  return localDateKey(new Date());
+}
+
+function isValidDateKey(value) {
+  if (typeof value !== "string" || !DATE_KEY_RE.test(value)) return false;
+  const [y, m, d] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return (
+    date.getUTCFullYear() === y &&
+    date.getUTCMonth() === m - 1 &&
+    date.getUTCDate() === d
+  );
+}
+
+function parseQuantity(value) {
+  if (value === null || value === undefined || typeof value === "boolean") return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0 || n > 10_000) return null;
+  return Math.round(n * 100) / 100;
+}
+
+function foodLogFor(userId) {
+  const data = userDataById.get(userId);
+  if (!data) return null;
+  if (!Array.isArray(data.foodLog)) data.foodLog = [];
+  return data.foodLog;
+}
+
+function sortFoodLogItems(items) {
+  return [...items].sort(
+    (a, b) =>
+      (MEAL_ORDER[a.meal] ?? 9) - (MEAL_ORDER[b.meal] ?? 9) ||
+      String(a.createdAt).localeCompare(String(b.createdAt))
+  );
+}
+
+/** Distinct days that have log entries, newest first (for quick history nav). */
+function buildFoodLogDays(userId) {
+  const log = foodLogFor(userId) ?? [];
+  const byDate = new Map();
+  for (const item of log) {
+    if (!isValidDateKey(item.date)) continue;
+    let marker = byDate.get(item.date);
+    if (!marker) {
+      marker = { date: item.date, calories: 0, eatenCount: 0, itemCount: 0 };
+      byDate.set(item.date, marker);
+    }
+    marker.itemCount += 1;
+    if (item.status === "eaten") {
+      marker.eatenCount += 1;
+      marker.calories += nutrition.scaleNutrition(item.nutritionPerUnit, item.quantity, 2)
+        .calories;
+    }
+  }
+  return [...byDate.values()]
+    .map((m) => ({ ...m, calories: Math.round(m.calories * 10) / 10 }))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 30);
+}
+
+function buildFoodLogDay(userId, date) {
+  const items = sortFoodLogItems((foodLogFor(userId) ?? []).filter((i) => i.date === date));
+  return {
+    date,
+    items,
+    summary: nutrition.summarizeFoodLog(items),
+    days: buildFoodLogDays(userId),
+  };
+}
+
+/**
+ * Validate the mutable food-log fields.
+ * Returns `{ error }` or `{ value }` with only the supplied fields (partial).
+ */
+function parseFoodLogFields(body, { partial = false } = {}) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { error: "A JSON body is required." };
+  }
+  const out = {};
+
+  if (!partial || "date" in body) {
+    const date = body.date ?? currentDateKey();
+    if (!isValidDateKey(date)) {
+      return { error: "date must be a valid YYYY-MM-DD date." };
+    }
+    out.date = date;
+  }
+
+  if (!partial || "meal" in body) {
+    if (!VALID_MEALS.includes(body.meal)) {
+      return { error: `meal must be one of: ${VALID_MEALS.join(", ")}.` };
+    }
+    out.meal = body.meal;
+  }
+
+  if (!partial || "foodName" in body) {
+    if (
+      typeof body.foodName !== "string" ||
+      !body.foodName.trim() ||
+      body.foodName.trim().length > 120
+    ) {
+      return { error: "foodName must be a string of 1-120 characters." };
+    }
+    out.foodName = body.foodName.trim();
+  }
+
+  if (!partial || "quantity" in body) {
+    const quantity = parseQuantity(body.quantity);
+    if (quantity === null) {
+      return { error: "quantity must be a number greater than 0 and at most 10000." };
+    }
+    out.quantity = quantity;
+  }
+
+  if (!partial || "unit" in body) {
+    if (!VALID_UNITS.includes(body.unit)) {
+      return { error: `unit must be one of: ${VALID_UNITS.join(", ")}.` };
+    }
+    out.unit = body.unit;
+  }
+
+  if (!partial || "status" in body) {
+    const status = body.status ?? "eaten";
+    if (!VALID_FOOD_LOG_STATUSES.includes(status)) {
+      return { error: "status must be eaten or not_eaten." };
+    }
+    out.status = status;
+  }
+
+  if ("category" in body) {
+    if (
+      body.category !== null &&
+      (typeof body.category !== "string" || body.category.length > 60)
+    ) {
+      return { error: "category must be a string of at most 60 characters." };
+    }
+    out.category = body.category?.trim() || undefined;
+  }
+
+  return { value: out };
+}
+
+/** Resolve nutrient values from the client or the local catalog/heuristic. */
+function resolveFoodLogNutrition(body, foodName, unit, categoryHint) {
+  if (body.nutritionPerUnit !== undefined) {
+    const manual = nutrition.sanitizeNutrition(body.nutritionPerUnit);
+    if (!manual) {
+      return {
+        error: "nutritionPerUnit must contain numeric, non-negative nutrient values.",
+      };
+    }
+    return {
+      value: {
+        nutritionPerUnit: manual,
+        category: categoryHint || "General Food",
+        nutritionSource: "manual",
+      },
+    };
+  }
+
+  const estimate = nutrition.estimateNutrition(foodName, unit);
+  return {
+    value: {
+      nutritionPerUnit: estimate.nutritionPerUnit,
+      category: categoryHint || estimate.category,
+      nutritionSource: estimate.nutritionSource,
+    },
+  };
+}
+
+app.get("/food-log", requireAuth, (req, res) => {
+  if (!userDataById.has(req.userId)) {
+    return res.status(404).json({ error: "User data not found." });
+  }
+  const date = req.query.date === undefined ? currentDateKey() : String(req.query.date);
+  if (!isValidDateKey(date)) {
+    return res.status(400).json({ error: "date must be a valid YYYY-MM-DD date." });
+  }
+  res.json(buildFoodLogDay(req.userId, date));
+});
+
+app.post("/food-log", requireAuth, (req, res) => {
+  const body = req.body ?? {};
+  const parsed = parseFoodLogFields(body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const value = parsed.value;
+  const resolved = resolveFoodLogNutrition(body, value.foodName, value.unit, value.category);
+  if (resolved.error) return res.status(400).json({ error: resolved.error });
+
+  const log = foodLogFor(req.userId);
+  if (!log) return res.status(404).json({ error: "User data not found." });
+
+  const now = new Date().toISOString();
+  const item = {
+    id: `food_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    ...value,
+    ...resolved.value,
+    createdAt: now,
+    updatedAt: now,
+  };
+  log.push(item);
+  persist();
+
+  res.status(201).json({ item, day: buildFoodLogDay(req.userId, item.date) });
+});
+
+app.patch("/food-log/:id", requireAuth, (req, res) => {
+  const log = foodLogFor(req.userId);
+  if (!log) return res.status(404).json({ error: "User data not found." });
+  const item = log.find((entry) => entry.id === req.params.id);
+  if (!item) return res.status(404).json({ error: "Food log item not found." });
+
+  const body = req.body ?? {};
+  const parsed = parseFoodLogFields(body, { partial: true });
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const patch = parsed.value;
+  const nextFoodName = patch.foodName ?? item.foodName;
+  const nextUnit = patch.unit ?? item.unit;
+  const identityChanged = nextFoodName !== item.foodName || nextUnit !== item.unit;
+  const hasManualNutrition = body.nutritionPerUnit !== undefined;
+
+  if (hasManualNutrition || identityChanged) {
+    const categoryHint = identityChanged ? patch.category : (patch.category ?? item.category);
+    const resolved = resolveFoodLogNutrition(body, nextFoodName, nextUnit, categoryHint);
+    if (resolved.error) return res.status(400).json({ error: resolved.error });
+    Object.assign(item, resolved.value);
+  } else if (patch.category !== undefined) {
+    item.category = patch.category;
+  }
+
+  for (const key of ["date", "meal", "foodName", "quantity", "unit", "status"]) {
+    if (key in patch) item[key] = patch[key];
+  }
+  item.updatedAt = new Date().toISOString();
+  persist();
+
+  res.json({ item, day: buildFoodLogDay(req.userId, item.date) });
+});
+
+app.delete("/food-log/:id", requireAuth, (req, res) => {
+  const log = foodLogFor(req.userId);
+  if (!log) return res.status(404).json({ error: "User data not found." });
+  const index = log.findIndex((entry) => entry.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: "Food log item not found." });
+
+  const [removed] = log.splice(index, 1);
+  persist();
+
+  res.json({
+    deleted: true,
+    item: removed,
+    day: buildFoodLogDay(req.userId, removed.date),
+  });
 });
 
 // ─── Vision — food identification from an image ──────────────────────────────
