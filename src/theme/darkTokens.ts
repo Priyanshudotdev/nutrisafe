@@ -33,6 +33,10 @@ export const darkColors = {
   dangerBg: "#7F1D1D",
   dangerBorder: "#DC2626",
   dangerIcon: "#FCA5A5",
+  unableText: "#C7D2FE",
+  unableBg: "#312E81",
+  unableBorder: "#6366F1",
+  unableIcon: "#818CF8",
   // ─── Condition chips (accents via getConditionColor(id, true)) ───────────────
   diabetesBg: "#1E3A8A",
   ckdBg: "#134E4A",

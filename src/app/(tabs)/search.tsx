@@ -70,7 +70,7 @@ export default function SearchHistoryScreen() {
         const localOnly = local.filter((l) => !remoteIds.has(l.id));
         const merged = [...localOnly, ...remote];
         foodSafetyStore.setHistory(merged);
-        if (!cancelled) setHistory(merged);
+        if (!cancelled) setHistory(foodSafetyStore.getHistory());
       } catch {
         /* keep local */
       }

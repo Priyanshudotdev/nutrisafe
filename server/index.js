@@ -19,6 +19,7 @@ const fs = require("fs");
 
 const ai = require("./ai");
 const nutrition = require("./nutrition");
+const safety = require("./safety-engine");
 const store = require("./store");
 
 // ─── Local env files ─────────────────────────────────────────────────────────
@@ -201,8 +202,7 @@ function decodeImageJson(body) {
       errStatus: 400,
       errBody: {
         status: "failed",
-        message:
-          "We couldn't read this photo. Try picking the photo again or retaking it.",
+        message: "We couldn't read this photo. Try picking the photo again or retaking it.",
       },
     };
   }
@@ -219,7 +219,8 @@ function decodeImageJson(body) {
 }
 
 // Map multer errors to clear 4xx responses instead of falling through to 500.
-function uploadSingleImage(req, res, next) {  upload.single("image")(req, res, (err) => {
+function uploadSingleImage(req, res, next) {
+  upload.single("image")(req, res, (err) => {
     if (err) {
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {
@@ -682,7 +683,7 @@ app.get("/history", requireAuth, (req, res) => {
   res.json({ history: history.slice(0, limit) });
 });
 
-const VALID_STATUSES = ["safe", "moderation", "not_recommended"];
+const VALID_STATUSES = ["safe", "moderation", "not_recommended", "unable_to_verify"];
 
 app.post(
   "/history",
@@ -703,9 +704,9 @@ app.post(
       return res.status(400).json({ error: "analysis must include string id and foodName." });
     }
     if (!VALID_STATUSES.includes(analysis.status)) {
-      return res
-        .status(400)
-        .json({ error: "analysis.status must be safe, moderation or not_recommended." });
+      return res.status(400).json({
+        error: "analysis.status must be safe, moderation, not_recommended or unable_to_verify.",
+      });
     }
     if (JSON.stringify(analysis).length > 100_000) {
       return res.status(413).json({ error: "analysis object is too large." });
@@ -766,11 +767,7 @@ function isValidDateKey(value) {
   if (typeof value !== "string" || !DATE_KEY_RE.test(value)) return false;
   const [y, m, d] = value.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
-  return (
-    date.getUTCFullYear() === y &&
-    date.getUTCMonth() === m - 1 &&
-    date.getUTCDate() === d
-  );
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
 }
 
 function parseQuantity(value) {
@@ -809,8 +806,7 @@ function buildFoodLogDays(userId) {
     marker.itemCount += 1;
     if (item.status === "eaten") {
       marker.eatenCount += 1;
-      marker.calories += nutrition.scaleNutrition(item.nutritionPerUnit, item.quantity, 2)
-        .calories;
+      marker.calories += nutrition.scaleNutrition(item.nutritionPerUnit, item.quantity, 2).calories;
     }
   }
   return [...byDate.values()]
@@ -1112,39 +1108,85 @@ app.post("/vision/identify-json", requireAuth, aiLimiter, async (req, res) => {
 });
 
 // ─── Nutrition analysis ───────────────────────────────────────────────────────
-// With an AI provider configured this returns a full structured analysis
-// ({ source: "ai", analysis }) evaluated against ALL of the patient's
-// conditions (worst-case verdict). Without one it signals the client to use
-// the deterministic rules engine in src/data/foodSafety.ts.
-app.post("/nutrition/analyze", requireAuth, aiLimiter, async (req, res) => {
-  const { foodName, condition, conditions, patient } = req.body;
-  if (!foodName || (!conditions && !condition)) {
-    return res.status(400).json({ error: "foodName and condition(s) are required." });
+// The verdict is produced only by the deterministic engine in safety-engine.js.
+// AI never supplies a status, nutrient value, or explanation here. The engine
+// is shared with the mobile client so on-device fallback can never diverge.
+app.post("/nutrition/analyze", requireAuth, apiLimiter, (req, res) => {
+  const { foodName, condition, conditions, patient, identity } = req.body ?? {};
+  if (typeof foodName !== "string" || !foodName.trim()) {
+    return res.status(400).json({ error: "foodName is required." });
+  }
+  if (foodName.length > 160) {
+    return res.status(400).json({ error: "foodName is too long." });
   }
 
-  if (!ai.isConfigured()) {
-    return res.json({
-      source: "local-rules-engine",
-      message:
-        "No AI provider configured. Set GEMINI_API_KEY or OPENAI_API_KEY to enable AI analysis; the app will use its local clinical rules engine.",
-    });
+  const rawConditions = Array.isArray(conditions) ? conditions : condition ? [condition] : [];
+  const conditionList = [...new Set(rawConditions)].filter((c) => VALID_CONDITIONS.includes(c));
+  if (conditionList.length === 0) {
+    return res.status(400).json({ error: "At least one valid condition is required." });
   }
 
-  const conditionList = Array.isArray(conditions) ? conditions : [condition];
+  // Only the fields the engine uses are forwarded. Free-text profile notes are
+  // never logged or used for the verdict.
+  const safePatient = {
+    allergensList: Array.isArray(patient?.allergensList)
+      ? patient.allergensList
+          .filter((a) => typeof a === "string" && a.trim())
+          .map((a) => a.trim().slice(0, 60))
+          .slice(0, 20)
+      : [],
+  };
+
+  const safeIdentity =
+    identity && typeof identity === "object"
+      ? {
+          confirmed: identity.confirmed === true,
+          source: typeof identity.source === "string" ? identity.source.slice(0, 20) : "text",
+          confidence:
+            typeof identity.confidence === "number" && Number.isFinite(identity.confidence)
+              ? Math.min(1, Math.max(0, identity.confidence))
+              : undefined,
+        }
+      : undefined;
+
+  const analysis = safety.analyzeFood(foodName.trim(), conditionList, {
+    patient: safePatient,
+    identity: safeIdentity,
+  });
+
+  // Structured audit trail: enough to reproduce a decision, no medical free
+  // text, no allergen values, no tokens. One JSON line per analysis.
   try {
-    const analysis = await ai.analyzeNutrition(String(foodName), conditionList, patient);
-    return res.json({ source: "ai", analysis });
-  } catch (err) {
-    console.error("Nutrition AI error:", err);
-    if (err.code === "invalid_condition") {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(502).json({
-      source: "ai_failed",
-      message:
-        "The AI analysis service returned an error. The app will fall back to its local rules engine.",
-    });
+    console.log(
+      `[safety] ${JSON.stringify({
+        event: "safety_analysis",
+        analysisId: analysis.id,
+        foodId: analysis.foodReference?.foodId ?? null,
+        foodName: analysis.foodName,
+        foodSource: analysis.foodReference?.sourceType ?? "unresolved",
+        matchType: analysis.foodReference?.matchType ?? "none",
+        conditions: analysis.conditions,
+        serving: analysis.serving?.label ?? null,
+        nutritionSource: analysis.foodReference?.source ?? null,
+        ruleVersion: analysis.ruleVersion,
+        outcomes: analysis.conditionOutcomes.map((o) => ({
+          condition: o.condition,
+          status: o.status,
+          rules: o.evidence.map((e) => e.ruleId),
+          gaps: o.missing.length,
+        })),
+        finalStatus: analysis.status,
+        evidenceCount: analysis.evidence.length,
+        dataGapCount: analysis.dataGaps.length,
+        alternatives: analysis.alternatives.length,
+        allergenScreenRun: conditionList.includes("allergy"),
+      })}`
+    );
+  } catch (logErr) {
+    console.warn("[safety] audit log failed:", logErr.message);
   }
+
+  return res.json({ source: "rules-engine", analysis });
 });
 
 // ─── Prescription extraction — read a doctor's prescription/report photo ─────

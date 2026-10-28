@@ -138,7 +138,8 @@ const PNG_B64 =
     const auth = { Authorization: `Bearer ${signup.body.token}` };
     console.log("✓ signup");
 
-    // Nutrition analyze via AI
+    // Nutrition analyze is deterministic even when an AI provider is configured.
+    // AI may identify foods, but it must never supply the safety verdict.
     const nut = await post(
       API_PORT,
       "/nutrition/analyze",
@@ -146,14 +147,20 @@ const PNG_B64 =
       auth
     );
     assertOk(nut.status === 200, "nutrition status");
-    assertOk(nut.body.source === "ai", "nutrition source=ai");
+    assertOk(nut.body.source === "rules-engine", "nutrition source=rules-engine");
+    assertOk(nut.body.source !== "ai", "AI does not produce the verdict");
     assertOk(nut.body.analysis?.foodName === "Banana", "nutrition foodName");
-    assertOk(nut.body.analysis?.status === "moderation", "nutrition status value");
+    assertOk(nut.body.analysis?.status === "moderation", "deterministic status value");
+    assertOk(nut.body.analysis?.ruleVersion, "nutrition ruleVersion");
+    assertOk(
+      Array.isArray(nut.body.analysis?.evidence) && nut.body.analysis.evidence.length > 0,
+      "evidence trail"
+    );
     assertOk(
       Array.isArray(nut.body.analysis?.factors) && nut.body.analysis.factors.length > 0,
       "factors"
     );
-    console.log("✓ /nutrition/analyze returns full AI analysis");
+    console.log("✓ /nutrition/analyze returns deterministic engine analysis (not AI)");
     console.log(`   → ${nut.body.analysis.statusHeadline}: ${nut.body.analysis.summary}`);
 
     // Vision identify via AI (multipart by hand)

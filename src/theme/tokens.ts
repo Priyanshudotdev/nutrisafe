@@ -56,6 +56,12 @@ export const colors = {
   dangerIcon: "#DC2626",
   danger: "#DC2626",
 
+  // ─── Safety Status: UNABLE TO VERIFY (neutral indigo — never green) ──────────
+  unableText: "#3730A3",
+  unableBg: "#EEF2FF",
+  unableBorder: "#6366F1",
+  unableIcon: "#4F46E5",
+
   // ─── Condition Badge Colors ──────────────────────────────────────────────────
   diabetesColor: "#2563EB",
   diabetesBg: "#EFF6FF",
@@ -155,7 +161,10 @@ export const shadow = {
 /** Resolved (light or dark) color tokens — the return type of `useThemeColors()`. */
 export type ThemeColors = typeof colors;
 // ─── Status Helpers (pass dark=true in dark mode) ─────────────────────────────
-export function getStatusColors(status: "safe" | "moderation" | "not_recommended", dark = false) {
+export function getStatusColors(
+  status: "safe" | "moderation" | "not_recommended" | "unable_to_verify",
+  dark = false
+) {
   if (dark) {
     switch (status) {
       case "safe":
@@ -164,6 +173,8 @@ export function getStatusColors(status: "safe" | "moderation" | "not_recommended
         return { text: "#FDE68A", bg: "#78350E", border: "#D97706", icon: "#FBBF24" };
       case "not_recommended":
         return { text: "#FECACA", bg: "#7F1D1D", border: "#DC2626", icon: "#FCA5A5" };
+      case "unable_to_verify":
+        return { text: "#C7D2FE", bg: "#312E81", border: "#6366F1", icon: "#818CF8" };
     }
   }
   switch (status) {
@@ -187,6 +198,13 @@ export function getStatusColors(status: "safe" | "moderation" | "not_recommended
         bg: colors.dangerBg,
         border: colors.dangerBorder,
         icon: colors.dangerIcon,
+      };
+    case "unable_to_verify":
+      return {
+        text: colors.unableText,
+        bg: colors.unableBg,
+        border: colors.unableBorder,
+        icon: colors.unableIcon,
       };
   }
 }

@@ -459,8 +459,50 @@ const CATALOG = [
     per100g: f(304, 0.3, 82.4, 0, 0.2, 82.1, 4, 52, 4),
     units: { tsp: 7, tbsp: 21, serving: 21 },
   },
+  // Composite Indian sweets are listed separately so the safety engine can
+  // resolve a canonical identity instead of collapsing them into one record.
+  // Values are representative reference composition (IFCT 2017 / USDA FDC
+  // style) for the traditional recipe; they are NOT a lab analysis of a
+  // specific shop or home recipe. See server/foodProfiles.js for the recipe
+  // assumptions (dairy/wheat) used by allergy and celiac checks.
   {
-    aliases: ["halwa", "laddu", "laddoo", "gulab jamun", "jalebi", "kheer", "sweet"],
+    id: "gulab-jamun",
+    aliases: ["gulab jamun", "gulab jamoon", "gulabjaamun", "gulab jaamun", "gulab jamuns"],
+    category: "Sweets & Sugars",
+    per100g: f(330, 5, 55, 12, 0.5, 45, 100, 130, 80, 6, 30),
+    units: { piece: 45, serving: 100 },
+  },
+  {
+    id: "jalebi",
+    aliases: ["jalebi", "jilebi"],
+    category: "Sweets & Sugars",
+    per100g: f(380, 4, 70, 10, 0.3, 50, 80, 90, 50, 4, 0),
+    units: { piece: 40, serving: 100 },
+  },
+  {
+    id: "laddu",
+    aliases: ["laddu", "laddoo", "ladoo"],
+    category: "Sweets & Sugars",
+    per100g: f(400, 6, 55, 18, 2, 35, 90, 160, 110, 8, 15),
+    units: { piece: 40, serving: 100 },
+  },
+  {
+    id: "kheer",
+    aliases: ["kheer", "rice pudding", "payasam"],
+    category: "Sweets & Sugars",
+    per100g: f(150, 3.5, 22, 5, 0.4, 15, 45, 120, 90, 3, 15),
+    units: { bowl: 150, serving: 150 },
+  },
+  {
+    id: "halwa",
+    aliases: ["halwa", "halva", "sooji halwa", "gajar halwa"],
+    category: "Sweets & Sugars",
+    per100g: f(350, 4, 55, 13, 1, 40, 120, 120, 70, 5, 30),
+    units: { piece: 50, bowl: 150, serving: 100 },
+  },
+  {
+    id: "sweet-generic",
+    aliases: ["sweet", "mithai", "dessert"],
     category: "Sweets & Sugars",
     per100g: f(350, 4, 55, 13, 1, 40, 120, 120, 70, 5, 30),
     units: { piece: 50, bowl: 150, serving: 100 },
@@ -684,6 +726,8 @@ module.exports = {
   NUTRIENT_KEYS,
   UNITS,
   DEFAULT_UNIT_GRAMS,
+  CATALOG,
+  normalizeName,
   emptyNutrition,
   scaleNutrition,
   sanitizeNutrition,

@@ -11,7 +11,9 @@
  *
  * Capabilities:
  *   - identifyFood(image)        → { status, foodName, confidence, candidates }
- *   - analyzeNutrition(...)      → structured clinical-style verdict for one condition
+ *   - analyzeNutrition(...)      → DEPRECATED: provider JSON-normalization fixture only.
+ *                                  Safety verdicts live in safety-engine.js and are never
+ *                                  produced by AI.
  *
  * Without any key, isConfigured() returns false and routes degrade gracefully.
  */
@@ -138,7 +140,13 @@ function _setGeminiOverride(fn) {
  */
 function geminiModelCandidates(configured) {
   const out = [];
-  for (const m of [configured, "gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]) {
+  for (const m of [
+    configured,
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+  ]) {
     if (typeof m === "string" && m && !out.includes(m)) out.push(m);
   }
   return out;
@@ -339,7 +347,11 @@ function museInputFromMessages(messages) {
     .filter((m) => m && m.role === "user")
     .map((m) => {
       if (typeof m.content === "string") {
-        return { type: "message", role: "user", content: [{ type: "input_text", text: m.content }] };
+        return {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: m.content }],
+        };
       }
       const content = (Array.isArray(m.content) ? m.content : [])
         .map((p) => {
@@ -478,9 +490,7 @@ function callModel({ parts, systemPrompt, messages, timeoutMs }) {
   if (provider.name === "gemini") return callGemini({ parts, systemPrompt, timeoutMs });
   if (provider.name === "muse") return callMuseSpark({ messages, systemPrompt, timeoutMs });
   return callOpenAI({
-    messages: systemPrompt
-      ? [{ role: "system", content: systemPrompt }, ...messages]
-      : messages,
+    messages: systemPrompt ? [{ role: "system", content: systemPrompt }, ...messages] : messages,
     timeoutMs,
   });
 }
@@ -705,6 +715,11 @@ async function identifyFood(imageBuffer, mimetype) {
 }
 
 /**
+ * @deprecated Safety verdicts MUST come from server/safety-engine.js. This
+ * provider exercise is retained only so the JSON-normalization tests keep
+ * covering Gemini/Muse/OpenAI response parsing. No route calls it, and it must
+ * never be wired back into /nutrition/analyze.
+ *
  * Produce a structured safety analysis for one food against one or more conditions.
  * The verdict is merged worst-case: the food must be safe for ALL conditions.
  * @returns analysis object shaped like the app's FoodSafetyAnalysis (minus id/timestamp/source).
@@ -744,8 +759,8 @@ async function analyzeNutrition(foodName, conditions, patient) {
 
 /**
  * Extract dietary-relevant health info from a prescription/report photo.
-  * @returns {{ status: "success"|"unreadable", readable, documentType, conditions, allergensList, notes, doctorName, summary }}
-  */
+ * @returns {{ status: "success"|"unreadable", readable, documentType, conditions, allergensList, notes, doctorName, summary }}
+ */
 async function extractPrescription(imageBuffer, mimetype) {
   const base64 = Buffer.from(imageBuffer).toString("base64");
   const effectiveMime = mimetype || "image/jpeg";

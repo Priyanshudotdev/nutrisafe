@@ -44,6 +44,15 @@ jobs:
 
       - name: Server food-log e2e tests (temp SQLite, no keys needed)
         run: node server/foodlog.e2e-test.js
+
+      - name: Safety engine unit tests (deterministic, no keys needed)
+        run: node server/safety.unit-test.js
+
+      - name: Safety API e2e tests (temp SQLite, no keys needed)
+        run: node server/safety.e2e-test.js
+
+      - name: Safety UI contract tests
+        run: node server/safety.ui-test.js
         # Intentionally NOT run here (fast, keyless CI):
         # - server/upload.e2e-test.js needs a live TARGET server + picsum.photos
         #   download + real AI routes (external network, slow/flaky, burns quota).
