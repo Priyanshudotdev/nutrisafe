@@ -41,6 +41,9 @@ jobs:
 
       - name: Server AI e2e tests (mock provider, no keys needed)
         run: node server/ai.e2e-test.js
+
+      - name: Server food-log e2e tests (temp SQLite, no keys needed)
+        run: node server/foodlog.e2e-test.js
         # Intentionally NOT run here (fast, keyless CI):
         # - server/upload.e2e-test.js needs a live TARGET server + picsum.photos
         #   download + real AI routes (external network, slow/flaky, burns quota).
