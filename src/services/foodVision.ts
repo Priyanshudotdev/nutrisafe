@@ -1,4 +1,5 @@
 import { VISION_CONFIDENCE_THRESHOLD, getApiBaseUrlCurrent } from "../config/api";
+import { assessVisionIdentity } from "../../server/safety-engine";
 import { ensureFreshToken, handleVisionAuthFailure } from "./apiClient";
 import { buildImageForm, buildImagePayload } from "./imageUpload";
 
@@ -60,13 +61,31 @@ function normalizeResult(data: VisionApiResponse): FoodIdentificationResult {
     };
   }
 
+  const candidates = data.candidates ?? [{ name: foodName, confidence }];
+
   if (confidence < VISION_CONFIDENCE_THRESHOLD) {
     return {
       status: "uncertain",
       foodName,
       confidence,
-      candidates: data.candidates ?? [{ name: foodName, confidence }],
+      candidates,
       message: `We're not fully confident this is ${foodName}. Please confirm or pick from suggestions.`,
+    };
+  }
+
+  // Shared policy: a strong-enough label still needs to be unambiguous before
+  // a safety verdict can be attached to it.
+  const policy = assessVisionIdentity(
+    { foodName, confidence, candidates },
+    VISION_CONFIDENCE_THRESHOLD
+  );
+  if (policy.decision !== "success") {
+    return {
+      status: "uncertain",
+      foodName,
+      confidence,
+      candidates,
+      message: policy.reason,
     };
   }
 
@@ -74,6 +93,7 @@ function normalizeResult(data: VisionApiResponse): FoodIdentificationResult {
     status: "success",
     foodName,
     confidence,
+    candidates,
     message: `Identified as ${foodName}.`,
   };
 }
@@ -105,8 +125,9 @@ export async function identifyFoodFromImage(imageUri: string): Promise<FoodIdent
     payload = await buildImagePayload(imageUri);
   } catch (err) {
     const detail = err instanceof Error ? err.message : "";
-    const isActionable =
-      /heic|heif|doesn't look like an image|could not read|too large/i.test(detail);
+    const isActionable = /heic|heif|doesn't look like an image|could not read|too large/i.test(
+      detail
+    );
     // Actionable errors (HEIC, non-image, oversize) are terminal — the
     // multipart path would fail the same way.
     if (isActionable) {
@@ -235,11 +256,10 @@ async function postMultipartVision(
     try {
       ({ form: formData } = await buildImageForm(imageUri, "image", "food"));
     } catch (err) {
-      const detail = err instanceof Error ? err.message : payloadError ?? "";
+      const detail = err instanceof Error ? err.message : (payloadError ?? "");
       // Surface actionable client errors (HEIC, non-image) verbatim;
       // fall back to the generic message for unexpected failures.
-      const isActionable =
-        /heic|heif|doesn't look like an image|could not read/i.test(detail);
+      const isActionable = /heic|heif|doesn't look like an image|could not read/i.test(detail);
       return {
         status: "failed",
         message: isActionable

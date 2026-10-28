@@ -1,12 +1,16 @@
 import {
   evaluateFoodSafetyMulti,
   foodSafetyStore,
+  RULE_VERSION,
+  STATUS_HEADLINES,
   type FoodSafetyAnalysis,
   type PatientCondition,
+  type SafetyStatus,
 } from "../data/foodSafety";
 import { getLocationAlternativeNote } from "../data/indianFoods";
 import { saveAnalysis } from "./historyService";
 import { identifyFoodFromImage, type FoodIdentificationResult } from "./foodVision";
+import { assessVisionIdentity } from "../../server/safety-engine";
 import { apiFetch } from "./apiClient";
 import { authStore } from "./authStore";
 
@@ -25,8 +29,19 @@ export const SCAN_ANALYSIS_STEPS: { id: AnalysisStep; label: string }[] = [
   { id: "recommendation", label: "Preparing your recommendation…" },
 ];
 
-/** Server AI can be slow — give it room before falling back to the local engine. */
+/** Server analysis is computation-only now, but allow for cold starts. */
 const SERVER_ANALYSIS_TIMEOUT_MS = 40_000;
+
+const SAFETY_STATUSES: SafetyStatus[] = [
+  "safe",
+  "moderation",
+  "not_recommended",
+  "unable_to_verify",
+];
+
+function isSafetyStatus(value: unknown): value is SafetyStatus {
+  return typeof value === "string" && SAFETY_STATUSES.includes(value as SafetyStatus);
+}
 
 function applyLocationContext(analysis: FoodSafetyAnalysis): FoodSafetyAnalysis {
   const city = authStore.getProfile()?.city ?? foodSafetyStore.getPatient().city;
@@ -61,24 +76,56 @@ interface ServerNutritionResponse {
 }
 
 /**
- * Ask the server's AI layer for a full analysis across ALL selected conditions.
- * Returns `{ status: "ok", analysis }` on success, otherwise
- * `{ status: "fallback", reason }` so callers can distinguish an
- * unauthenticated user from a missing AI provider from a real error —
- * all three still fall back to the local rules engine.
+ * The server must return the same rule version and a complete evidence trail.
+ * Anything else (a legacy AI verdict, a mangled payload, a newer incompatible
+ * engine) is rejected and the client re-runs its own copy of the engine.
  */
-export type ServerFallbackReason = "unauthenticated" | "no-ai" | "error";
+function isValidEngineAnalysis(
+  value: Partial<FoodSafetyAnalysis> | undefined
+): value is FoodSafetyAnalysis {
+  if (!value || typeof value !== "object") return false;
+  if (!isSafetyStatus(value.status)) return false;
+  if (typeof value.foodName !== "string" || !value.foodName.trim()) return false;
+  if (typeof value.statusHeadline !== "string") return false;
+  if (value.ruleVersion !== RULE_VERSION) return false;
+  if (!Array.isArray(value.evidence)) return false;
+  if (!Array.isArray(value.dataGaps)) return false;
+  if (!Array.isArray(value.conditionOutcomes)) return false;
+  if (!Array.isArray(value.factors) || !Array.isArray(value.alternatives)) return false;
+
+  return value.evidence.every(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      isSafetyStatus(item.status) &&
+      typeof item.ruleId === "string" &&
+      item.ruleId.length > 0 &&
+      item.ruleVersion === RULE_VERSION &&
+      typeof item.servingLabel === "string"
+  );
+}
+
+/**
+ * Ask the server for a deterministic analysis across ALL selected conditions.
+ * Returns `{ status: "ok", analysis }` only for a validated rules-engine
+ * payload; otherwise `{ status: "fallback", reason }` so the caller runs the
+ * identical engine locally. A missing/failed/invalid response never yields a
+ * default "safe" or "moderation" verdict.
+ */
+export type ServerFallbackReason = "unauthenticated" | "invalid" | "error";
 
 export type ServerAnalysisOutcome =
-  | { status: "ok"; analysis: Partial<FoodSafetyAnalysis> }
+  | { status: "ok"; analysis: FoodSafetyAnalysis }
   | { status: "fallback"; reason: ServerFallbackReason };
+
+type IdentitySource = "text" | "scan";
 
 async function requestServerAnalysis(
   foodName: string,
-  conditions: PatientCondition[]
+  conditions: PatientCondition[],
+  identity: { source: IdentitySource; confidence?: number }
 ): Promise<ServerAnalysisOutcome> {
   if (!authStore.isAuthenticated()) {
-    console.warn("requestServerAnalysis: unauthenticated, using local engine");
     return { status: "fallback", reason: "unauthenticated" };
   }
 
@@ -86,21 +133,29 @@ async function requestServerAnalysis(
   const timer = setTimeout(() => controller.abort(), SERVER_ANALYSIS_TIMEOUT_MS);
 
   try {
+    const profile = authStore.getProfile();
     const data = await apiFetch<ServerNutritionResponse>("/nutrition/analyze", {
       method: "POST",
       body: JSON.stringify({
         foodName,
         conditions,
-        patient: authStore.getProfile(),
+        // Only allergen tokens are needed for the deterministic screen; free
+        // text notes never leave the device for this request.
+        patient: { allergensList: profile?.allergensList ?? [] },
+        identity: {
+          confirmed: true,
+          source: identity.source,
+          confidence: identity.confidence,
+        },
       }),
       signal: controller.signal,
     });
 
-    if (data.source === "ai" && data.analysis && data.analysis.status) {
+    if (data.source === "rules-engine" && isValidEngineAnalysis(data.analysis)) {
       return { status: "ok", analysis: data.analysis };
     }
-    console.warn("requestServerAnalysis: no AI result, using local engine");
-    return { status: "fallback", reason: "no-ai" };
+    console.warn("requestServerAnalysis: rejected non-engine/invalid response, using local engine");
+    return { status: "fallback", reason: "invalid" };
   } catch (e) {
     console.warn("requestServerAnalysis failed, using local engine", e);
     return { status: "fallback", reason: "error" };
@@ -116,34 +171,58 @@ function newAnalysisId(): string {
   return `check-${Date.now()}-${analysisCounter}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/**
+ * Finalize a complete engine analysis for display. There is deliberately no
+ * default verdict: an invalid status collapses to "Unable to Verify", never
+ * to "moderation" or "safe".
+ */
 function finalizeAnalysis(
-  base: Partial<FoodSafetyAnalysis>,
+  base: FoodSafetyAnalysis,
   foodQuery: string,
   conditions: PatientCondition[]
 ): FoodSafetyAnalysis {
-  const conditionList = conditions.length > 0 ? conditions : (base.conditions ?? ["ckd"]);
+  const conditionList = conditions.length > 0 ? conditions : (base.conditions ?? []);
+  const status: SafetyStatus = isSafetyStatus(base.status) ? base.status : "unable_to_verify";
   const trimmedQuery = foodQuery.trim();
   return {
+    ...base,
     id: newAnalysisId(),
     foodName: base.foodName?.trim() ? base.foodName.trim() : trimmedQuery,
-    category: base.category ?? "General Food",
-    condition: conditionList[0],
+    category: base.category ?? "Unknown food",
+    condition: conditionList[0] ?? "ckd",
     conditions: conditionList,
-    status: base.status ?? "moderation",
-    statusHeadline: base.statusHeadline ?? "Consume in Moderation",
-    summary: base.summary ?? "",
-    detailedWhy: base.detailedWhy ?? "",
+    status,
+    statusHeadline: base.statusHeadline || STATUS_HEADLINES[status],
+    summary: base.summary || "",
+    detailedWhy: base.detailedWhy || "",
     factors: base.factors ?? [],
     alternatives: base.alternatives ?? [],
-    portionGuidance: base.portionGuidance,
+    evidence: base.evidence ?? [],
+    dataGaps: base.dataGaps ?? [],
+    conditionOutcomes: base.conditionOutcomes ?? [],
+    ruleVersion: base.ruleVersion ?? RULE_VERSION,
+    serving: base.serving ?? null,
+    foodReference: base.foodReference ?? null,
     timestamp: `${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,
   };
 }
 
+function runLocalEngine(
+  foodQuery: string,
+  conditions: PatientCondition[],
+  identity: { source: IdentitySource; confidence?: number }
+): FoodSafetyAnalysis {
+  const profile = authStore.getProfile();
+  return evaluateFoodSafetyMulti(foodQuery, conditions, {
+    patient: { allergensList: profile?.allergensList ?? [] },
+    identity: { confirmed: true, source: identity.source, confidence: identity.confidence },
+  });
+}
+
 /**
- * Text food check. Prefers the server's AI layer when configured; falls back
- * to the deterministic clinical rules engine (worst-case across all selected
- * conditions) otherwise.
+ * Text food check. The verdict always comes from the shared deterministic
+ * engine (server or an identical local copy), evaluated worst-case across all
+ * selected conditions.
  */
 export async function analyzeFoodByText(
   foodQuery: string,
@@ -152,24 +231,19 @@ export async function analyzeFoodByText(
 ): Promise<FoodSafetyAnalysis> {
   onStep?.("nutrition");
 
-  const serverOutcome = await requestServerAnalysis(foodQuery, conditions);
-  const serverBase = serverOutcome.status === "ok" ? serverOutcome.analysis : null;
+  const outcome = await requestServerAnalysis(foodQuery, conditions, { source: "text" });
+  const base =
+    outcome.status === "ok"
+      ? outcome.analysis
+      : runLocalEngine(foodQuery, conditions, { source: "text" });
 
-  if (!serverBase) {
-    // Local rules-engine path keeps the step UX while computing instantly.
-    await delay(400);
-    onStep?.("guidelines");
-    await delay(400);
-    onStep?.("recommendation");
-    await delay(300);
-  } else {
-    onStep?.("guidelines");
-    await delay(250);
-    onStep?.("recommendation");
-    await delay(200);
-  }
+  // Keep the step UX while the deterministic result is ready.
+  await delay(outcome.status === "ok" ? 0 : 400);
+  onStep?.("guidelines");
+  await delay(outcome.status === "ok" ? 250 : 400);
+  onStep?.("recommendation");
+  await delay(outcome.status === "ok" ? 200 : 300);
 
-  const base = serverBase ?? evaluateFoodSafetyMulti(foodQuery, conditions);
   return persistAnalysis(applyLocationContext(finalizeAnalysis(base, foodQuery, conditions)));
 }
 
@@ -186,28 +260,42 @@ export async function analyzeFoodFromImage(
   onStep?.("identifying");
   const identification = await identifyFoodFromImage(imageUri);
 
+  if (identification.status === "success" && identification.foodName) {
+    // Defense in depth: the shared vision policy is the final gate before a
+    // verdict can be attached to an AI-identified food.
+    const policy = assessVisionIdentity(identification);
+    if (policy.decision !== "success") {
+      return {
+        identification: {
+          ...identification,
+          status: policy.decision === "failed" ? "failed" : "uncertain",
+          message: policy.reason,
+        },
+      };
+    }
+  }
+
   if (identification.status !== "success" || !identification.foodName) {
     return { identification };
   }
 
   onStep?.("nutrition");
-  const serverOutcome = await requestServerAnalysis(identification.foodName, conditions);
-  const serverBase = serverOutcome.status === "ok" ? serverOutcome.analysis : null;
+  const identity = {
+    source: "scan" as const,
+    confidence: identification.confidence,
+  };
+  const outcome = await requestServerAnalysis(identification.foodName, conditions, identity);
+  const base =
+    outcome.status === "ok"
+      ? outcome.analysis
+      : runLocalEngine(identification.foodName, conditions, identity);
 
-  if (!serverBase) {
-    await delay(400);
-    onStep?.("guidelines");
-    await delay(400);
-    onStep?.("recommendation");
-    await delay(300);
-  } else {
-    onStep?.("guidelines");
-    await delay(250);
-    onStep?.("recommendation");
-    await delay(200);
-  }
+  await delay(outcome.status === "ok" ? 0 : 400);
+  onStep?.("guidelines");
+  await delay(outcome.status === "ok" ? 250 : 400);
+  onStep?.("recommendation");
+  await delay(outcome.status === "ok" ? 200 : 300);
 
-  const base = serverBase ?? evaluateFoodSafetyMulti(identification.foodName, conditions);
   const analysis = await persistAnalysis({
     ...applyLocationContext(finalizeAnalysis(base, identification.foodName, conditions)),
     source: "scan",
@@ -223,23 +311,17 @@ export async function analyzeConfirmedFood(
   onStep?: (step: AnalysisStep) => void
 ): Promise<FoodSafetyAnalysis> {
   onStep?.("nutrition");
-  const serverOutcome = await requestServerAnalysis(foodName, conditions);
-  const serverBase = serverOutcome.status === "ok" ? serverOutcome.analysis : null;
+  const identity = { source: "scan" as const };
+  const outcome = await requestServerAnalysis(foodName, conditions, identity);
+  const base =
+    outcome.status === "ok" ? outcome.analysis : runLocalEngine(foodName, conditions, identity);
 
-  if (!serverBase) {
-    await delay(350);
-    onStep?.("guidelines");
-    await delay(350);
-    onStep?.("recommendation");
-    await delay(250);
-  } else {
-    onStep?.("guidelines");
-    await delay(250);
-    onStep?.("recommendation");
-    await delay(200);
-  }
+  await delay(outcome.status === "ok" ? 0 : 350);
+  onStep?.("guidelines");
+  await delay(outcome.status === "ok" ? 250 : 350);
+  onStep?.("recommendation");
+  await delay(outcome.status === "ok" ? 200 : 250);
 
-  const base = serverBase ?? evaluateFoodSafetyMulti(foodName, conditions);
   return persistAnalysis({
     ...applyLocationContext(finalizeAnalysis(base, foodName, conditions)),
     source: "scan",

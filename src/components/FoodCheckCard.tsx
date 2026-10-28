@@ -1,17 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { JSX } from "react";
 import React, { useState } from "react";
-import {
-  LayoutAnimation,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   PATIENT_CONDITIONS,
+  type EvidenceItem,
   type FoodSafetyAnalysis,
   type NutrientFactor,
+  type SafetyStatus,
 } from "../data/foodSafety";
 import {
   getConditionColor,
@@ -27,6 +23,25 @@ function getConditionLabel(conditionId: string): string {
   return (
     PATIENT_CONDITIONS.find((c) => c.id === conditionId)?.shortName ?? conditionId.toUpperCase()
   );
+}
+
+function getAnalysisConditions(analysis: FoodSafetyAnalysis): string[] {
+  const list = analysis.conditions?.length ? analysis.conditions : [analysis.condition];
+  return [...new Set(list)];
+}
+
+const STATUS_ICONS: Record<SafetyStatus, keyof typeof Ionicons.glyphMap> = {
+  safe: "checkmark-circle",
+  moderation: "alert-circle",
+  not_recommended: "close-circle",
+  unable_to_verify: "help-circle",
+};
+
+function formatEvidenceValue(item: EvidenceItem): string {
+  if (typeof item.value === "number") {
+    return `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
+  }
+  return String(item.value);
 }
 
 function NutrientRow({ factor }: { factor: NutrientFactor }): JSX.Element {
@@ -71,8 +86,7 @@ export function FoodCheckCard({
   const styles = makeStyles(colors);
   const [whyExpanded, setWhyExpanded] = useState(expanded);
   const sc = getStatusColors(analysis.status, isDark);
-  const cc = getConditionColor(analysis.condition, isDark);
-  const conditionLabel = getConditionLabel(analysis.condition);
+  const conditions = getAnalysisConditions(analysis);
   const showDetails = expanded || whyExpanded;
 
   const toggleWhy = () => {
@@ -99,14 +113,21 @@ export function FoodCheckCard({
               {analysis.category}
             </Text>
           </View>
-          <View style={[styles.conditionTag, { backgroundColor: cc.bg }]}>
-            <Text
-              style={[styles.conditionTagText, { color: cc.accent }]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {conditionLabel}
-            </Text>
+          <View style={styles.conditionTagsRow}>
+            {conditions.map((conditionId) => {
+              const cc = getConditionColor(conditionId, isDark);
+              return (
+                <View key={conditionId} style={[styles.conditionTag, { backgroundColor: cc.bg }]}>
+                  <Text
+                    style={[styles.conditionTagText, { color: cc.accent }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {getConditionLabel(conditionId)}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         </View>
 
@@ -132,10 +153,63 @@ export function FoodCheckCard({
             </View>
           )}
 
+          {analysis.evidence && analysis.evidence.length > 0 && (
+            <View style={styles.detailSection}>
+              <Text style={styles.detailHeading}>Evidence used</Text>
+              {analysis.evidence.map((item, i) => (
+                <View key={`${item.ruleId}-${i}`} style={styles.evidenceRow}>
+                  <View style={styles.evidenceHeader}>
+                    <Text style={styles.evidenceLabel}>{item.label}</Text>
+                    <Text style={styles.evidenceValue}>{formatEvidenceValue(item)}</Text>
+                  </View>
+                  <Text style={styles.evidenceMeta}>
+                    {item.servingLabel ? `Per ${item.servingLabel} · ` : ""}
+                    {item.ruleId} · v{item.ruleVersion}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {analysis.dataGaps && analysis.dataGaps.length > 0 && (
+            <View style={styles.detailSection}>
+              <Text style={styles.detailHeading}>What we couldn&apos;t verify</Text>
+              {analysis.dataGaps.map((gap, i) => (
+                <View key={`gap-${i}`} style={styles.gapRow}>
+                  <Ionicons name="help-circle-outline" size={15} color={colors.unableIcon} />
+                  <Text style={styles.gapText}>{gap}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           <View style={styles.detailSection}>
             <Text style={styles.detailHeading}>Why this matters</Text>
             <Text style={styles.detailText}>{analysis.detailedWhy}</Text>
           </View>
+
+          {(analysis.serving || analysis.foodReference) && (
+            <View
+              style={[
+                styles.referenceBox,
+                { backgroundColor: colors.bgSubtle, borderColor: colors.cardBorder },
+              ]}
+            >
+              <Text style={styles.referenceHeading}>Reference basis</Text>
+              {analysis.serving && (
+                <Text style={styles.referenceLine}>Serving: {analysis.serving.label}</Text>
+              )}
+              {analysis.foodReference && (
+                <>
+                  <Text style={styles.referenceLine}>Source: {analysis.foodReference.source}</Text>
+                  <Text style={styles.referenceMeta}>{analysis.foodReference.uncertainty}</Text>
+                </>
+              )}
+              {analysis.ruleVersion && (
+                <Text style={styles.referenceMeta}>Rules v{analysis.ruleVersion}</Text>
+              )}
+            </View>
+          )}
 
           {analysis.alternatives.length > 0 && (
             <View style={styles.detailSection}>
@@ -213,7 +287,7 @@ export function HistoryItem({ analysis, onPress }: HistoryItemProps): JSX.Elemen
   const { colors, isDark } = useThemeColors();
   const styles = makeStyles(colors);
   const sc = getStatusColors(analysis.status, isDark);
-  const conditionLabel = getConditionLabel(analysis.condition);
+  const conditionLabels = getAnalysisConditions(analysis).map(getConditionLabel).join(" · ");
 
   return (
     <Pressable
@@ -221,20 +295,10 @@ export function HistoryItem({ analysis, onPress }: HistoryItemProps): JSX.Elemen
       onPress={onPress}
       android_ripple={{ color: "rgba(0,0,0,0.04)" }}
       accessibilityRole="button"
-      accessibilityLabel={`${analysis.foodName}, ${conditionLabel}, ${analysis.statusHeadline}`}
+      accessibilityLabel={`${analysis.foodName}, ${conditionLabels}, ${analysis.statusHeadline}`}
     >
       <View style={[styles.historyIcon, { backgroundColor: sc.bg }]}>
-        <Ionicons
-          name={
-            analysis.status === "safe"
-              ? "checkmark-circle"
-              : analysis.status === "moderation"
-                ? "alert-circle"
-                : "close-circle"
-          }
-          size={22}
-          color={sc.icon}
-        />
+        <Ionicons name={STATUS_ICONS[analysis.status]} size={22} color={sc.icon} />
       </View>
       <View style={styles.historyContent}>
         <Text style={styles.historyName} numberOfLines={1} ellipsizeMode="tail">
@@ -242,7 +306,7 @@ export function HistoryItem({ analysis, onPress }: HistoryItemProps): JSX.Elemen
         </Text>
         <View style={styles.historyMetaRow}>
           <Text style={styles.historyCondition} numberOfLines={1} ellipsizeMode="tail">
-            {conditionLabel}
+            {conditionLabels}
           </Text>
           <Text style={styles.historyDot}>·</Text>
           <Text style={styles.historyMeta} numberOfLines={1} ellipsizeMode="tail">
@@ -296,11 +360,19 @@ const makeStyles = (colors: ThemeColors) =>
       color: colors.slateLight,
       marginTop: 2,
     },
+    conditionTagsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+      alignItems: "flex-start",
+      gap: 4,
+      marginLeft: spacing.sm,
+      maxWidth: "45%",
+    },
     conditionTag: {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: radius.sm,
-      marginLeft: spacing.sm,
       flexShrink: 0,
       maxWidth: 110,
     },
@@ -336,6 +408,69 @@ const makeStyles = (colors: ThemeColors) =>
       fontSize: 13,
       color: colors.slateMedium,
       lineHeight: 20,
+      fontWeight: "500",
+    },
+    evidenceRow: {
+      gap: 2,
+      paddingVertical: spacing.xs,
+    },
+    evidenceHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    evidenceLabel: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.dark,
+    },
+    evidenceValue: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.slateDark,
+    },
+    evidenceMeta: {
+      fontSize: 11,
+      color: colors.slateMuted,
+      fontWeight: "500",
+    },
+    gapRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    gapText: {
+      flex: 1,
+      fontSize: 12,
+      color: colors.slateMedium,
+      lineHeight: 18,
+      fontWeight: "500",
+    },
+    referenceBox: {
+      gap: 3,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+    },
+    referenceHeading: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.slateDark,
+      marginBottom: 2,
+    },
+    referenceLine: {
+      fontSize: 12,
+      color: colors.slateMedium,
+      lineHeight: 17,
+      fontWeight: "500",
+    },
+    referenceMeta: {
+      fontSize: 11,
+      color: colors.slateMuted,
+      lineHeight: 16,
       fontWeight: "500",
     },
     nutrientRow: {

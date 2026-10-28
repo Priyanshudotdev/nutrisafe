@@ -7,7 +7,8 @@ import { getStatusColors, radius, spacing, typography } from "../theme/tokens";
 import { useThemeColors } from "../hooks/useThemeColors";
 
 // A11y outline exception (documented): status icons stay outline-style
-// ("checkmark-circle", "alert-circle", "close-circle") per design — do NOT change icons.
+// ("checkmark-circle", "alert-circle", "close-circle", "help-circle") per
+// design — do NOT change icons.
 
 interface SafetyStatusBadgeProps {
   status: SafetyStatus;
@@ -19,12 +20,21 @@ const STATUS_ICONS: Record<SafetyStatus, keyof typeof Ionicons.glyphMap> = {
   safe: "checkmark-circle",
   moderation: "alert-circle",
   not_recommended: "close-circle",
+  unable_to_verify: "help-circle",
 };
 
 const STATUS_LABELS: Record<SafetyStatus, string> = {
   safe: "Safe to Consume",
   moderation: "Consume in Moderation",
   not_recommended: "Not Recommended",
+  unable_to_verify: "Unable to Verify",
+};
+
+const STATUS_SUBLABELS: Record<SafetyStatus, string> = {
+  safe: "Approved",
+  moderation: "Caution",
+  not_recommended: "Avoid",
+  unable_to_verify: "Unverified",
 };
 
 export function SafetyStatusBadge({
@@ -52,9 +62,7 @@ export function SafetyStatusBadge({
         <Ionicons name={icon} size={32} color={sc.icon} />
         <View style={styles.largeContent}>
           <Text style={[styles.largeLabel, { color: sc.text }]}>{label}</Text>
-          <Text style={[styles.largeStatus, { color: sc.text }]}>
-            {status === "safe" ? "Approved" : status === "moderation" ? "Caution" : "Avoid"}
-          </Text>
+          <Text style={[styles.largeStatus, { color: sc.text }]}>{STATUS_SUBLABELS[status]}</Text>
         </View>
       </View>
     );
