@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { LayoutAnimation, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   PATIENT_CONDITIONS,
+  type ConditionOutcome,
   type EvidenceItem,
   type FoodSafetyAnalysis,
   type NutrientFactor,
@@ -37,11 +38,69 @@ const STATUS_ICONS: Record<SafetyStatus, keyof typeof Ionicons.glyphMap> = {
   unable_to_verify: "help-circle",
 };
 
+const STATUS_SHORT_LABELS: Record<SafetyStatus, string> = {
+  safe: "Safe",
+  moderation: "Moderation",
+  not_recommended: "Not Recommended",
+  unable_to_verify: "Unable to Verify",
+};
+
 function formatEvidenceValue(item: EvidenceItem): string {
   if (typeof item.value === "number") {
     return `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
   }
   return String(item.value);
+}
+
+/** One-line support text for the compact per-condition row. */
+function conditionEvidenceLine(outcome: ConditionOutcome): string {
+  const item =
+    outcome.evidence.find((e) => e.status === outcome.status) ??
+    outcome.evidence.find((e) => e.status !== "safe") ??
+    outcome.evidence[0];
+
+  if (!item) return outcome.missing[0] ?? "";
+
+  if (item.nutrient === "allergen") {
+    return item.value === "Contains" ? `${item.label} (contains)` : item.label;
+  }
+  if (item.nutrient === "gluten") {
+    return `Gluten: ${item.value}`;
+  }
+  return `${formatEvidenceValue(item)} ${item.label.toLowerCase()} per ${item.servingLabel}`;
+}
+
+function ConditionRow({ outcome }: { outcome: ConditionOutcome }): JSX.Element {
+  const { colors, isDark } = useThemeColors();
+  const styles = makeStyles(colors);
+  const sc = getStatusColors(outcome.status, isDark);
+  const detail = conditionEvidenceLine(outcome);
+
+  return (
+    <View
+      style={styles.conditionRow}
+      accessibilityLabel={`${outcome.label}, ${STATUS_SHORT_LABELS[outcome.status]}`}
+    >
+      <View style={[styles.conditionStatusIcon, { backgroundColor: sc.bg }]}>
+        <Ionicons name={STATUS_ICONS[outcome.status]} size={15} color={sc.icon} />
+      </View>
+      <View style={styles.conditionRowBody}>
+        <View style={styles.conditionRowHeader}>
+          <Text style={styles.conditionName} numberOfLines={1} ellipsizeMode="tail">
+            {outcome.label}
+          </Text>
+          <Text style={[styles.conditionStatusText, { color: sc.text }]} numberOfLines={1}>
+            {STATUS_SHORT_LABELS[outcome.status]}
+          </Text>
+        </View>
+        {detail ? (
+          <Text style={styles.conditionDetail} numberOfLines={2} ellipsizeMode="tail">
+            {detail}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
 }
 
 function NutrientRow({ factor }: { factor: NutrientFactor }): JSX.Element {
@@ -102,7 +161,7 @@ export function FoodCheckCard({
       disabled={!onPress}
       android_ripple={{ color: "rgba(0,0,0,0.03)" }}
     >
-      {/* Hero: Food name + large status */}
+      {/* Hero: food name + compact verdict */}
       <View style={styles.heroSection}>
         <View style={styles.heroTop}>
           <View style={styles.foodNameWrap}>
@@ -111,6 +170,7 @@ export function FoodCheckCard({
             </Text>
             <Text style={styles.foodCategory} numberOfLines={1} ellipsizeMode="tail">
               {analysis.category}
+              {analysis.serving ? ` · ${analysis.serving.label}` : ""}
             </Text>
           </View>
           <View style={styles.conditionTagsRow}>
@@ -131,16 +191,26 @@ export function FoodCheckCard({
           </View>
         </View>
 
-        <SafetyStatusBadge
-          status={analysis.status}
-          headline={analysis.statusHeadline}
-          size="large"
-        />
+        <View style={styles.verdictBlock}>
+          <SafetyStatusBadge status={analysis.status} headline={analysis.statusHeadline} />
+          <Text
+            style={styles.summary}
+            numberOfLines={showDetails ? undefined : 2}
+            ellipsizeMode="tail"
+          >
+            {analysis.summary}
+          </Text>
+        </View>
       </View>
 
-      <Text style={styles.summary} numberOfLines={showDetails ? undefined : 3} ellipsizeMode="tail">
-        {analysis.summary}
-      </Text>
+      {analysis.conditionOutcomes && analysis.conditionOutcomes.length > 0 && (
+        <View style={styles.conditionSection}>
+          <Text style={styles.conditionHeading}>By condition</Text>
+          {analysis.conditionOutcomes.map((outcome) => (
+            <ConditionRow key={outcome.condition} outcome={outcome} />
+          ))}
+        </View>
+      )}
 
       {showDetails && (
         <>
@@ -339,6 +409,65 @@ const makeStyles = (colors: ThemeColors) =>
     heroSection: {
       gap: spacing.md,
     },
+    verdictBlock: {
+      alignItems: "flex-start",
+      gap: spacing.sm,
+    },
+    conditionSection: {
+      gap: spacing.xs,
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.cardBorderSubtle,
+    },
+    conditionHeading: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.slateMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: 2,
+    },
+    conditionRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    conditionStatusIcon: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 1,
+    },
+    conditionRowBody: {
+      flex: 1,
+      minWidth: 0,
+      gap: 1,
+    },
+    conditionRowHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    conditionName: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.dark,
+    },
+    conditionStatusText: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    conditionDetail: {
+      fontSize: 12,
+      fontWeight: "500",
+      color: colors.slateLight,
+      lineHeight: 17,
+    },
     heroTop: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -382,9 +511,9 @@ const makeStyles = (colors: ThemeColors) =>
       letterSpacing: 0.3,
     },
     summary: {
-      fontSize: 14,
+      fontSize: 15,
       color: colors.slateMedium,
-      lineHeight: 21,
+      lineHeight: 22,
       fontWeight: "500",
     },
     timestamp: {

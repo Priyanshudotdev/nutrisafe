@@ -69,6 +69,17 @@ test("result card shows every active condition, not just the first", () => {
   assert.match(card, /getConditionColor/);
 });
 
+test("main result card stays compact and leads with a short summary", () => {
+  const home = read("src/app/(tabs)/index.tsx");
+  assert.match(home, /<FoodCheckCard analysis={result} \/>/);
+  assert.doesNotMatch(home, /<FoodCheckCard analysis={result} expanded \/>/);
+  assert.match(card, /By condition/);
+  assert.match(card, /conditionOutcomes\.map/);
+  assert.match(card, /numberOfLines={showDetails \? undefined : 2}/);
+  assert.doesNotMatch(card, /size="large"/);
+  assert.match(card, /See full analysis/);
+});
+
 test("card surfaces evidence, data gaps, serving, source, and rule version", () => {
   assert.match(card, /Evidence used/);
   assert.match(card, /analysis\.evidence/);
