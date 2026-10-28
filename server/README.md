@@ -42,9 +42,10 @@ the app falls back to its built-in deterministic rules engine.
 
 ## Data persistence
 
-Accounts and history persist to SQLite at `server/data/nutrisafe.db` (gitignored,
-zero dependencies via Node's built-in `node:sqlite`). History is capped at 500
-entries per user (oldest trimmed on save). A legacy `db.json`, if
+Accounts, history and the food log persist to SQLite at
+`server/data/nutrisafe.db` (gitignored, zero dependencies via Node's built-in
+`node:sqlite`). History is capped at 500 entries per user and the food log at
+2,000 items per user (oldest trimmed on save). A legacy `db.json`, if
 present, is migrated automatically on first boot and renamed to
 `db.json.migrated`. Set `NUTRISAFE_DB_FILE` to override the path, or delete the
 `.db` file to reset all data. The server only touches `store.js` `load()` /
@@ -78,6 +79,25 @@ also set a real `JWT_SECRET`.
 | `POST`   | `/history`     | Bearer | Save a food check (validated: id/foodName/status, ≤100KB) |
 | `DELETE` | `/history/:id` | Bearer | Delete one food check                                     |
 | `DELETE` | `/history`     | Bearer | Clear all history                                         |
+
+### Food log (daily nutrition report)
+
+| Method   | Path             | Auth   | Description                                                                   |
+| -------- | ---------------- | ------ | ----------------------------------------------------------------------------- |
+| `GET`    | `/food-log`      | Bearer | One day (`?date=YYYY-MM-DD`, defaults to today) → `{ date, items, summary, days }` |
+| `POST`   | `/food-log`      | Bearer | Add an item → `201 { item, day }`; estimates nutrition if not supplied        |
+| `PATCH`  | `/food-log/:id`  | Bearer | Partial update (status, quantity, meal, …) → `{ item, day }`                  |
+| `DELETE` | `/food-log/:id`  | Bearer | Remove an item → `{ deleted, item, day }`                                     |
+
+Every response includes the recalculated `day`: `items` sorted by meal,
+`summary` (`totals` + `eatenCount` + `notEatenCount`) and `days` (last 30 days
+with entries, newest first). Only `status: "eaten"` items contribute to
+`summary.totals`; totals are `nutritionPerUnit × quantity`.
+
+Valid meals: `breakfast`, `lunch`, `snack`, `dinner`. Valid units: `g`, `ml`,
+`serving`, `piece`, `cup`, `bowl`, `slice`, `tbsp`, `tsp`. Statuses: `eaten`,
+`not_eaten`. Nutrition comes from `server/nutrition.js` (catalog + heuristic
+fallback, no AI keys required) unless the client sends `nutritionPerUnit`.
 
 ### Vision & Nutrition (AI)
 

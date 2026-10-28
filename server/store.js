@@ -7,9 +7,12 @@
  * Tables:
  *   users(id TEXT PK, email TEXT UNIQUE, passwordHash TEXT, profile TEXT, createdAt TEXT)
  *   history(id INTEGER PK AUTOINCREMENT, userId TEXT, analysis TEXT, createdAt TEXT)
+ *   food_log(id TEXT PK, userId TEXT, date TEXT, meal TEXT, foodName TEXT,
+ *            category TEXT, quantity REAL, unit TEXT, status TEXT,
+ *            nutritionPerUnit TEXT, createdAt TEXT, updatedAt TEXT)
  *
  * API (unchanged — index.js only touches load()/save()):
- *   load() → { users: {email: user}, userData: {userId: {history: [...]}} } (live object)
+ *   load() → { users: {email: user}, userData: {userId: {history: [...], foodLog: [...]}} }
  *   save() → persists the live object (transactional)
  *
  * First run migrates legacy server/data/db.json automatically.
@@ -36,6 +39,8 @@ let useJsonFallback = !sqlite;
 
 /** Oldest entries beyond this per user are trimmed on save (bounds rewrite cost). */
 const MAX_HISTORY_ITEMS = 500;
+/** Food-log entries are small; keep about five years of dense logging. */
+const MAX_FOOD_LOG_ITEMS = 2000;
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -102,7 +107,29 @@ function openSqlite() {
       createdAt TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_history_user ON history(userId, id DESC);
+    CREATE TABLE IF NOT EXISTS food_log (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL,
+      date TEXT NOT NULL,
+      meal TEXT NOT NULL,
+      foodName TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'General Food',
+      quantity REAL NOT NULL,
+      unit TEXT NOT NULL,
+      status TEXT NOT NULL,
+      nutritionPerUnit TEXT NOT NULL,
+      nutritionSource TEXT,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_food_log_user_date ON food_log(userId, date);
   `);
+
+  // Older databases predate nutritionSource; add the column in place.
+  const foodLogColumns = sql.prepare("PRAGMA table_info(food_log)").all();
+  if (!foodLogColumns.some((column) => column.name === "nutritionSource")) {
+    sql.exec("ALTER TABLE food_log ADD COLUMN nutritionSource TEXT");
+  }
 }
 
 function loadFromSqlite() {
@@ -125,14 +152,44 @@ function loadFromSqlite() {
 
   const userData = {};
   for (const email of Object.keys(users)) {
-    userData[users[email].id] = { history: [] };
+    userData[users[email].id] = { history: [], foodLog: [] };
   }
   // Newest first (index.js prepends new entries).
   const rows = sql.prepare("SELECT userId, analysis FROM history ORDER BY id DESC").all();
   for (const row of rows) {
     try {
-      if (!userData[row.userId]) userData[row.userId] = { history: [] };
+      if (!userData[row.userId]) userData[row.userId] = { history: [], foodLog: [] };
       userData[row.userId].history.push(JSON.parse(row.analysis));
+    } catch {
+      /* skip corrupt rows */
+    }
+  }
+
+  // Food-log rows are stored oldest-first; the API sorts per day by meal.
+  const logRows = sql.prepare("SELECT * FROM food_log ORDER BY createdAt ASC").all();
+  for (const row of logRows) {
+    try {
+      if (!userData[row.userId]) userData[row.userId] = { history: [], foodLog: [] };
+      let nutritionPerUnit = {};
+      try {
+        nutritionPerUnit = JSON.parse(row.nutritionPerUnit);
+      } catch {
+        nutritionPerUnit = {};
+      }
+      userData[row.userId].foodLog.push({
+        id: row.id,
+        date: row.date,
+        meal: row.meal,
+        foodName: row.foodName,
+        category: row.category,
+        quantity: row.quantity,
+        unit: row.unit,
+        status: row.status,
+        nutritionPerUnit,
+        nutritionSource: row.nutritionSource ?? undefined,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      });
     } catch {
       /* skip corrupt rows */
     }
@@ -163,6 +220,17 @@ function saveToSqlite() {
     `DELETE FROM history WHERE userId = ?
      AND id NOT IN (SELECT id FROM history WHERE userId = ? ORDER BY id DESC LIMIT ?)`
   );
+  const clearFoodLog = sql.prepare("DELETE FROM food_log WHERE userId = ?");
+  const insertFoodLog = sql.prepare(`
+    INSERT INTO food_log (
+      id, userId, date, meal, foodName, category, quantity, unit, status,
+      nutritionPerUnit, nutritionSource, createdAt, updatedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const trimFoodLog = sql.prepare(
+    `DELETE FROM food_log WHERE userId = ?
+     AND id NOT IN (SELECT id FROM food_log WHERE userId = ? ORDER BY createdAt DESC LIMIT ?)`
+  );
 
   // node:sqlite has no transaction() helper — use explicit BEGIN/COMMIT.
   sql.exec("BEGIN");
@@ -184,6 +252,25 @@ function saveToSqlite() {
         insertHistory.run(userId, JSON.stringify(analysis), new Date().toISOString());
       }
       trimHistory.run(userId, userId, MAX_HISTORY_ITEMS);
+      clearFoodLog.run(userId);
+      for (const item of data.foodLog ?? []) {
+        insertFoodLog.run(
+          item.id,
+          userId,
+          item.date,
+          item.meal,
+          item.foodName,
+          item.category ?? "General Food",
+          Number(item.quantity) || 0,
+          item.unit,
+          item.status,
+          JSON.stringify(item.nutritionPerUnit ?? {}),
+          item.nutritionSource ?? null,
+          item.createdAt ?? new Date().toISOString(),
+          item.updatedAt ?? item.createdAt ?? new Date().toISOString()
+        );
+      }
+      trimFoodLog.run(userId, userId, MAX_FOOD_LOG_ITEMS);
     }
     sql.exec("COMMIT");
   } catch (err) {
@@ -213,21 +300,30 @@ function migrateLegacyIfEmpty() {
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
+/** Ensure every account has the collections index.js expects. */
+function normalizeShape(state) {
+  for (const data of Object.values(state.userData ?? {})) {
+    if (!Array.isArray(data.history)) data.history = [];
+    if (!Array.isArray(data.foodLog)) data.foodLog = [];
+  }
+  return state;
+}
+
 function load() {
   if (db) return db;
   if (useJsonFallback) {
-    db = readLegacyJson();
+    db = normalizeShape(readLegacyJson());
     return db;
   }
   try {
     openSqlite();
     migrateLegacyIfEmpty();
-    db = loadFromSqlite();
+    db = normalizeShape(loadFromSqlite());
     return db;
   } catch (err) {
     console.error("[store] SQLite init failed, using JSON fallback:", err.message);
     useJsonFallback = true;
-    db = readLegacyJson();
+    db = normalizeShape(readLegacyJson());
     return db;
   }
 }
@@ -238,6 +334,10 @@ function save() {
   for (const data of Object.values(db.userData)) {
     if (Array.isArray(data.history) && data.history.length > MAX_HISTORY_ITEMS) {
       data.history = data.history.slice(0, MAX_HISTORY_ITEMS);
+    }
+    // Food log is kept oldest-first; drop the oldest overflow.
+    if (Array.isArray(data.foodLog) && data.foodLog.length > MAX_FOOD_LOG_ITEMS) {
+      data.foodLog = data.foodLog.slice(-MAX_FOOD_LOG_ITEMS);
     }
   }
   if (useJsonFallback) {

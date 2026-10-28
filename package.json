@@ -18,7 +18,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "node server/ai.smoke-test.js && node server/ai.e2e-test.js",
+    "test": "node server/ai.smoke-test.js && node server/ai.e2e-test.js && node server/foodlog.e2e-test.js",
+    "test:foodlog": "node server/foodlog.e2e-test.js",
     "open": "opencode -s ses_f46664726ffe1aWYlX1iplVJXB"
   },
   "dependencies": {

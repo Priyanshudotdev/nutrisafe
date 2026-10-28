@@ -35,7 +35,8 @@ physical devices, `10.0.2.2` on Android emulators.
 | `pnpm android/ios/start` | Start Expo for a target                              |
 | `pnpm typecheck`         | `tsc --noEmit`                                       |
 | `pnpm lint`              | ESLint                                               |
-| `pnpm test`              | Server AI tests (mocked smoke + e2e, no keys needed) |
+| `pnpm test`              | All server tests (AI + food log, no keys needed)     |
+| `pnpm test:foodlog`      | Food-log API e2e on a throwaway SQLite database      |
 
 ## How it works
 
@@ -81,5 +82,5 @@ add the short label, and mirror the id in the server's `VALID_CONDITIONS` and
 
 ## CI
 
-`.github/workflows/ci.yml` runs typecheck, lint, and both server AI test suites
-on every push to `main` and every pull request.
+`.github/workflows/ci.yml` runs typecheck, lint, and the server AI and food-log
+test suites on every push to `main` and every pull request.

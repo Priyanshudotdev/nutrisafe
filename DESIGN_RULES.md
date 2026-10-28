@@ -19,6 +19,7 @@ question belongs on another page or nowhere.
 | Home (`index`)      | "Can I eat this?" — check one food right now             |
 | Scan (`scan`)       | "Is this dish safe?" — photo-based check                 |
 | History (`search`)  | "What have I already checked, and what was the verdict?" |
+| Log (`log`)         | "What did I eat today, and what did it add up to?"       |
 | Account (`account`) | "How do I configure my profile and app?"                 |
 | Onboarding          | "What conditions should checks account for?"             |
 
