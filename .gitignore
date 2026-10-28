@@ -53,3 +53,7 @@ server/data/*.db
 # Generated native folders
 /ios
 /android
+
+# Local agent tooling (skills fetched by the coding harness)
+.agents/
+skills-lock.json
