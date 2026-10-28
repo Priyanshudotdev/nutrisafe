@@ -673,6 +673,71 @@ function buildConditionSummary(outcome) {
   return `${prefix}${detail} No applicable rule was triggered.`;
 }
 
+/**
+ * Join labels for a short sentence: "CKD", "CKD and Diabetes",
+ * "CKD, Diabetes and Celiac".
+ */
+function joinLabels(labels) {
+  const list = labels.filter(Boolean);
+  if (list.length === 0) return "your conditions";
+  if (list.length === 1) return list[0];
+  if (list.length === 2) return `${list[0]} and ${list[1]}`;
+  return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
+}
+
+/** One short evidence phrase, e.g. "45 g sugar per 1 serving (100 g)". */
+function shortEvidencePhrase(item) {
+  if (!item) return "";
+  if (item.nutrient === "gluten") {
+    return item.value === "Contains"
+      ? "it contains gluten"
+      : "gluten was not found in the reference recipe";
+  }
+  if (item.nutrient === "allergen") {
+    if (item.value === "Contains") {
+      return `it contains ${String(item.label).replace(/^Allergen:\s*/i, "")}`;
+    }
+    if (String(item.value).toLowerCase() === "possible") return "cross-contact is possible";
+    return "no listed allergen matched";
+  }
+  return `${formatNumber(item.value)} ${item.unit} ${String(item.label).toLowerCase()} per ${item.servingLabel}`;
+}
+
+/**
+ * Build the 1–2 line verdict shown on the result card. Full reasoning,
+ * per-nutrient evidence and caveats stay in detailedWhy/evidence/condition
+ * outcomes — the summary must stay short enough to read at a glance.
+ */
+function buildShortSummary({ name, status, outcomes, servingLabel }) {
+  const food = titleCase(name);
+  const labels = outcomes.map((o) => CONDITION_LABELS[o.condition]);
+
+  if (status === STATUS.NOT_RECOMMENDED) {
+    const blocking = outcomes.filter((o) => o.status === STATUS.NOT_RECOMMENDED);
+    const item = blocking
+      .flatMap((o) => o.evidence)
+      .find((e) => e.status === STATUS.NOT_RECOMMENDED);
+    const detail = shortEvidencePhrase(item);
+    const blockedFor = joinLabels(blocking.map((o) => CONDITION_LABELS[o.condition]));
+    return `${food} is not recommended for ${blockedFor}${detail ? `: ${detail}` : ""}.`;
+  }
+
+  if (status === STATUS.MODERATION) {
+    const caution = outcomes.find((o) => o.status === STATUS.MODERATION);
+    const item = caution?.evidence.find((e) => e.status === STATUS.MODERATION);
+    const detail = shortEvidencePhrase(item);
+    return `${food} is best limited for ${joinLabels(labels)}${detail ? `: ${detail}` : ""}.`;
+  }
+
+  if (status === STATUS.UNABLE) {
+    return `We can't verify ${food} for ${joinLabels(labels)} from the available evidence.`;
+  }
+
+  return `${food} did not trigger a safety rule for ${joinLabels(labels)}${
+    servingLabel ? ` at ${servingLabel}` : ""
+  }.`;
+}
+
 function buildRuleWhy(outcome) {
   const lines = [];
   for (const item of outcome.evidence) {
@@ -888,8 +953,8 @@ function unableAnalysis(foodName, conditions, gaps, options = {}) {
   analysis.dataGaps = gaps;
   analysis.summary =
     gaps.length > 0
-      ? `We can't verify "${titleCase(foodName)}" for your active conditions. ${gaps[0]}`
-      : `We can't verify "${titleCase(foodName)}" for your active conditions.`;
+      ? `We can't verify "${titleCase(foodName)}". ${gaps[0]}`
+      : `We can't verify "${titleCase(foodName)}".`;
   analysis.detailedWhy = [
     "The safety engine did not produce a verdict because required evidence is missing or uncertain.",
     ...gaps,
@@ -958,29 +1023,12 @@ function analyzeFood(foodName, conditions, options = {}) {
   }));
   analysis.factors = buildFactors(evaluation.outcomes);
 
-  const concerning = evaluation.outcomes.filter(
-    (o) => o.status === STATUS.NOT_RECOMMENDED || o.status === STATUS.MODERATION
-  );
-  const unverified = evaluation.outcomes.filter((o) => o.status === STATUS.UNABLE);
-
-  if (evaluation.status === STATUS.NOT_RECOMMENDED) {
-    analysis.summary = concerning
-      .filter((o) => o.status === STATUS.NOT_RECOMMENDED)
-      .map((o) => o.summary)
-      .join(" ");
-  } else if (evaluation.status === STATUS.UNABLE) {
-    analysis.summary = `${titleCase(name)} cannot be verified for ${unverified
-      .map((o) => CONDITION_LABELS[o.condition])
-      .join(", ")}. ${unverified[0]?.summary ?? ""}`;
-  } else if (evaluation.status === STATUS.MODERATION) {
-    analysis.summary = concerning.map((o) => o.summary).join(" ");
-  } else {
-    analysis.summary = `${titleCase(name)} did not trigger any applicable rule for ${unique
-      .map((c) => CONDITION_LABELS[c])
-      .join(
-        ", "
-      )} using ${reference.serving.label}. This is decision support, not a guarantee of safety.`;
-  }
+  analysis.summary = buildShortSummary({
+    name: analysis.foodName,
+    status: evaluation.status,
+    outcomes: evaluation.outcomes,
+    servingLabel: reference.serving?.label,
+  });
 
   const whyParts = [];
   for (const outcome of evaluation.outcomes) {

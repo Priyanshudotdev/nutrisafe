@@ -106,7 +106,9 @@ test("gulab jamun + diabetes is Not Recommended with sugar evidence", () => {
   assert.equal(sugar.unit, "g");
   assert.equal(sugar.ruleId, "diabetes.sugar.per_serving");
   assert.match(a.summary, /45 g/);
-  assert.match(a.summary, /diabetes\.sugar\.per_serving/);
+  assert.match(a.summary, /not recommended for diabetes/i);
+  assert.match(a.detailedWhy, /diabetes\.sugar\.per_serving/);
+  assert.ok(a.summary.length < 160, "summary stays short enough to scan");
   assert.equal(
     a.factors.some((f) => f.level === "High"),
     true

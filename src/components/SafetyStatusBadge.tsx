@@ -94,16 +94,16 @@ const styles = StyleSheet.create({
   normalBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: radius.pill,
     borderWidth: 1.2,
     gap: spacing.sm,
   },
   normalText: {
-    ...typography.body,
+    ...typography.bodySmall,
     fontWeight: "700",
-    flex: 1,
   },
   largeBadge: {
     flexDirection: "row",

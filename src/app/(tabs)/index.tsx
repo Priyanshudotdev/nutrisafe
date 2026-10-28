@@ -246,7 +246,7 @@ export default function HomeScreen() {
 
         {result && !isAnalyzing && (
           <View style={styles.resultSection}>
-            <FoodCheckCard analysis={result} expanded />
+            <FoodCheckCard analysis={result} />
             <MedicalDisclaimer />
           </View>
         )}
