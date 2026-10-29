@@ -2,7 +2,7 @@
   "expo": {
     "name": "NutriSafe",
     "slug": "nutrisafe",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nutrisafe",
@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.nutrisafe.app",
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
