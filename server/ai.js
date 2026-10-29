@@ -2,10 +2,9 @@
  *
  * Providers (first match wins):
  *   1. Google Gemini          → GEMINI_API_KEY (optional GEMINI_MODEL, default
- *      gemini-3.8-flash; unknown ids fall through 2.5-flash → 2.0-flash → 1.5-flash)
+ *      gemini-3.6-flash; overloaded/unknown ids fall through 2.5 → 3.5 → 1.5)
  *   2. Muse Spark (Meta Model API) → MUSE_SPARK_API_KEY (Responses API;
  *      dormant until Meta billing is configured on the account)
- *   2. Google Gemini          → GEMINI_API_KEY            (optional GEMINI_MODEL, default gemini-3.8-flash)
  *   3. OpenAI-compatible      → OPENAI_API_KEY            (optional OPENAI_BASE_URL, OPENAI_MODEL)
  *      Works with OpenAI, OpenRouter, Groq, Together, Ollama, LM Studio, ...
  *
@@ -24,12 +23,15 @@
 // MUSE_SPARK_MODEL overrides either way.
 const DEFAULT_MUSE_SPARK_MODEL = "muse-spark-1.3-contributor";
 const DEFAULT_MUSE_SPARK_BASE_URL = "https://api.meta.ai/v1";
-const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 
 const VISION_TIMEOUT_MS = 45_000;
 const TEXT_TIMEOUT_MS = 30_000;
+/** Per-model budget inside the Gemini fallback chain. A stalled model must
+ *  not consume the whole request budget; the next candidate gets a turn. */
+const GEMINI_ATTEMPT_TIMEOUT_MS = 15_000;
 
 // ─── Provider resolution ───────────────────────────────────────────────────────
 
@@ -133,18 +135,17 @@ function _setGeminiOverride(fn) {
 }
 
 /**
- * Ordered Gemini model ids: configured → 3.8-flash → 2.5-flash → 2.0-flash → 1.5-flash.
- * Google retires aliases over time; each model-not-found moves on.
- * (New API keys can no longer use gemini-2.5-flash — Google returns 404
- * "no longer available to new users" and points at gemini-3.8-flash.)
+ * Ordered Gemini model ids: configured → 3.6-flash → 2.5-flash → 3.5-flash → 1.5-flash.
+ * Google retires aliases and individual models can be capacity-limited; each
+ * failure type (404, 503/timeout) moves on to the next candidate.
  */
 function geminiModelCandidates(configured) {
   const out = [];
   for (const m of [
     configured,
-    "gemini-3.8-flash",
+    "gemini-3.6-flash",
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
+    "gemini-3.5-flash",
     "gemini-1.5-flash",
   ]) {
     if (typeof m === "string" && m && !out.includes(m)) out.push(m);
@@ -155,6 +156,14 @@ function geminiModelCandidates(configured) {
 function isGeminiModelNotFound(err) {
   const msg = err instanceof Error ? `${err.message}` : String(err);
   return /404|not.?found|MODEL_NOT_FOUND/i.test(msg);
+}
+
+/** Capacity/quota/transport failures are worth retrying on another model. */
+function isGeminiTransient(err) {
+  const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  return /abort|timeout|timed out|503|UNAVAILABLE|high demand|429|RESOURCE_EXHAUSTED|500|502|504|ECONNRESET|ETIMEDOUT|ENOTFOUND/i.test(
+    msg
+  );
 }
 
 async function callGemini({ parts, systemPrompt, timeoutMs }) {
@@ -191,9 +200,16 @@ async function callGemini({ parts, systemPrompt, timeoutMs }) {
   const ai = new GoogleGenAI({ apiKey: provider.apiKey });
 
   let lastError = null;
-  for (const model of geminiModelCandidates(provider.model)) {
+  const candidates = geminiModelCandidates(provider.model);
+  const deadline = Date.now() + timeoutMs;
+  for (let index = 0; index < candidates.length; index += 1) {
+    const model = candidates[index];
+    const isLastCandidate = index === candidates.length - 1;
+    const remainingBudget = deadline - Date.now();
+    if (remainingBudget <= 0) break;
+    const attemptTimeout = Math.min(GEMINI_ATTEMPT_TIMEOUT_MS, remainingBudget);
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = setTimeout(() => controller.abort(), attemptTimeout);
     try {
       const response = await ai.models.generateContent({
         model,
@@ -212,10 +228,18 @@ async function callGemini({ parts, systemPrompt, timeoutMs }) {
     } catch (err) {
       if (err instanceof AiError) throw err;
       const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-      if (/abort/i.test(msg)) throw new AiError(`Gemini request timed out after ${timeoutMs}ms.`);
-      lastError = new AiError(`Gemini request failed: ${msg.slice(0, 300)}`);
-      if (isGeminiModelNotFound(err) && model !== geminiModelCandidates(provider.model).pop()) {
-        console.warn(`[ai] gemini model ${model} not found, trying next candidate`);
+      const timedOut = /abort|timeout|timed out/i.test(msg);
+      lastError = timedOut
+        ? new AiError(`Gemini request timed out after ${attemptTimeout}ms.`)
+        : new AiError(`Gemini request failed: ${msg.slice(0, 300)}`);
+
+      // A single model being overloaded or unavailable must not fail the
+      // request: move on to a healthy candidate while budget remains.
+      const canFallback =
+        !isLastCandidate && (timedOut || isGeminiModelNotFound(err) || isGeminiTransient(err));
+      if (canFallback) {
+        const reason = timedOut ? "timed out" : msg.slice(0, 80);
+        console.warn(`[ai] gemini model ${model} unavailable (${reason}), trying next candidate`);
         continue;
       }
       throw lastError;
@@ -857,5 +881,7 @@ module.exports = {
   extractJson,
   normalizeAnalysis,
   geminiModelCandidates,
+  isGeminiModelNotFound,
+  isGeminiTransient,
   _setGeminiOverride,
 };

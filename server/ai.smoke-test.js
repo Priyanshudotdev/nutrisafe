@@ -113,17 +113,30 @@ function setGemini(text) {
   // Gemini model fallback chain order (retired aliases rotate forward).
   assert.deepStrictEqual(ai.geminiModelCandidates("gemini-9.9-custom"), [
     "gemini-9.9-custom",
-    "gemini-3.8-flash",
+    "gemini-3.6-flash",
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
+    "gemini-3.5-flash",
     "gemini-1.5-flash",
   ]);
   assert.deepStrictEqual(ai.geminiModelCandidates("gemini-1.5-flash"), [
     "gemini-1.5-flash",
-    "gemini-3.8-flash",
+    "gemini-3.6-flash",
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
+    "gemini-3.5-flash",
   ]);
+  // Overloaded/aborted models are retryable on the next candidate; auth and
+  // malformed-request failures stay terminal.
+  for (const message of [
+    "ApiError: 503 UNAVAILABLE high demand",
+    "AbortError: The operation was aborted",
+    "Gemini request timed out after 15000ms.",
+    "RESOURCE_EXHAUSTED",
+    "fetch failed: ECONNRESET",
+  ]) {
+    assert.strictEqual(ai.isGeminiTransient(new Error(message)), true, message);
+  }
+  assert.strictEqual(ai.isGeminiTransient(new Error("API key not valid")), false);
+  assert.strictEqual(ai.isGeminiModelNotFound(new Error("404 model not found")), true);
   console.log("✓ gemini model candidate order");
 
   // ── identifyFood via OpenAI-compatible ──
@@ -231,8 +244,11 @@ function setGemini(text) {
         lastGeminiArgs.systemPrompt.includes("clinical dietitian"),
       "Gemini nutrition must carry the dietitian system prompt"
     );
-    const nutriText = (lastGeminiArgs.parts?.[0]?.text ?? "");
-    assert.ok(nutriText.includes('Food: "banana"'), "Gemini nutrition parts must carry the food prompt");
+    const nutriText = lastGeminiArgs.parts?.[0]?.text ?? "";
+    assert.ok(
+      nutriText.includes('Food: "banana"'),
+      "Gemini nutrition parts must carry the food prompt"
+    );
     console.log("✓ analyzeNutrition sends parts + systemInstruction for Gemini SDK");
   }
 
@@ -259,7 +275,10 @@ function setGemini(text) {
       "Gemini prescription must carry the extraction schema as system prompt"
     );
     const rxParts = lastGeminiArgs.parts ?? [];
-    assert.ok(rxParts.some((p) => p.inlineData), "Gemini prescription must include inlineData image");
+    assert.ok(
+      rxParts.some((p) => p.inlineData),
+      "Gemini prescription must include inlineData image"
+    );
     console.log("✓ extractPrescription sends schema via systemInstruction + inlineData image");
   }
 
@@ -419,11 +438,7 @@ function setGemini(text) {
     ai._setGeminiOverride(null);
     r = await ai.identifyFood(Buffer.from("fake"), "image/jpeg");
     delete process.env.MUSE_SPARK_MODELS;
-    assert.deepStrictEqual(seenModels, [
-      "custom-a",
-      "custom-b",
-      "muse-spark-1.3-contributor",
-    ]);
+    assert.deepStrictEqual(seenModels, ["custom-a", "custom-b", "muse-spark-1.3-contributor"]);
     assert.strictEqual(r.foodName, "Idli");
     console.log("✓ Muse Spark model fallback chain on model_not_found");
   }
